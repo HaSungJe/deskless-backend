@@ -10,11 +10,12 @@
 #
 # 부하 분산
 #   - 큐(명령): 모든 인스턴스가 같은 q.admin.cmd(admin.#)를 소비 → 브로커가 나눠 준다(경쟁 소비)
-#   - 내부 HTTP: admin-service-lb(nginx)가 인스턴스들에 라운드로빈 — 게이트웨이는 http://admin-service-lb:4002 로 부른다
+#   - 내부 HTTP: admin-service-lb(nginx)가 인스턴스들에 라운드로빈 — 게이트웨이는 http://admin-service-lb:3020 로 부른다
 #
 # 네트워크 — "admin-service 는 게이트웨이만 닿는다"
 #   roomless-service (internal) : gateway · admin-service-lb · admin-service (user-service 와 같은 내부망)
 #   roomless-broker / roomless-data : 브로커 / DB · Redis 로 나가는 길 (DB · Redis 는 user-service 와 같다)
+#   볼륨 roomless-files : 내부 파일 저장소(AWS_S3_BUCKET 이 빌 때 — gateway · user-service · admin-service 가 /app/storage/files 로 같이 본다), npm run docker:network 가 만든다
 name: roomless-admin-service
 
 x-logging: &logging
@@ -46,20 +47,24 @@ services:
             REDIS_URL: '${REDIS_URL:?.env 에 REDIS_URL 이 필요합니다}'
             # ── 서버 구성: 어느 환경이든 같다 ──
             # admin-service-lb 의 upstream 포트(docker/nginx/admin-service.conf)와 같아야 한다
-            ADMIN_SERVICE_PORT: 4002
+            ADMIN_SERVICE_PORT: 3020
             # 컨테이너 안에서는 0.0.0.0 — 닿을 수 있는 상대는 roomless-service 의 admin-service-lb · gateway 뿐이다
             ADMIN_SERVICE_HOST: 0.0.0.0
             TZ: Asia/Seoul
+            # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 공용 볼륨 roomless-files 를 붙인 자리(서버 구성 — .env 값과 무관)
+            FILE_STORAGE_DIR: /app/storage/files
             # ── 쓰지 않는 비밀값은 전달하지 않는다 ──
             RABBITMQ_GATEWAY_PASSWORD: ''
             RABBITMQ_USER_SERVICE_PASSWORD: ''
             RABBITMQ_PASSWORD: ''
             REDIS_PASSWORD: ''
             TOSS_SECRET_KEY: ''
+        volumes:
+            - files:/app/storage/files
         deploy:
             replicas: ${ADMIN_SERVICE_REPLICAS:-1}
         expose:
-            - '4002'
+            - '3020'
         networks: [service, broker, data]
         logging: *logging
         restart: unless-stopped
@@ -71,7 +76,7 @@ services:
         volumes:
             - ./docker/nginx/admin-service.conf:/etc/nginx/conf.d/default.conf:ro
         expose:
-            - '4002'
+            - '3020'
         networks: [service]
         depends_on:
             - admin-service
@@ -87,4 +92,9 @@ networks:
         external: true
     data:
         name: roomless-data
+        external: true
+
+volumes:
+    files:
+        name: roomless-files
         external: true

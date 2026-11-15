@@ -27,6 +27,7 @@
     "start:prod:admin-service": "node dist/apps/admin-service/apps/admin-service/src/main.js",
     "start:prod:scheduler": "node dist/apps/scheduler/apps/scheduler/src/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "sample:images": "node scripts/sample-images.mjs",
     "docker:network": "node scripts/docker-network.mjs",
     "docker:postgres": "docker compose -f compose.postgres.yml up -d --wait",
     "docker:rabbitmq": "docker compose -f compose.rabbitmq.yml up -d --wait rabbitmq && docker compose -f compose.rabbitmq.yml run --rm -T rabbitmq-init",

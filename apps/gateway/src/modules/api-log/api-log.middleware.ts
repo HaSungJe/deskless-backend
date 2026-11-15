@@ -2,12 +2,12 @@ import {Injectable, NestMiddleware} from '@nestjs/common';
 import type {NextFunction, Request, Response} from 'express';
 import {ERROR_STACK_LOCAL} from '@app/common/exception/custom-error.filter.js';
 import {dayjs} from '@app/common/utils/dayjs.js';
-import {buildApiLogEntity, collectApiLogChunk, isApiLogExcluded, toRequestPath} from './api-log.util.js';
+import {buildApiLogEntity, collectApiLogChunk, isApiLogExcluded, isApiLogTextContentType, toRequestPath} from './api-log.util.js';
 import {ApiLogWriter} from './api-log.writer.js';
 
 /**
  * API 로그 기록 미들웨어(게이트웨이 인프라) — 모든 HTTP 요청의 응답이 끝나면 한 번 기록해 로그 전용 연결로 넣는다(사용자 결정 2026-11-10).
- * 미들웨어라 가드(401) · 없는 경로(404) · 검증(400)에서 끝난 요청도 지난다. 응답 본문은 res.write · res.end 를 가로채 모은다(JSON · SSE 공통).
+ * 미들웨어라 가드(401) · 없는 경로(404) · 검증(400)에서 끝난 요청도 지난다. 응답 본문은 res.write · res.end 를 가로채 모은다(JSON · SSE 공통 — 바이너리 응답은 모으지 않고 본문 null).
  * 넣기는 기다리지 않는다 — 실패하면 그 로그만 빠진다(요청에는 영향 없음).
  */
 @Injectable()
@@ -33,12 +33,18 @@ export class ApiLogMiddleware implements NestMiddleware {
         const chunks: Buffer[] = [];
         const write = res.write.bind(res) as (...args: unknown[]) => boolean;
         const end = res.end.bind(res) as (...args: unknown[]) => Response;
+        // 글 응답만 모은다 — 바이너리(내부 파일 저장소 /files 의 사진)는 본문을 남기지 않는다
+        const isText = (): boolean => isApiLogTextContentType(String(res.getHeader('content-type') ?? ''));
         res.write = ((chunk: unknown, ...rest: unknown[]) => {
-            collectApiLogChunk(chunks, chunk);
+            if (isText()) {
+                collectApiLogChunk(chunks, chunk);
+            }
             return write(chunk, ...rest);
         }) as Response['write'];
         res.end = ((chunk?: unknown, ...rest: unknown[]) => {
-            collectApiLogChunk(chunks, chunk);
+            if (isText()) {
+                collectApiLogChunk(chunks, chunk);
+            }
             return end(chunk, ...rest);
         }) as Response['end'];
 

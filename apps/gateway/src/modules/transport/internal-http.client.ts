@@ -9,8 +9,8 @@ export type InternalService = 'user' | 'admin';
 
 /** 서비스별 주소 환경변수와 기본값 */
 const SERVICE_URL: Record<InternalService, {env: string; fallback: string}> = {
-    user: {env: 'USER_SERVICE_URL', fallback: 'http://localhost:4001'},
-    admin: {env: 'ADMIN_SERVICE_URL', fallback: 'http://localhost:4002'},
+    user: {env: 'USER_SERVICE_URL', fallback: 'http://localhost:3010'},
+    admin: {env: 'ADMIN_SERVICE_URL', fallback: 'http://localhost:3020'},
 };
 
 /** 내부 HTTP 요청 옵션 */

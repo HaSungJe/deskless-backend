@@ -52,6 +52,17 @@ export function isApiLogExcluded(path: string, swaggerPath: string): boolean {
 }
 
 /**
+ * 응답 본문을 남길 형식인지 — 글(JSON · SSE · text/* · 형식 없음)만. 사진 같은 바이너리(내부 파일 저장소 /files 의 파일)는 모으지도 남기지도 않는다
+ * (파일 크기만큼 메모리에 쌓이고, NUL 바이트는 PostgreSQL 글자 컬럼에 들어가지 않는다).
+ *
+ * @param contentType 응답 Content-Type
+ * @returns 남기면 true
+ */
+export function isApiLogTextContentType(contentType: string): boolean {
+    return contentType === '' || contentType.startsWith('text/') || contentType.includes('json');
+}
+
+/**
  * 응답 조각을 모은다 — res.write · res.end 로 들어온 문자열 · Buffer(콜백 등 그 밖은 버린다).
  *
  * @param chunks 모을 곳
@@ -120,7 +131,7 @@ function parseLastSseEvent(text: string): {event: string; data: unknown} | null 
 }
 
 /**
- * 파일 전용 — 응답 본문 · 상태. JSON 은 객체, SSE 는 마지막 이벤트(failed 면 그 status_code 를 상태로), 그 밖은 문자열, 없으면 null.
+ * 파일 전용 — 응답 본문 · 상태. JSON 은 객체, SSE 는 마지막 이벤트(failed 면 그 status_code 를 상태로), 그 밖의 글은 문자열, 없거나 바이너리면 null.
  *
  * @param contentType Content-Type
  * @param text 모은 응답
@@ -128,7 +139,7 @@ function parseLastSseEvent(text: string): {event: string; data: unknown} | null 
  * @returns 상태 · 본문
  */
 function toApiLogResponse(contentType: string, text: string, statusCode: number): {status_code: number; response_body: unknown} {
-    if (text === '') {
+    if (text === '' || !isApiLogTextContentType(contentType)) {
         return {status_code: statusCode, response_body: null};
     }
     if (contentType.includes('text/event-stream')) {

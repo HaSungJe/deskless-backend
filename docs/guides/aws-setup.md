@@ -1,7 +1,22 @@
 # AWS 세팅 가이드 — SMS(Amazon SNS) · 파일 저장(Amazon S3)
 
 > 코드는 이미 AWS 에 붙어 있다(`libs/integration`). 아래를 마치고 `.env` 의 AWS 값을 채우면 동작한다.
-> 값이 비어 있는 동안에는 부팅 경고만 남고, SMS · 파일 요청이 실패한다(503, 사진 공개 주소는 500).
+> 값을 비워 두면 AWS 없이 돈다 — 바로 아래 "AWS 없이 돌리기".
+
+## AWS 없이 돌리기 (개발 · 포트폴리오)
+
+AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026-11-15). 값을 채우면 아래 절대로 S3 · SNS 를 쓴다.
+
+| 비운 값 | 동작 |
+|---|---|
+| `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | SMS 를 보내지 않고 `SMS 생략(AWS 키 미설정) — <번호>: <본문>` 경고 로그를 남긴 뒤 성공 처리 — 휴대폰 인증번호 · 매니저 임시 비밀번호는 로그에서 본다(`npm run docker:logs:user-service` · `docker:logs:admin-service` · `docker:logs:scheduler`) |
+| `AWS_S3_BUCKET` | 파일은 **내부 파일 저장소** — 업로드 주소 API 가 게이트웨이 `GATEWAY_PUBLIC_URL/files/upload?…`(서명 · 10분)를 주고, 프론트는 S3 때와 똑같이 같은 `Content-Type` 으로 PUT 한다(10MB 까지). 공개 사진은 `GATEWAY_PUBLIC_URL/files/<키>`, 사업자등록증은 서명된 10분 주소. 키 · DB 행 모양은 S3 와 같다 |
+
+- 필요한 값: `GATEWAY_PUBLIC_URL`(브라우저가 게이트웨이에 닿는 주소) · `INTERNAL_API_TOKEN`(서명 — 이미 필수)
+- 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), Docker 는 공용 볼륨 `roomless-files`(`npm run docker:network` 가 만든다 — gateway · user-service · admin-service 가 같이 본다)
+- 나중에 S3 를 켜면 내부 저장소에 올린 파일은 S3 에 없다(옮기지 않는다) — 그 사진은 다시 올린다
+- IAM 역할만으로 돌리는 배포는 키가 비어 SMS 가 생략된다 — SMS 를 보내려면 키를 넣는다(S3 는 버킷만 있으면 역할로 된다)
+- 키는 넣었는데 `AWS_REGION` · `AWS_S3_PUBLIC_URL` 이 비면 지금처럼 부팅 경고 후 그 요청만 실패한다(503, 사진 공개 주소는 500)
 
 ## 0. 준비
 
@@ -31,7 +46,7 @@
    공개 접두가 늘면(객실 사진 등) `Resource` 에 그 접두를 더한다.
 4. **CORS** — 브라우저가 presigned URL 로 직접 PUT 한다. `AllowedOrigins` 는 `.env` 의 `CORS_ORIGINS` 와 같은 프론트 주소로 한다.
    ```json
-   [{"AllowedOrigins": ["http://localhost:3001"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["*"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3000}]
+   [{"AllowedOrigins": ["http://localhost:5000"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["*"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3000}]
    ```
    프론트는 업로드 주소를 요청할 때 보낸 `content_type` 과 **같은 `Content-Type` 헤더**로 PUT 한다. Content-Type 이 서명에 들어가 있어 다르면 S3 가 403 으로 거부한다.
 5. **CloudFront(기본 구성)** — 공개 파일(업체 사진)은 CDN 주소로 내려간다.

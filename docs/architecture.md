@@ -11,7 +11,7 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
       ▼
 ┌──────────────┐  내부 HTTP (동기)      ┌────────────────┐
 │   gateway    │ ─────────────────────▶ │  user-service  │ ──▶ PostgreSQL
-│  :3000       │                        │  :4001 (내부)  │
+│  :3000       │                        │  :3010 (내부)  │
 │              │  roomless.cmd (명령)   │                │
 │              │ ──▶ RabbitMQ ────────▶ │ q.user.cmd     │
 │              │ ◀── q.gw.result.<id> ◀ │ roomless.event │
@@ -114,7 +114,7 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 
 전역 모듈 — `TransportModule`(`@Global`) · `DatabaseModule`(`@Global`, `JobLockService` export) · `SmsModule` · `StorageModule`(`@Global`, `SMS_SENDER` · `STORAGE_GATEWAY` export) · `RedisModule`(`@Global`, `RedisConnection` export) · `DoorStoreModule`(`@Global`, `DOOR_STORE` export — RedisModule 포함) · `MessagingModule.forGateway()/forService()`(`global: true`, forService 는 `exports: []`). 그래서 도메인 모듈은 이것들을 import 하지 않고 주입받는다.
 
-**gateway** — `GatewayModule` = `MessagingModule.forGateway()`(`BROKER_ACCOUNT='gateway'` · `RabbitMqConnection` · `GATEWAY_INSTANCE_ID` · `COMMAND_PUBLISHER` · `RESULT_SUBSCRIBER`) + `TransportModule`(`modules/transport`: InternalHttpClient · CommandStreamService) + `PassportJwtAuthModule`(`guards/passport.jwt.auth`, 그룹별 JWT 전략 3개) + `DoorStoreModule`(Redis — 문 소켓이 바로 열기 명령 채널 `door-commands` 를 구독) + 도메인 라우트 모듈(`UserModule` · `ReservationModule` · `DiscoveryModule` · `UserStoreModule` — `api/v1/user-service/{user,reservation,discovery,store}`(둘러보기 · 예약 가능 시간은 가드 없음), `ManagerModule` · `AdminModule` · `StoreModule` · `RoomModule` · `AdminReservationModule` · `AdminUserModule` · `StatsModule` — `api/v1/admin-service/{manager,admin,store,room,reservation,user,stats}` — 이름이 겹치는 도메인 모듈은 별칭으로 들인다) + `ApiLogModule`(`modules/api-log` — 모든 경로에 `ApiLogMiddleware` 를 건다(`configure` · `forRoutes('*')` — 가드보다 먼저), 로그 전용 연결로 `t_api_log` 적재) + `DoorSocketModule`(`modules/door-socket` — 문 소켓 `/ws/v1/door`, HTTP 서버 `upgrade` 를 직접 받는 표준 WebSocket). APP_GUARD 없음(인증은 핸들러의 그룹 가드, 문 소켓은 접속 헤더의 업체 ID + 시크릿).
+**gateway** — `GatewayModule` = `MessagingModule.forGateway()`(`BROKER_ACCOUNT='gateway'` · `RabbitMqConnection` · `GATEWAY_INSTANCE_ID` · `COMMAND_PUBLISHER` · `RESULT_SUBSCRIBER`) + `TransportModule`(`modules/transport`: InternalHttpClient · CommandStreamService) + `PassportJwtAuthModule`(`guards/passport.jwt.auth`, 그룹별 JWT 전략 3개) + `DoorStoreModule`(Redis — 문 소켓이 바로 열기 명령 채널 `door-commands` 를 구독) + 도메인 라우트 모듈(`UserModule` · `ReservationModule` · `DiscoveryModule` · `UserStoreModule` — `api/v1/user-service/{user,reservation,discovery,store}`(둘러보기 · 예약 가능 시간은 가드 없음), `ManagerModule` · `AdminModule` · `StoreModule` · `RoomModule` · `AdminReservationModule` · `AdminUserModule` · `StatsModule` — `api/v1/admin-service/{manager,admin,store,room,reservation,user,stats}` — 이름이 겹치는 도메인 모듈은 별칭으로 들인다) + `ApiLogModule`(`modules/api-log` — 모든 경로에 `ApiLogMiddleware` 를 건다(`configure` · `forRoutes('*')` — 가드보다 먼저), 로그 전용 연결로 `t_api_log` 적재) + `DoorSocketModule`(`modules/door-socket` — 문 소켓 `/ws/v1/door`, HTTP 서버 `upgrade` 를 직접 받는 표준 WebSocket) + `LocalFileModule`(`modules/local-file` — `AWS_S3_BUCKET` 이 비면 `/files`(서명된 업로드 받기 · 비공개 열람 · 공개 파일)를 HTTP 앱에 직접 붙인다 — 문 소켓과 같은 HttpAdapterHost 방식, Swagger 밖). `main.ts` 는 샘플 사진 정적 경로 `/sample/`(`assets/sample/` — config/sample-image.config.ts)를 건다. APP_GUARD 없음(인증은 핸들러의 그룹 가드, 문 소켓은 접속 헤더의 업체 ID + 시크릿).
 
 ```
 apps/gateway/src/
@@ -133,9 +133,11 @@ apps/gateway/src/
 │   ├── passport.jwt.auth/  # 그룹별 strategy · guard(auth=이용자 · manager · admin) · util(공통 옵션 · 회원 조회 · 401) · decorator(@PassportUser · @PassportActor) · module
 │   └── roles/              # roles.guard.ts · roles.decorator.ts(@Roles — 그룹 안 권한, 사용 0)
 ├── modules/transport/      # internal-http.client · command-stream.service · transport.util
-├── modules/api-log/        # api-log.middleware(모든 HTTP 요청 — 응답 조각 모으기 · finish/close 1번) · api-log.writer(로그 전용 DataSource insert) · api-log.util(라우트 패턴 · 응답 본문 · SSE 마지막 이벤트) · api-log.module
+├── modules/api-log/        # api-log.middleware(모든 HTTP 요청 — 글 응답 조각 모으기(바이너리 — /files 사진은 본문 null) · finish/close 1번) · api-log.writer(로그 전용 DataSource insert) · api-log.util(라우트 패턴 · 응답 본문 · SSE 마지막 이벤트) · api-log.module
 ├── modules/door-socket/    # door-socket.server(upgrade 수신 · 인증 · 메시지 · 명령 구독 · ping) · door-socket.util · door-socket.module
-├── config/                 # cors.config.ts(buildCorsOptions) · trust-proxy.config.ts(parseTrustProxy)
+├── modules/local-file/     # 내부 파일 저장소 경로(/files — AWS_S3_BUCKET 이 빌 때만) — local-file.server(업로드 받기 · 비공개 열람 · 공개 파일) · local-file.util · local-file.module
+├── assets/sample/          # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, nest-cli assets 로 dist 복사)
+├── config/                 # cors.config.ts(buildCorsOptions) · trust-proxy.config.ts(parseTrustProxy) · sample-image.config.ts(/sample/ 정적 경로)
 ├── gateway.module.ts
 └── main.ts
 ```
@@ -143,11 +145,11 @@ apps/gateway/src/
 
 **user-service** — `UserServiceModule` = `DatabaseModule`(TypeORM + ClsModule `TransactionalAdapterTypeOrm`) + `MessagingModule.forService({queue: USER_COMMAND_QUEUE, binding_keys: [USER_COMMAND_BINDING], broker_user: BROKER_USER.USER_SERVICE})`(`broker_user` 필수, 큐 · 바인딩은 contracts 상수) + `SmsModule` + `DoorStoreModule`(문 정보 포트 `DOOR_STORE` — Redis 연결 `RedisModule` 포함) + `PaymentModule` + `StorageModule`(입점 신청 업체 정보 파일 · 업체 둘러보기의 사진 공개 주소) + `UserModule` · `ReservationModule`(예약 — 내 예약 QR · 결제 확인 QR 은 `DOOR_STORE` 로 호실의 현재 QR 을 쓴다) · `DiscoveryModule`(업체 둘러보기 — 내부 HTTP 3개, 큐 없음) · `StoreModule`(입점 신청 — 내부 HTTP 3개 · 큐 4개) · `DoorModule`(문 소켓 처리 — 내부 HTTP 3개, 큐 없음) + providers `{provide: APP_GUARD, useClass: InternalAuthGuard}` · `{provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}`(반환된 예외 → 실패 응답) · `SeederService`. crontab 이 없다(scheduler).
 
-**admin-service** — `AdminServiceModule` = `DatabaseModule`(user-service 와 같은 DB · 엔티티) + `MessagingModule.forService({queue: ADMIN_COMMAND_QUEUE, binding_keys: [ADMIN_COMMAND_BINDING], broker_user: BROKER_USER.ADMIN_SERVICE})`(`q.admin.cmd` ← `admin.#`) + `SmsModule` · `StorageModule` · `DoorStoreModule` + `ManagerModule` · `AdminModule` · `StoreModule` · `RoomModule`(객실 — 업체 관리자) · `ReservationModule`(업체 예약 — 예약 현황 · 업체 취소 · 호실 이동, SMS · DOOR_STORE) · `UserModule`(이용자 관리 — 총관리자 · 관리자) · `StatsModule`(통계 — 조회만, 내부 HTTP 컨트롤러 하나) + providers `{provide: APP_GUARD, useClass: InternalAuthGuard}` · `{provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}`. migrate · `SeederService` 가 없다(user-service 몫). `main.ts` 는 user-service 와 같은 모양 — `listen(ADMIN_SERVICE_PORT ?? 4002, ADMIN_SERVICE_HOST || '127.0.0.1')`.
+**admin-service** — `AdminServiceModule` = `DatabaseModule`(user-service 와 같은 DB · 엔티티) + `MessagingModule.forService({queue: ADMIN_COMMAND_QUEUE, binding_keys: [ADMIN_COMMAND_BINDING], broker_user: BROKER_USER.ADMIN_SERVICE})`(`q.admin.cmd` ← `admin.#`) + `SmsModule` · `StorageModule` · `DoorStoreModule` + `ManagerModule` · `AdminModule` · `StoreModule` · `RoomModule`(객실 — 업체 관리자) · `ReservationModule`(업체 예약 — 예약 현황 · 업체 취소 · 호실 이동, SMS · DOOR_STORE) · `UserModule`(이용자 관리 — 총관리자 · 관리자) · `StatsModule`(통계 — 조회만, 내부 HTTP 컨트롤러 하나) + providers `{provide: APP_GUARD, useClass: InternalAuthGuard}` · `{provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}`. migrate · `SeederService` 가 없다(user-service 몫). `main.ts` 는 user-service 와 같은 모양 — `listen(ADMIN_SERVICE_PORT ?? 3020, ADMIN_SERVICE_HOST || '127.0.0.1')`.
 
 **scheduler** — `SchedulerModule` = `DatabaseModule` + `ScheduleModule.forRoot()` + `PaymentModule` · `DoorStoreModule` · `SmsModule` + `UserModule`(crontab + scheduler 의 회원 repository) · `ReservationModule`(결제 대기 만료 · 늦은 승인 · 환불 · QR 동기화 · 이용 전환 · QR 확인 링크 SMS crontab + scheduler 의 예약 repository) · `ApiLogModule`(t_api_log 월 파티션 미리 만들기 crontab + DDL repository). APP_GUARD · MessagingModule · 컨트롤러 · 시드가 없다.
 `main.ts`: `dotenv/config` → `NestFactory.createApplicationContext(SchedulerModule)`(listen 하지 않는다) → 종료 훅. 등록된 `@Cron` 타이머가 프로세스를 살려 둔다.
-`main.ts`: `dotenv/config` → 전역 필터 → 전역 ValidationPipe → 종료 훅 → `listen(USER_SERVICE_PORT ?? 4001, USER_SERVICE_HOST || '127.0.0.1')`. CORS · Swagger 없음.
+`main.ts`: `dotenv/config` → 전역 필터 → 전역 ValidationPipe → 종료 훅 → `listen(USER_SERVICE_PORT ?? 3010, USER_SERVICE_HOST || '127.0.0.1')`. CORS · Swagger 없음.
 `migrate.ts`(별도 진입점): `retry` 로 DB 연결을 기다린 뒤(30회 × 2초) `runMigrations` 또는 `revert` 인자면 `undoLastMigration`, 둘 다 `{transaction: 'each'}`. DataSource 설정은 앱과 같다(`synchronize: false`, 목록 테이블 `t_migration`).
 
 **수명주기 순서** — ① `onModuleInit`: 결과 수신기 · 명령 소비자가 `connection.register(setup)`, `CommandHandlerRegistry` 가 앱 전체 provider 를 스캔 ② `onApplicationBootstrap`: RabbitMQ 연결(등록된 setup 실행) · 시드 입력 ③ `onModuleDestroy`: 브로커 연결 종료, 게이트웨이는 남은 SSE 스트림에 pending 을 쓰고 닫는다.
@@ -155,6 +157,8 @@ apps/gateway/src/
 ## 기본 데이터 시드
 
 `SeederService`(libs/database, `OnApplicationBootstrap`)가 [seeder.targets.ts](../libs/database/src/seeder/seeder.targets.ts) 의 `SEED_TARGETS` 를 순서대로 처리한다 — PK 기준으로 없는 행만 insert(`pickMissingRows`). 대상별 실패는 경고 로그만 남기고 부팅을 막지 않는다. DB 를 소유한 서비스 한 곳에서만 등록한다.
+
+테스트 데이터(샘플 시드)는 `SEED_TARGETS` 끝의 `SAMPLE_SEED_TARGETS`([sample-seed.targets.ts](../libs/database/src/seeder/sample-seed.targets.ts) · 값은 sample-seed.data.ts)다 — `SEED_SAMPLE_DATA=1` 일 때만 업체 10곳 · 객실 그룹 · 호실 · 업체 총관리자 · 이용자를 고정 ID(`sampleId` — `5a3e` + 종류 + 번호)로 넣고, 꺼져 있으면 만드는 함수를 부르지 않는다. 사진은 게이트웨이 `assets/sample/` 의 PNG(`/sample/` 정적 경로 — config/sample-image.config.ts). 켜는 법 · 계정: [guides/sample-data.md](guides/sample-data.md).
 
 ## 스케줄러
 
@@ -178,7 +182,7 @@ postgres · rabbitmq · redis · user-service · admin-service · scheduler · g
 
 ```bash
 npm run docker:up            # 아래 1~8 을 순서대로
-npm run docker:network       # 1. 공용 네트워크 4개 (이미 있으면 건너뜀)
+npm run docker:network       # 1. 공용 네트워크 4개 · 볼륨 1개 (이미 있으면 건너뜀)
 npm run docker:postgres      # 2. compose.postgres.yml — healthy 까지 기다림
 npm run docker:rabbitmq      # 3. compose.rabbitmq.yml — healthy 후 브로커 계정 초기화 1회
 npm run docker:redis         # 4. compose.redis.yml — healthy 까지 기다림 (AOF 영속)
@@ -209,7 +213,7 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 | 구분 | 정하는 곳 | 항목 |
 |---|---|---|
 | 환경 값 | `.env` 그대로 — compose 는 바꾸지 않는다. 비밀값 · 접속정보는 기본값 없이 필수(`${VAR:?}`), 비밀이 아닌 구성값만 기본값이 있다(`TRUST_PROXY:-1` · `*_REPLICAS:-2`(admin-service · scheduler `:-1`) · `GATEWAY_PORT:-3000` · 호스트 포트) | `NODE_ENV` · `DATABASE_URL` · `RABBITMQ_HOST` · `RABBITMQ_PORT` · 비밀값 · `CORS_ORIGINS` · `TRUST_PROXY` · `*_REPLICAS` |
-| 서버 구성 | compose 고정 — 어느 환경이든 같다 | 컨테이너 안 포트(gateway 3000 · user-service 4001 · admin-service 4002, nginx upstream 과 짝) · `USER_SERVICE_HOST` · `ADMIN_SERVICE_HOST=0.0.0.0` · `USER_SERVICE_URL=http://user-service-lb:4001` · `ADMIN_SERVICE_URL=http://admin-service-lb:4002` · `GATEWAY_INSTANCE_ID`(빈 값 → `gw-<컨테이너 호스트명>-<pid>`) · `TZ=Asia/Seoul` |
+| 서버 구성 | compose 고정 — 어느 환경이든 같다 | 컨테이너 안 포트(gateway 3000 · user-service 3010 · admin-service 3020, nginx upstream 과 짝) · `USER_SERVICE_HOST` · `ADMIN_SERVICE_HOST=0.0.0.0` · `USER_SERVICE_URL=http://user-service-lb:3010` · `ADMIN_SERVICE_URL=http://admin-service-lb:3020` · `GATEWAY_INSTANCE_ID`(빈 값 → `gw-<컨테이너 호스트명>-<pid>`) · `TZ=Asia/Seoul` |
 | 쓰지 않는 비밀값 | 빈 값으로 덮어 전달하지 않는다(앱 동작과 무관) | gateway · user-service · admin-service 공통: 다른 앱의 브로커 비밀번호 · 브로커 관리자 비밀번호 · Redis 컨테이너 비밀번호(`REDIS_PASSWORD`), Redis 를 쓰지 않는 앱(admin-service · scheduler · gateway)은 `REDIS_URL` 도. 게이트웨이만: DB 주소 · DB 비밀번호 · bcrypt pepper · 토큰 암호화 키. scheduler: DB 주소 외 비밀값 전부(브로커 · JWT · 토큰 암호화 · 내부 토큰 · bcrypt · DB 관리자 — AWS 키는 QR 확인 링크 SMS 에 쓴다) |
 
 - **가상 운영 · 실제 운영은 `.env` 의 접속정보로 고른다.** 가상 운영은 같은 서버에 postgres · rabbitmq · redis 묶음을 띄우고 주소를 컨테이너 이름(`postgres` · `rabbitmq` · `redis`)으로 둔다. 실제 운영은 세 묶음을 띄우지 않고 주소를 RDS · Amazon MQ · ElastiCache 같은 실제 주소로 둔다(브로커에는 [init.sh](../docker/rabbitmq/init.sh) 와 같은 계정 · 권한을 만들어 둔다). user-service · gateway 묶음과 compose 파일은 그대로다.
@@ -242,7 +246,8 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 | `roomless-broker` | rabbitmq · rabbitmq-init · gateway · user-service · admin-service |
 | `roomless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
 
-- [docker-network.mjs](../scripts/docker-network.mjs) 가 만든다. 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
+- 공용 볼륨 `roomless-files` — 내부 파일 저장소(`AWS_S3_BUCKET` 이 빌 때)를 gateway · user-service · admin-service 가 `/app/storage/files` 로 같이 본다(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다.
+- [docker-network.mjs](../scripts/docker-network.mjs) 가 네트워크 · 볼륨을 만든다. 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
 - 서비스의 HTTP 에 닿는 컨테이너는 gateway · 그 서비스의 LB 뿐이고, 게이트웨이는 DB 에 닿지 않는다.
 - 이미지: Node 24 slim(bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행.
 - user-service · gateway 묶음은 같은 Docker 호스트의 공용 네트워크를 전제로 한다(게이트웨이 → user-service-lb). DB · 브로커는 `.env` 의 주소라 다른 서버(RDS · Amazon MQ)여도 된다. 앱 묶음까지 서로 다른 서버에 나누려면 Swarm overlay 네트워크 · Kubernetes 로 옮긴다.
@@ -252,8 +257,8 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 ```bash
 npm run docker:infra          # 공용 네트워크 + postgres + rabbitmq(+계정 초기화) + redis
 npm run db:migrate            # 마이그레이션 적용
-npm run start:user-service    # :4001
-npm run start:admin-service   # :4002
+npm run start:user-service    # :3010
+npm run start:admin-service   # :3020
 npm run start:gateway         # :3000
 ```
 

@@ -5,6 +5,11 @@
 ## 원칙
 
 - **mock · 가짜 어댑터를 두지 않는다** — 외부 연동은 처음부터 실제 서비스에 붙는 코드다. 서비스를 만드는 방법은 `docs/guides/` 에 가이드로 남긴다. 세팅 전에는 `.env` 값이 비어 있어 요청만 실패한다(부팅은 된다).
+- **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: AWS 값이 비면 AWS 없이 돈다([guides/aws-setup.md](guides/aws-setup.md) "AWS 없이 돌리기").
+  - **SMS 생략** — `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 가 비면 `SnsSmsSender` 가 SNS 를 부르지 않고 받는 번호 · 본문을 경고 로그로 남긴 뒤 성공으로 끝난다(인증번호 · 임시 비밀번호는 로그에서 본다). 서비스는 그대로 마지막 단계에서 `send` 를 부른다.
+  - **내부 파일 저장소** — `AWS_S3_BUCKET` 이 비면 `StorageModule` 이 `LocalStorageGateway` 를 고른다(`isS3StorageConfigured`). 실제로 저장 · 제공하는 두 번째 어댑터다(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명 — 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(`private/` 는 공개 경로로 안 나간다). 받기 · 내주기는 게이트웨이 인프라 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR`, 기본 `storage/files` · Docker 공용 볼륨 `roomless-files`). 키 · DB 행 모양은 S3 와 같다.
+  - S3 일 때 "파일 본문은 게이트웨이 · 브로커를 거치지 않는다" 는 그대로이고, 내부 저장소일 때는 게이트웨이가 저장소다(브로커 · 서비스는 거치지 않는다).
+- **샘플 키(`sample/` — 테스트 데이터 시드 사진)** 는 어느 어댑터든 저장소 파일이 아니다 — `getPublicUrl` 은 `GATEWAY_PUBLIC_URL` 뒤에 키(게이트웨이 `/sample/` 정적 경로, 비면 500 `STORAGE_PUBLIC_URL_MISSING_MESSAGE`), `remove` 는 건너뛴다(행 소프트 삭제만). 업로드 키 검사가 `store/<업체>/…` 접두만 받아 API 로는 샘플 키를 등록할 수 없다. [guides/sample-data.md](guides/sample-data.md)
 - **발송은 SMS 하나** — `SMS_SENDER`(Amazon SNS). 이메일 · 알림톡 · 푸시는 쓰지 않는다. 아래 발송이 모두 이 포트로 나간다.
   - 휴대폰 인증
   - 아이디 찾기 · 비밀번호 초기화
@@ -12,7 +17,7 @@
   - 예약 변경 안내(업체 취소 · 호실 이동)
   - QR 확인 링크(scheduler — 이용 시작 5분 전, `USER_WEB_URL/reservation/<예약 ID>`, 예약당 1번)
   - 이용 중 취소 요청 승인 링크(admin-service — `USER_WEB_URL/reservation/<예약 ID>/cancel-request`)
-- **파일은 `STORAGE_GATEWAY`(Amazon S3), 업로드는 presigned URL** — 파일 본문은 게이트웨이 · 브로커를 거치지 않는다. 흐름은 네 단계다.
+- **파일은 `STORAGE_GATEWAY`(Amazon S3 — 버킷이 비면 내부 파일 저장소), 업로드는 서명된 주소(S3 presigned URL)** — S3 면 파일 본문은 게이트웨이 · 브로커를 거치지 않는다. 흐름은 네 단계다(내부 저장소도 같다).
   1. 업로드 주소 요청(동기)
   2. 클라이언트가 `upload_url` 로 PUT — 요청 때 보낸 `content_type` 과 같은 `Content-Type` 헤더로(서명에 들어간다)
   3. 등록 명령에 키만 보낸다 → service 가 `exists(key)` 확인 후 저장
@@ -27,14 +32,14 @@
 | `integration.symbols.ts` | `SMS_SENDER` · `STORAGE_GATEWAY` · `DOOR_STORE` · `PAYMENT_GATEWAY` |
 | `interfaces/integration.interface.ts` | `SmsSenderInterface` · `SmsMessage` · `StorageGatewayInterface` · `StorageUploadInput` · `StorageUploadResult` · `StorageDownloadResult` · `DoorStoreInterface` · `DoorRecord` · `DoorState` · `DoorCommand`(`DoorOpenCommand` · `DoorDisconnectCommand`) · `PaymentGatewayInterface` · `PaymentEnvironment` · `PaymentLookupResult` · `PaymentCancelInput` · `PaymentCancelResult` |
 | `integration.constants.ts` | `SMS_UNAVAILABLE_MESSAGE` · `STORAGE_UNAVAILABLE_MESSAGE` · `STORAGE_PUBLIC_URL_MISSING_MESSAGE` · `STORAGE_UPLOAD_URL_TTL_SECONDS` · `STORAGE_DOWNLOAD_URL_TTL_SECONDS` · `REDIS_UNAVAILABLE_MESSAGE` · `DOOR_STATE` · `DOOR_TIME_NONE` · `DOOR_COMMAND_CHANNEL` · `DOOR_COMMAND` · `PAYMENT_UNAVAILABLE_MESSAGE` · `PAYMENT_FAILED_MESSAGE` · `TOSS_API_BASE_URL` · `PAYMENT_REQUEST_TIMEOUT_MS` · `TOSS_PAYMENT_STATUS_DONE` |
-| `integration.util.ts` | `toDoorTime` — 시각 → 문 시각(한국 시각 yyyyMMddHHmmss) · `toE164KrPhone` — 국내 번호 → `+82…` · `classifyTossFailure` — 토스 실패 → 업무 · 일시 · 결제 없음 · `verifyPaymentLookup` — 토스 조회 결과 ↔ 우리 결제 행 대조 |
-| `sms/sns-sms.sender.ts` · `sms/sms.module.ts` | `SnsSmsSender`(SNS `Publish`, Transactional) · `SmsModule`(`@Global`) |
-| `storage/s3-storage.gateway.ts` · `storage/storage.module.ts` | `S3StorageGateway`(presigned PutObject — Content-Type 서명 · presigned GetObject · HeadObject · DeleteObject) · `StorageModule`(`@Global`) |
+| `integration.util.ts` | `toDoorTime` — 시각 → 문 시각(한국 시각 yyyyMMddHHmmss) · `toE164KrPhone` — 국내 번호 → `+82…` · `classifyTossFailure` — 토스 실패 → 업무 · 일시 · 결제 없음 · `verifyPaymentLookup` — 토스 조회 결과 ↔ 우리 결제 행 대조 · `isSampleFileKey` · `isS3StorageConfigured` · `isAwsKeyConfigured` · `gatewayPublicUrl` |
+| `sms/sns-sms.sender.ts` · `sms/sms.module.ts` | `SnsSmsSender`(SNS `Publish`, Transactional — AWS 키가 비면 생략 · 로그) · `SmsModule`(`@Global`) |
+| `storage/s3-storage.gateway.ts` · `storage/local-storage.gateway.ts` · `storage/local-storage.util.ts` · `storage/storage.module.ts` | `S3StorageGateway`(presigned PutObject — Content-Type 서명 · presigned GetObject · HeadObject · DeleteObject) · `LocalStorageGateway`(내부 파일 저장소 — 게이트웨이 `/files` 서명 주소 · 폴더 확인 · 삭제) · `signLocalFileRequest` · `isValidLocalFileSignature` · `resolveLocalFilePath` · `localFileStorageDir` · `StorageModule`(`@Global`, `AWS_S3_BUCKET` 으로 어댑터를 고른다) |
 | `redis/redis.connection.ts` · `redis/redis.module.ts` | `RedisConnection`(node-redis — 부팅을 막지 않는 연결 · 끊긴 동안 명령을 쌓지 않음 · 준비 전 503 · `subscribe(channel, listener)` — 채널마다 구독 전용 연결) · `RedisModule`(`@Global`) |
 | `door/redis-door.store.ts` · `door/door-store.module.ts` | `RedisDoorStore`(`getMany` · `setQr` · `revokeQr` · `verify` · `open` · `close` · `disconnect` · `subscribe` — Lua 스크립트 3개: QR 확인 + 열림 · 바로 열기 + PUBLISH · QR 지우기) · `DoorStoreModule`(`@Global`, RedisModule 포함) |
 | `payment/toss-payment.gateway.ts` · `payment/payment.module.ts` | `TossPaymentGateway`(fetch — Basic 인증 · 30초 제한 · 조회 · 전액 취소) · `PaymentModule`(`@Global`, 앱 등록은 Phase 17) |
 
-설정은 `.env` 의 `AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL`(AWS — 자격증명은 SDK 기본 체인이 읽는다, IAM 역할이면 키를 비운다), `REDIS_URL`(Redis), `TOSS_SECRET_KEY`(토스 — 비어 있으면 부팅 경고 · 결제 요청만 503) 이다.
+설정은 `.env` 의 `AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL`(AWS — S3 자격증명은 SDK 기본 체인이 읽는다, SMS 는 키가 비면 생략), `GATEWAY_PUBLIC_URL` · `FILE_STORAGE_DIR`(내부 파일 저장소 · 샘플 사진 주소), `REDIS_URL`(Redis), `TOSS_SECRET_KEY`(토스 — 비어 있으면 부팅 경고 · 결제 요청만 503) 이다.
 
 ## S3 클라이언트 설정
 

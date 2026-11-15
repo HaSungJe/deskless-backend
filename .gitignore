@@ -67,3 +67,6 @@ ecosystem.config.js
 .back
 *.tsbuildinfo
 
+
+# 내부 파일 저장소(AWS_S3_BUCKET 이 빌 때 — 로컬 실행의 업로드 파일)
+/storage

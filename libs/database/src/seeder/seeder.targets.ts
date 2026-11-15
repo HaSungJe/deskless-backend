@@ -16,6 +16,7 @@ import {SnsEntity} from '../entities/user/sns.entity.js';
 import {StateEntity} from '../entities/user/state.entity.js';
 import {UserSettingEntity} from '../entities/user/user-setting.entity.js';
 import {UserEntity} from '../entities/user/user.entity.js';
+import {SAMPLE_SEED_TARGETS} from './sample-seed.targets.js';
 
 /** 시드 대상 1건 — 엔티티 클래스 + 그 엔티티의 기본 데이터 */
 export interface SeedTarget<T extends ObjectLiteral = ObjectLiteral> {
@@ -194,6 +195,7 @@ export async function buildSuperAdminSettingSeed(dataSource: DataSource): Promis
 /**
  * 애플리케이션 시작 시 기본 데이터를 보장할 엔티티 목록 (기본 데이터 단일 관리 지점).
  * 새 기본 데이터는 위에 `<X>_SEED_DATA`(또는 만드는 함수)를 정의하고 여기에 한 줄 추가한다. FK 부모를 먼저 둔다.
+ * 끝의 샘플 대상(테스트 데이터 — sample-seed.targets.ts)은 SEED_SAMPLE_DATA=1 일 때만 행을 만든다.
  */
 export const SEED_TARGETS: SeedTarget[] = [
     {entity: AuthEntity, data: AUTH_SEED_DATA},
@@ -211,4 +213,5 @@ export const SEED_TARGETS: SeedTarget[] = [
     {entity: PaymentStateEntity, data: PAYMENT_STATE_SEED_DATA},
     {entity: UserEntity, data: buildSuperAdminSeed, key: 'login_id'},
     {entity: UserSettingEntity, data: buildSuperAdminSettingSeed, key: 'user_id'},
+    ...SAMPLE_SEED_TARGETS,
 ];

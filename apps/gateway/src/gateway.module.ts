@@ -5,6 +5,7 @@ import {PassportJwtAuthModule} from './guards/passport.jwt.auth/passport.jwt.aut
 import {ApiLogMiddleware} from './modules/api-log/api-log.middleware.js';
 import {ApiLogModule} from './modules/api-log/api-log.module.js';
 import {DoorSocketModule} from './modules/door-socket/door-socket.module.js';
+import {LocalFileModule} from './modules/local-file/local-file.module.js';
 import {TransportModule} from './modules/transport/transport.module.js';
 import {AdminModule} from './api/v1/admin-service/admin/admin.module.js';
 import {ManagerModule} from './api/v1/admin-service/manager/manager.module.js';
@@ -33,6 +34,7 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
  * - 같은 이름 도메인이 서비스마다 있으면(행위자별 서버 — 사용자 결정 2026-11-07) 별칭으로 들인다
  * - 업체 둘러보기 라우트: DiscoveryModule(/api/v1/user-service/discovery — 가드 없음, 반경 업체 · 업체 상세 · 객실 그룹 목록)
  * - DoorSocketModule: 문 소켓(`/ws/v1/door` — 업체 ID + 시크릿, 표준 WebSocket) — QR 확인 · 잠금 알림 · 바로 열기 명령
+ * - LocalFileModule: 내부 파일 저장소 경로(`/files` — AWS_S3_BUCKET 이 빌 때만) — 서명된 업로드 받기 · 비공개 열람 · 공개 파일
  * - ApiLogModule: API 로그 — 모든 HTTP 요청(가드보다 먼저 거는 미들웨어)을 응답이 끝난 뒤 로그 전용 연결로 t_api_log 에 넣는다(Swagger 문서 제외)
  */
 @Module({
@@ -54,6 +56,7 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
         AdminUserModule,
         StatsModule,
         DoorSocketModule,
+        LocalFileModule,
     ],
 })
 export class GatewayModule implements NestModule {

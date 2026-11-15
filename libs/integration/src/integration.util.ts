@@ -1,5 +1,5 @@
 import {dayjs, KST_TIMEZONE} from '@app/common/utils/dayjs.js';
-import {TOSS_PAYMENT_STATUS_DONE} from './integration.constants.js';
+import {SAMPLE_FILE_KEY_PREFIX, TOSS_PAYMENT_STATUS_DONE} from './integration.constants.js';
 import type {PaymentLookupResult} from './interfaces/integration.interface.js';
 
 /** 문 시각 형식 — 한국 시각 yyyyMMddHHmmss (Redis 문 정보의 시각 칸) */
@@ -87,4 +87,45 @@ export function verifyPaymentLookup(lookup: PaymentLookupResult | null, payment_
         return 'MISMATCH';
     }
     return 'PAID';
+}
+
+/**
+ * 샘플 파일 저장 키인지 — 테스트 데이터 시드의 사진(게이트웨이가 내주는 저장소 안 파일). API 로는 이 키를 등록할 수 없다(업로드 키 검사가 store/<업체>/… 접두만 받는다).
+ *
+ * @param key 저장 키
+ * @returns `sample/` 로 시작하면 true
+ */
+export function isSampleFileKey(key: string): boolean {
+    return key.startsWith(SAMPLE_FILE_KEY_PREFIX);
+}
+
+/**
+ * 파일 저장소로 S3 를 쓸지 — AWS_S3_BUCKET 이 있으면 S3, 비면 내부 파일 저장소(게이트웨이 /files — 사용자 결정 2026-11-15).
+ * StorageModule(어댑터 고르기)과 게이트웨이 local-file(경로를 열지)이 같은 기준을 쓴다.
+ *
+ * @param env 환경변수
+ * @returns S3 면 true
+ */
+export function isS3StorageConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+    return Boolean(env.AWS_S3_BUCKET);
+}
+
+/**
+ * AWS 키가 있는지 — AWS_ACCESS_KEY_ID · AWS_SECRET_ACCESS_KEY 둘 다 있어야 SMS 를 SNS 로 보낸다(없으면 보내지 않고 로그 — 사용자 결정 2026-11-15).
+ *
+ * @param env 환경변수
+ * @returns 둘 다 있으면 true
+ */
+export function isAwsKeyConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+    return Boolean(env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY);
+}
+
+/**
+ * 게이트웨이 공개 주소(끝의 / 를 뗀다) — 샘플 사진 · 내부 파일 저장소 주소의 기준. 비어 있으면 빈 문자열.
+ *
+ * @param env 환경변수
+ * @returns 예: http://localhost:3000
+ */
+export function gatewayPublicUrl(env: NodeJS.ProcessEnv = process.env): string {
+    return (env.GATEWAY_PUBLIC_URL ?? '').replace(/\/+$/, '');
 }

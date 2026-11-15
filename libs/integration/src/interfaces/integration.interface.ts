@@ -9,6 +9,7 @@ export interface SmsMessage {
 /**
  * SMS 발송 포트 — 서비스의 모든 발송이 이 포트 하나로 나간다(이메일 · 알림톡 · 푸시 없음).
  * 휴대폰 인증 · 아이디 찾기 · 비밀번호 초기화 · 업체 계정 안내 · 예약 변경 안내 · 입장 QR 링크.
+ * AWS 키가 비어 있으면 어댑터가 보내지 않고 로그만 남긴다(성공 — AWS 미설정 개발 모드).
  */
 export interface SmsSenderInterface {
     /**
@@ -44,8 +45,9 @@ export interface StorageDownloadResult {
 }
 
 /**
- * 파일 저장소 포트 — 공개 파일(업체 · 객실 그룹 사진 — CDN 공개 주소)과 비공개 파일(사업자등록증 — private/, 서명된 열람 주소).
- * 파일 본문은 서버를 거치지 않는다. 클라이언트가 createUploadUrl 의 주소로 직접 올리고, 등록 명령에는 키만 보낸다.
+ * 파일 저장소 포트 — 공개 파일(업체 · 객실 그룹 사진 — 공개 주소)과 비공개 파일(사업자등록증 — private/, 서명된 열람 주소).
+ * 어댑터는 S3(AWS_S3_BUCKET 이 있을 때 — CDN 공개 주소) 또는 내부 파일 저장소(비었을 때 — 게이트웨이 /files).
+ * 어느 쪽이든 클라이언트가 createUploadUrl 의 주소로 직접 올리고, 등록 명령에는 키만 보낸다(파일 본문은 서비스 · 브로커를 거치지 않는다).
  */
 export interface StorageGatewayInterface {
     /**

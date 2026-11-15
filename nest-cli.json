@@ -15,7 +15,7 @@
       "root": "apps/gateway",
       "entryFile": "apps/gateway/src/main",
       "sourceRoot": "apps/gateway/src",
-      "compilerOptions": {"tsConfigPath": "apps/gateway/tsconfig.app.json"}
+      "compilerOptions": {"tsConfigPath": "apps/gateway/tsconfig.app.json", "assets": [{"include": "assets/sample/*.png", "watchAssets": false}]}
     },
     "user-service": {
       "type": "application",

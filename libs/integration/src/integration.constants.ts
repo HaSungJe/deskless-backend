@@ -42,3 +42,27 @@ export const PAYMENT_REQUEST_TIMEOUT_MS = 30000;
 
 /** 토스 결제 상태 — 승인 완료 */
 export const TOSS_PAYMENT_STATUS_DONE = 'DONE';
+
+/** 샘플 파일 저장 키 접두 — 테스트 데이터 시드(SEED_SAMPLE_DATA)의 사진. S3 가 아니라 게이트웨이 assets/sample/ 에 있고 GATEWAY_PUBLIC_URL/sample/<파일> 로 연다(libs/database sample-seed.data.ts 의 SAMPLE_IMAGE_KEY_PREFIX 와 같다) */
+export const SAMPLE_FILE_KEY_PREFIX = 'sample/';
+
+/** 비공개 파일 저장 키 접두 — 도메인 키 규칙(admin-service store.util.ts storeFilePrefix — `private/store/<업체>`)과 같다. 내부 파일 저장소는 이 키를 공개 경로로 내주지 않는다 */
+export const PRIVATE_FILE_KEY_PREFIX = 'private/';
+
+/** 내부 파일 저장소 경로(게이트웨이) — AWS_S3_BUCKET 이 비면 업로드 · 열람 · 공개 파일이 이 아래다(`/files/upload` · `/files/download` · `/files/<키>`) */
+export const LOCAL_FILE_ROUTE = '/files';
+
+/** 내부 파일 저장소 폴더 기본값 — 실행 위치 기준(로컬은 저장소 루트, Docker 는 /app — 공용 볼륨 roomless-files), FILE_STORAGE_DIR 로 바꾼다 */
+export const LOCAL_FILE_STORAGE_DIR_DEFAULT = 'storage/files';
+
+/** 내부 파일 저장소 업로드 한도(바이트) — 게이트웨이 앞 nginx(docker/nginx/gateway.conf client_max_body_size 10m)와 같다 */
+export const LOCAL_FILE_MAX_BYTES = 10 * 1024 * 1024;
+
+/** 내부 파일 저장소 — 서명이 틀리거나 만료된(또는 Content-Type 이 다른) 업로드 · 열람 주소 */
+export const LOCAL_FILE_SIGNATURE_INVALID_MESSAGE = '파일 주소가 올바르지 않거나 만료되었습니다. 주소를 다시 받아주세요.';
+
+/** 내부 파일 저장소 — 업로드 한도 초과 */
+export const LOCAL_FILE_TOO_LARGE_MESSAGE = '파일은 10MB 이하만 올릴 수 있습니다.';
+
+/** 내부 파일 저장소 — 열람할 파일이 없음 */
+export const LOCAL_FILE_NOT_FOUND_MESSAGE = '파일을 찾을 수 없습니다.';

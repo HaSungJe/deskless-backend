@@ -17,7 +17,7 @@ async function bootstrap(): Promise<void> {
     app.useGlobalPipes(new ValidationPipe({transform: true, forbidNonWhitelisted: true, exceptionFactory: validationExceptionFactory}));
     app.enableShutdownHooks();
 
-    await app.listen(process.env.USER_SERVICE_PORT ?? 4001, process.env.USER_SERVICE_HOST || '127.0.0.1');
+    await app.listen(process.env.USER_SERVICE_PORT ?? 3010, process.env.USER_SERVICE_HOST || '127.0.0.1');
 }
 
 await bootstrap();
