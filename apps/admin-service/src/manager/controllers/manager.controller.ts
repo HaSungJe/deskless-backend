@@ -34,8 +34,8 @@ export class ManagerController {
      */
     @Post('/token-refresh')
     @HttpCode(200)
-    async tokenRefresh(@Body() dto: ManagerTokenRefreshDto, @ClientIp() ip: string): Promise<ManagerTokenRefreshResultDto> {
-        return this.managerService.tokenRefresh(dto, ip);
+    async tokenRefresh(@Body() dto: ManagerTokenRefreshDto): Promise<ManagerTokenRefreshResultDto> {
+        return this.managerService.tokenRefresh(dto);
     }
 
     /**

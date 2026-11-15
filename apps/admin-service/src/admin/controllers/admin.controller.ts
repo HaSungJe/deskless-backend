@@ -30,8 +30,8 @@ export class AdminController {
      */
     @Post('/token-refresh')
     @HttpCode(200)
-    async tokenRefresh(@Body() dto: AdminTokenRefreshDto, @ClientIp() ip: string): Promise<AdminTokenRefreshResultDto> {
-        return this.adminService.tokenRefresh(dto, ip);
+    async tokenRefresh(@Body() dto: AdminTokenRefreshDto): Promise<AdminTokenRefreshResultDto> {
+        return this.adminService.tokenRefresh(dto);
     }
 
     /**

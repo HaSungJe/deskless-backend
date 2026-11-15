@@ -71,6 +71,18 @@ describe('POST /internal/v1/admin-service/admin/token-refresh — 관리자 토�
         });
     });
 
+    it('[SUCCESS] 로그인 때와 다른 IP(Next 서버)에서 불러도 재발급한다 — IP 를 보지 않는다', async () => {
+        arrange({user_id: PAYLOAD.user_id, state_id: 'ACTIVE', login_scope: 'ADMIN'}); // 세션 ip 10.0.0.1
+
+        const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders('10.0.0.2')).send({refresh_token: OLD_REFRESH});
+
+        expect(res.status).toBe(200);
+        expect(res.body.access_token).toBe(MOCK_ACCESS_TOKEN);
+        expect(repo.findAdmin).toHaveBeenCalledWith({user_id: PAYLOAD.user_id});
+        expect(repo.updateSessionRefresh).toHaveBeenCalledWith({refresh_hash: OLD_HASH}, {expires_at: ONE_MINUTE_LATER});
+        expect(repo.insertSessionRefresh).toHaveBeenCalledTimes(1);
+    });
+
     it.each([
         ['다른 그룹 회원(매니저)', {user_id: PAYLOAD.user_id, state_id: 'ACTIVE', login_scope: 'MANAGER'}],
         ['다른 그룹 회원(이용자)', {user_id: PAYLOAD.user_id, state_id: 'ACTIVE', login_scope: 'USER'}],

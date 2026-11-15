@@ -103,15 +103,16 @@ describe('POST /internal/v1/user-service/user/token-refresh — 이용자 토큰
             expect(repo.insertSessionRefresh).toHaveBeenCalledTimes(1);
         });
 
-        it('세션에 저장된 ip 가 없으면 ip 비교를 건너뛴다', async () => {
-            jwt.verify.mockReturnValueOnce(PAYLOAD);
-            repo.findSessionRefresh.mockResolvedValueOnce({refresh_hash: OLD_HASH, expires_at: new Date(2026, 5, 1)});
-            repo.findSession.mockResolvedValueOnce({session_id: PAYLOAD.session_id, ip: null});
-            repo.findUser.mockResolvedValueOnce({user_id: PAYLOAD.user_id, state_id: 'ACTIVE', login_scope: 'USER'});
+        it('로그인 때와 다른 IP(Next 서버)에서 불러도 재발급한다 — IP 를 보지 않는다', async () => {
+            arrangeValid(); // 세션 ip 10.0.0.1
 
-            const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders('99.99.99.99')).send({refresh_token: OLD_REFRESH});
+            const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders('10.0.0.2')).send({refresh_token: OLD_REFRESH});
 
             expect(res.status).toBe(200);
+            expect(res.body.access_token).toBe(MOCK_ACCESS_TOKEN);
+            expect(repo.findUser).toHaveBeenCalledWith({user_id: PAYLOAD.user_id});
+            expect(repo.updateSessionRefresh).toHaveBeenCalledWith({refresh_hash: OLD_HASH}, {expires_at: ONE_MINUTE_LATER});
+            expect(repo.insertSessionRefresh).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -185,18 +186,6 @@ describe('POST /internal/v1/user-service/user/token-refresh — 이용자 토큰
             const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders()).send({refresh_token: OLD_REFRESH});
 
             expect(res.status).toBe(401);
-            expectNoWrites();
-        });
-
-        it('로그인 시점 ip 와 다른 ip — 만료 단축 없이 거부', async () => {
-            jwt.verify.mockReturnValueOnce(PAYLOAD);
-            repo.findSessionRefresh.mockResolvedValueOnce({refresh_hash: OLD_HASH, expires_at: new Date(2026, 5, 1)});
-            repo.findSession.mockResolvedValueOnce({session_id: PAYLOAD.session_id, ip: '10.0.0.1'});
-
-            const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders('10.0.0.2')).send({refresh_token: OLD_REFRESH});
-
-            expect(res.status).toBe(401);
-            expect(repo.findUser).not.toHaveBeenCalled();
             expectNoWrites();
         });
 

@@ -29,3 +29,30 @@
 
 ## Remaining Issues
 - 프록시 뒤 실클라이언트 ip 는 express `trust proxy` 설정 사안 — 기존 저장 로직과 동일 전제(이번 범위 밖).
+
+## Modification - 261116-1
+
+### Change summary
+- 프론트 수정 요청(기준 afd6c9a): 세 토큰 재발급(이용자 · 매니저 · 관리자)에서 세션 IP ↔ 요청 IP 비교(다르면 401)를 없앴다 — 배포 환경에서 로그인은 브라우저, 재발급은 Next 서버가 불러 IP 가 달라 로그인 약 19분 뒤 로그아웃되던 문제. 세션 존재 확인(지워진 세션 401)은 그대로, 로그인 때 `t_session.ip` 저장은 기록용으로 그대로.
+- 쓰이지 않게 된 `ip` 인자를 service `tokenRefresh` · 내부 controller(`@ClientIp()`)에서 지웠다. 거부 대신 로그도 두지 않는다(AGENTS.md — service 는 로그를 남기지 않는다).
+- revision: [session-ip-check-revision-261116-1.md](../../revision/user/session-ip-check-revision-261116-1.md)
+
+### Changed files
+| File | Change Type | Description |
+|------|-----------|------|
+| `apps/user-service/src/user/user.service.ts` · `controllers/user.controller.ts` | modified | IP 비교 · `ip` 인자 삭제, JSDoc |
+| `apps/admin-service/src/manager/manager.service.ts` · `controllers/manager.controller.ts` | modified | 같은 변경 |
+| `apps/admin-service/src/admin/admin.service.ts` · `controllers/admin.controller.ts` | modified | 같은 변경 |
+| `apps/user-service/src/user/test/user-token-refresh.spec.ts` | modified | "다른 IP 401" · "세션 IP 없으면 비교 생략" → "다른 IP(Next 서버)여도 재발급" 1개 |
+| `apps/admin-service/src/manager/test/manager-token-refresh.spec.ts` | modified | "다른 IP 401" → "다른 IP 여도 재발급" |
+| `apps/admin-service/src/admin/test/admin-token-refresh.spec.ts` | modified | "다른 IP 여도 재발급" 추가 |
+| `.beaver/output/frontend/changes/2026-11-16-token-refresh-ip.md` · `changes/README.md` | created · modified | 프론트 안내 — 반영됨, 프론트 변경 없음, 백엔드 배포 먼저 |
+
+### Tests written
+- 세 spec 에 `[SUCCESS] 로그인 때와 다른 IP(Next 서버)에서 불러도 재발급한다` — 세션 ip `10.0.0.1` · 요청 `10.0.0.2` 로 200, 회원 재검증 호출 · 이전 refresh 1분 단축 · 새 refresh 1건 저장을 단언. 기존 "세션 없음 401" · 회원 상태 · 그룹 케이스는 그대로.
+
+### Verification
+- `npm run typecheck` 통과 · `oxlint apps/ libs/` 통과 · prettier(바꾼 9개 파일) 통과. `session.ip` 비교와 `tokenRefresh(dto, ip)` 호출이 코드에 남지 않음(grep). README · AGENTS.md · docs 에 IP 검사 서술 없음(grep). 테스트 실행은 ship 뒤 `/beaver:test`.
+
+### Remaining issues
+- None — 배포는 사용자 몫(프론트는 바꿀 것 없음).

@@ -166,16 +166,15 @@ export class ManagerService {
      * 매니저 토큰 재발급 (내부 HTTP: POST /internal/v1/admin-service/manager/token-refresh)
      * - 서명 · 만료 · payload type 검증 실패 → 401
      * - refresh_hash 로 t_session_refresh 조회, 미존재 · DB expires_at 경과 → 401
-     * - 세션 미존재 · 로그인 시점 ip 와 요청 ip 불일치 → 401 (어느 한쪽 ip 가 없으면 비교 생략)
+     * - 세션 미존재(지워진 세션) → 401. 요청 IP 는 보지 않는다 — 재발급은 Next 서버가 부르고 IP 는 네트워크 전환으로도 바뀐다(로그인 때 저장한 t_session.ip 는 기록용)
      * - 회원이 ACTIVE 가 아니거나 매니저 그룹이 아니면 401 + 안전망으로 expires_at 단축
      * - old refresh expires_at = now + 1m 단축(grace) 후 새 토큰 발급, previous_refresh_hash 로 체인 연결
      *
      * @param dto refresh token
-     * @param ip 클라이언트 IP
      * @returns 토큰 4종
      */
     @Transactional()
-    async tokenRefresh(dto: ManagerTokenRefreshDto, ip: string): Promise<ManagerTokenRefreshResultDto> {
+    async tokenRefresh(dto: ManagerTokenRefreshDto): Promise<ManagerTokenRefreshResultDto> {
         // 1. JWT 검증
         let payload: {type: string; user_id: string; session_id: string};
         try {
@@ -197,12 +196,9 @@ export class ManagerService {
             throw new UnauthorizedException({message: INVALID_TOKEN_MESSAGE});
         }
 
-        // 3. 세션 ip 체크 — 로그인 시점 저장 ip 와 불일치 시 거부(만료 단축 없음)
+        // 3. 세션 확인 — 지워진 세션이면 거부(IP 는 비교하지 않는다)
         const session = await this.managerRepository.findSession({session_id: payload.session_id});
         if (!session) {
-            throw new UnauthorizedException({message: INVALID_TOKEN_MESSAGE});
-        }
-        if (session.ip && ip && session.ip !== ip) {
             throw new UnauthorizedException({message: INVALID_TOKEN_MESSAGE});
         }
 

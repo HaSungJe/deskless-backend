@@ -107,16 +107,16 @@ describe('POST /internal/v1/admin-service/manager/token-refresh — 매니저 �
         expect(repo.findSessionRefresh).not.toHaveBeenCalled();
     });
 
-    it('[FAIL:service] 로그인 시점 ip 와 다른 ip 는 만료 단축 없이 401', async () => {
-        jwt.verify.mockReturnValueOnce(PAYLOAD);
-        repo.findSessionRefresh.mockResolvedValueOnce({refresh_hash: OLD_HASH, expires_at: new Date(2026, 5, 1)});
-        repo.findSession.mockResolvedValueOnce({session_id: PAYLOAD.session_id, ip: '10.0.0.1'});
+    it('[SUCCESS] 로그인 때와 다른 IP(Next 서버)에서 불러도 재발급한다 — IP 를 보지 않는다', async () => {
+        arrange({user_id: PAYLOAD.user_id, state_id: 'ACTIVE', login_scope: 'MANAGER'}); // 세션 ip 10.0.0.1
 
         const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders('10.0.0.2')).send({refresh_token: OLD_REFRESH});
 
-        expect(res.status).toBe(401);
-        expect(repo.findManager).not.toHaveBeenCalled();
-        expect(repo.updateSessionRefresh).not.toHaveBeenCalled();
+        expect(res.status).toBe(200);
+        expect(res.body.access_token).toBe(MOCK_ACCESS_TOKEN);
+        expect(repo.findManager).toHaveBeenCalledWith({user_id: PAYLOAD.user_id});
+        expect(repo.updateSessionRefresh).toHaveBeenCalledWith({refresh_hash: OLD_HASH}, {expires_at: ONE_MINUTE_LATER});
+        expect(repo.insertSessionRefresh).toHaveBeenCalledTimes(1);
     });
 
     it('[FAIL:validation] refresh_token 누락은 400', async () => {

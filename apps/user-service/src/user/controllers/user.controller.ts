@@ -31,8 +31,8 @@ export class UserController {
      */
     @Post('/token-refresh')
     @HttpCode(200)
-    async tokenRefresh(@Body() dto: UserTokenRefreshDto, @ClientIp() ip: string): Promise<UserTokenRefreshResultDto> {
-        return this.userService.tokenRefresh(dto, ip);
+    async tokenRefresh(@Body() dto: UserTokenRefreshDto): Promise<UserTokenRefreshResultDto> {
+        return this.userService.tokenRefresh(dto);
     }
 
     /**
