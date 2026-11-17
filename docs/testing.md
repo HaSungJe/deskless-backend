@@ -1,6 +1,6 @@
 # Testing
 
-Vitest 4 + `@nestjs/testing` + `supertest`. 설정 [vitest.config.ts](../vitest.config.ts), 전역 setup [vitest.setup.ts](../vitest.setup.ts).
+Vitest 5 + `@nestjs/testing` + `supertest`. 설정 [vitest.config.ts](../vitest.config.ts), 전역 setup [vitest.setup.ts](../vitest.setup.ts). Vite 는 vitest 5 의 peer 라 devDependency 로 직접 둔다. vitest 5 는 `clearMocks` 가 기본으로 켜져 테스트마다 mock 호출 기록을 지운다(아래 `afterEach` 의 `vi.clearAllMocks()` 는 그대로 둔다 — 같은 일을 한 번 더 할 뿐). `vi.mock` · `vi.hoisted` 는 파일 최상단에서만 부른다(vitest 5 는 그 밖에서 부르면 오류).
 
 ## 무엇을 테스트하나 — service 기능 + repository
 

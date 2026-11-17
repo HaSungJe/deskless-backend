@@ -29,7 +29,7 @@ roomless-backend — 무인 객실 대여 서비스 백엔드. 규칙은 지금 
 
 ## Architecture
 
-NestJS 12 **모노레포**(ESM, `"type": "module"`) + TypeORM 1.x(PostgreSQL, pg) + RabbitMQ(amqplib 2) + nestjs-cls 트랜잭션 + passport-jwt + Swagger + `@nestjs/schedule` + Vitest 4. 다국어(i18n) 없음 — 모든 사용자 노출 메시지는 한국어 리터럴.
+NestJS 12 **모노레포**(ESM, `"type": "module"`) + TypeORM 1.x(PostgreSQL, pg) + RabbitMQ(amqplib 2) + nestjs-cls 트랜잭션 + passport-jwt + Swagger + `@nestjs/schedule` + Vitest 5. 다국어(i18n) 없음 — 모든 사용자 노출 메시지는 한국어 리터럴.
 
 ```
 apps/
@@ -247,7 +247,7 @@ scripts/          # db-schema.mjs(마이그레이션 생성 · 검사) · docker
 
 ## Testing
 
-- **Vitest 4** + `@nestjs/testing` + `supertest`. `globals: true` — spec 은 describe · it · expect · vi 를 import 하지 않는다. 위치는 **도메인 옆 `test/` 폴더**(`apps/<app>/src/<domain>/test/<domain>-<feature>.spec.ts` · `<domain>.repository.spec.ts`). 실행 `npm test`, 단일 `npm test -- <파일 경로 일부>`.
+- **Vitest 5** + `@nestjs/testing` + `supertest`. `globals: true` — spec 은 describe · it · expect · vi 를 import 하지 않는다. 위치는 **도메인 옆 `test/` 폴더**(`apps/<app>/src/<domain>/test/<domain>-<feature>.spec.ts` · `<domain>.repository.spec.ts`). 실행 `npm test`, 단일 `npm test -- <파일 경로 일부>`.
 - **spec 은 두 종류만 둔다**(사용자 결정 2026-10-23): ① **service 기능 spec** — 서비스 앱(user-service · admin-service)의 API 가 부르는 service 기준, API 1개당 1개, repository · 외부 연동 포트 · `JwtService` 는 mock ② **repository spec** — service spec 이 mock 으로 건너뛴 repository 자체(제약명별 오류 변환 · 통일 500 · 넘긴 조건 · Data-Access Smoke), 서비스 앱 · scheduler. controller 자체(게이트웨이 라우트 · 서비스 controller) · util 단위(계산 표 `[CASES]`) · 라이브러리(`libs/*`) · 게이트웨이 인프라(가드 · 전송 · 설정) · scheduler crontab spec 은 두지 않는다. 스키마는 `npm run db:check`, 타입은 `npm run typecheck` 로 확인한다.
 - 전역 setup([vitest.setup.ts](vitest.setup.ts)): `@Transactional()` pass-through mock + Nest 로거 끔. spec 마다 반복하지 않는다.
 - **큐 경로**: 실제 큐 컨트롤러 · service · `CommandHandlerRegistry` · `CommandDispatcher` 를 부팅(`DiscoveryModule` + `module.init()` 필수)하고 **repository · 외부 연동 포트(Symbol 토큰) · `JwtService` 만 mock** 주입, 봉투를 `dispatcher.dispatch()` 에 넣어 판정(ack/requeue/dead)과 done/failed 결과를 단언.
