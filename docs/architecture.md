@@ -249,7 +249,7 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 - 공용 볼륨 `roomless-files` — 내부 파일 저장소(`AWS_S3_BUCKET` 이 빌 때)를 gateway · user-service · admin-service 가 `/app/storage/files` 로 같이 본다(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다.
 - [docker-network.mjs](../scripts/docker-network.mjs) 가 네트워크 · 볼륨을 만든다. 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
 - 서비스의 HTTP 에 닿는 컨테이너는 gateway · 그 서비스의 LB 뿐이고, 게이트웨이는 DB 에 닿지 않는다.
-- 이미지: Node 24 slim(bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행.
+- 이미지: Node 24 LTS slim — `node:24.22.3-slim`(패치까지 고정 — 보안 패치가 나오면 Dockerfile `NODE_IMAGE` 와 package.json `engines` 하한을 같이 올린다, bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행.
 - user-service · gateway 묶음은 같은 Docker 호스트의 공용 네트워크를 전제로 한다(게이트웨이 → user-service-lb). DB · 브로커는 `.env` 의 주소라 다른 서버(RDS · Amazon MQ)여도 된다. 앱 묶음까지 서로 다른 서버에 나누려면 Swarm overlay 네트워크 · Kubernetes 로 옮긴다.
 
 앱 코드를 고치며 개발할 때는 인프라만 컨테이너로 띄우고 앱은 로컬에서 watch 로 실행해도 된다.

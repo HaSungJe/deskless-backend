@@ -6,6 +6,9 @@
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
+  "engines": {
+    "node": ">=24.22.1"
+  },
   "scripts": {
     "build": "npm run build:gateway && npm run build:user-service && npm run build:admin-service && npm run build:scheduler",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" scripts/*.mjs vitest.config.ts vitest.setup.ts",

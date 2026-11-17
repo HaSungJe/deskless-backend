@@ -3,7 +3,9 @@
 #   docker build --build-arg APP=gateway -t roomless/gateway .
 # 베이스는 Debian slim: bcrypt 가 glibc 용 prebuild 만 제공한다(Alpine/musl 이면 소스 빌드가 필요).
 
-ARG NODE_IMAGE=node:24-slim
+# Node 24 LTS(Krypton) — 패치 버전까지 고정한다(PC 에 받아 둔 옛 이미지가 쓰이지 않게). 보안 패치가 나오면 이 줄을 올린다.
+# 하한 24.22.1(2026-11 보안 권고) — package.json engines 와 같이 본다
+ARG NODE_IMAGE=node:24.22.3-slim
 
 # ── 1. 전체 의존성 ──
 FROM ${NODE_IMAGE} AS deps

@@ -31,7 +31,7 @@
 - 업체 총관리자가 시크릿을 바꾸면 그 업체 연결을 모두 끊는다(종료 코드 1008) — 새 시크릿으로 다시 붙는다.
 - 문 시각 `door_changed_at` 은 한국 시각 `yyyyMMddHHmmss`(기록 전은 `00000000000000`).
 
-스택: NestJS 12 (ESM) · TypeORM 1.x + PostgreSQL 17 · RabbitMQ 4 · Redis 8(node-redis) · AWS SDK v3(SNS · S3) · 토스페이먼츠(fetch) · Vitest · oxlint.
+스택: Node.js 24 LTS(24.22.1 이상 — Docker 이미지 `node:24.22.3-slim`) · NestJS 12 (ESM) · TypeORM 1.x + PostgreSQL 17 · RabbitMQ 4 · Redis 8(node-redis) · AWS SDK v3(SNS · S3) · 토스페이먼츠(fetch) · Vitest · oxlint.
 규약과 구조는 [AGENTS.md](AGENTS.md) 와 [docs/](docs/) 를 본다.
 
 ## 실행
@@ -86,6 +86,7 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 ### 3. 로컬 개발 — 인프라만 Docker, 앱은 watch
 
 ```bash
+node -v                     # v24.22.1 이상(24 LTS)
 npm install
 npm run docker:infra        # 공용 네트워크 + postgres + rabbitmq(+계정 초기화) + redis
 npm run db:migrate
