@@ -58,6 +58,8 @@ export const STORE_INTERNAL_PATH = {
     STORE_LIST: STORE_INTERNAL_BASE,
     /** 업체 상세 (GET, 총관리자) */
     store: (store_id: string) => `${STORE_INTERNAL_BASE}/${encodeURIComponent(store_id)}`,
+    /** 매니저 로그인용 업체 조회 (GET, 로그인 없음) — 업체코드 → 업체 ID · 업체코드 · 업체명 */
+    loginStore: (store_code: string) => `${STORE_INTERNAL_BASE}/login-store/${encodeURIComponent(store_code)}`,
     /** 내 업체 상세 (GET, 업체 관리자) */
     MINE: `${STORE_INTERNAL_BASE}/mine`,
     /** 내 업체 사진 업로드 주소 (POST, 업체 관리자) */

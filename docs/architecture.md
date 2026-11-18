@@ -137,11 +137,11 @@ apps/gateway/src/
 ├── modules/door-socket/    # door-socket.server(upgrade 수신 · 인증 · 메시지 · 명령 구독 · ping) · door-socket.util · door-socket.module
 ├── modules/local-file/     # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때만, 읽기는 늘) — local-file.server(업로드 받기 · 비공개 열람 · 공개 파일) · local-file.util · local-file.module
 ├── assets/sample/          # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, nest-cli assets 로 dist 복사)
-├── config/                 # cors.config.ts(buildCorsOptions) · trust-proxy.config.ts(parseTrustProxy) · sample-image.config.ts(/sample/ 정적 경로)
+├── config/                 # cors.config.ts(buildCorsOptions) · trust-proxy.config.ts(parseTrustProxy) · sample-image.config.ts(/sample/ 정적 경로) · swagger.config.ts(buildSwaggerCustomOptions — Swagger 도메인 선택 상자)
 ├── gateway.module.ts
 └── main.ts
 ```
-`main.ts`: `dotenv/config` → trust proxy(`TRUST_PROXY`, 값이 없으면 설정하지 않음) → 전역 `CustomErrorFilter` → 전역 ValidationPipe → CORS(`CORS_ORIGINS`) → Swagger(`SWAGGER_TITLE` · `SWAGGER_PATH` 기본 `swagger`, bearer) → 종료 훅 → `listen(GATEWAY_PORT ?? 3000)`.
+`main.ts`: `dotenv/config` → trust proxy(`TRUST_PROXY`, 값이 없으면 설정하지 않음) → 전역 `CustomErrorFilter` → 전역 ValidationPipe → CORS(`CORS_ORIGINS`) → Swagger(`SWAGGER_TITLE` · `SWAGGER_PATH` 기본 `swagger`, bearer, 도메인 선택 상자 — config/swagger.config.ts) → 종료 훅 → `listen(GATEWAY_PORT ?? 3000)`.
 
 **user-service** — `UserServiceModule` = `DatabaseModule`(TypeORM + ClsModule `TransactionalAdapterTypeOrm`) + `MessagingModule.forService({queue: USER_COMMAND_QUEUE, binding_keys: [USER_COMMAND_BINDING], broker_user: BROKER_USER.USER_SERVICE})`(`broker_user` 필수, 큐 · 바인딩은 contracts 상수) + `SmsModule` + `DoorStoreModule`(문 정보 포트 `DOOR_STORE` — Redis 연결 `RedisModule` 포함) + `PaymentModule` + `StorageModule`(입점 신청 업체 정보 파일 · 업체 둘러보기의 사진 공개 주소) + `UserModule` · `ReservationModule`(예약 — 내 예약 QR · 결제 확인 QR 은 `DOOR_STORE` 로 호실의 현재 QR 을 쓴다) · `DiscoveryModule`(업체 둘러보기 — 내부 HTTP 3개, 큐 없음) · `StoreModule`(입점 신청 — 내부 HTTP 3개 · 큐 4개) · `DoorModule`(문 소켓 처리 — 내부 HTTP 3개, 큐 없음) + providers `{provide: APP_GUARD, useClass: InternalAuthGuard}` · `{provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}`(반환된 예외 → 실패 응답) · `SeederService`. crontab 이 없다(scheduler).
 

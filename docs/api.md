@@ -1,6 +1,6 @@
 # API & Docs
 
-Swagger 는 게이트웨이에만 있다(`SWAGGER_PATH` 기본 `/swagger`, 제목 `SWAGGER_TITLE`, bearer 인증). 서비스의 내부 API(`/internal/v1/...`)는 문서화하지 않는다(내부 controller 의 Swagger import 0건).
+Swagger 는 게이트웨이에만 있다(`SWAGGER_PATH` 기본 `/swagger`, 제목 `SWAGGER_TITLE`, bearer 인증). 서비스의 내부 API(`/internal/v1/...`)는 문서화하지 않는다(내부 controller 의 Swagger import 0건). 화면의 Authorize 버튼 왼쪽에 도메인(태그) 선택 상자가 있다 — 기본 "전체", 고르면 이름이 정확히 같은 태그 묶음만 보인다(Swagger 기본 필터는 부분 일치라 "업체" 가 "업체 둘러보기" · "업체 예약" 도 남긴다 — 기본 글자 필터 칸은 숨김). 설정은 [swagger.config.ts](../apps/gateway/src/config/swagger.config.ts) `buildSwaggerCustomOptions` — swagger-ui 플러그인 함수는 `@nestjs/swagger` 가 글자로 바꿔 페이지에 넣어 브라우저에서 돌므로 바깥 변수 · import 를 쓰지 않는다. 그래서 태그 이름은 도메인마다 겹치지 않는 하나로 둔다(`@ApiTags`).
 
 ## 클래스
 

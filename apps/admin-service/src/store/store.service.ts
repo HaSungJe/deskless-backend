@@ -14,6 +14,7 @@ import type {StoreApplicationListDto, StoreApplicationListResultDto} from '@app/
 import type {StoreApplicationRejectDto} from '@app/contracts/store/dto/store-application-reject.dto.js';
 import type {StoreDetailFileResultDto, StoreDetailResultDto} from '@app/contracts/store/dto/store-detail.dto.js';
 import type {StoreListDto, StoreListResultDto} from '@app/contracts/store/dto/store-list.dto.js';
+import type {StoreLoginStoreResultDto} from '@app/contracts/store/dto/store-login-store.dto.js';
 import type {StoreMineBreaksDto} from '@app/contracts/store/dto/store-mine-breaks.dto.js';
 import type {StoreMineFileOrderDto} from '@app/contracts/store/dto/store-mine-file-order.dto.js';
 import type {StoreMineFileUploadUrlDto, StoreMineFileUploadUrlResultDto} from '@app/contracts/store/dto/store-mine-file-upload-url.dto.js';
@@ -318,6 +319,30 @@ export class StoreService {
         const pagination = new Pagination({...dto, total_count});
         const stores = await this.storeRepository.findStoreList(where, pagination.limit, pagination.offset);
         return {list: stores.map(toStoreListItem), pagination: pagination.getPagination()};
+    }
+
+    /**
+     * 매니저 로그인용 업체 조회 (로그인 없음) — 업체코드로 업체 ID · 업체코드 · 업체명. 없는 · 탈퇴 업체(모양이 틀린 코드 포함)는 404, 영업중지는 400 + 정지 사유. (내부 HTTP: GET /internal/v1/admin-service/store/login-store/:store_code)
+     *
+     * @param store_code 업체코드 (모양을 따지지 않는다)
+     * @returns 업체 ID · 업체코드 · 업체명
+     */
+    async getLoginStore(store_code: string): Promise<StoreLoginStoreResultDto> {
+        // ① 지워지지 않은 업체를 업체코드로(유일 — UK_Store_StoreCode) — 모양 검사 없음(틀린 모양은 결과 없음 → 404)
+        const store = await this.storeRepository.findStore({store_code});
+
+        // ② 없거나 탈퇴 업체는 같은 404
+        if (!store || store.store_state_id === STORE_STATE.LEAVE) {
+            throw new NotFoundException({message: STORE_NOT_FOUND_MESSAGE});
+        }
+
+        // ③ 영업중지 — 400 + 정지 사유(없으면 null)
+        if (store.store_state_id === STORE_STATE.SUSPEND) {
+            throw new BadRequestException({message: '영업이 중지된 업체입니다.', suspend_comment: store.suspend_comment ?? null});
+        }
+
+        // ④ 활성 업체
+        return {store_id: store.store_id, store_code: store.store_code, store_name: store.store_name};
     }
 
     /**

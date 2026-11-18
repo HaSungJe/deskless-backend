@@ -41,7 +41,7 @@ apps/
 │   ├── modules/door-socket/  # 문 소켓(표준 WebSocket /ws/v1/door — 업체 ID + 시크릿, QR 확인 · 잠금 알림 · 바로 열기 명령) → user-service 내부 HTTP(door) · Redis 채널 구독
 │   ├── modules/local-file/   # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때만, 읽기는 늘 — S3 로 바꾸기 전에 올린 LOCAL 행): 서명된 업로드 받기 · 비공개 열람 · 공개 파일 — 폴더는 user-service · admin-service 와 공유(FILE_STORAGE_DIR · Docker 공용 볼륨 roomless-files)
 │   ├── assets/sample/        # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, /sample/ 정적 경로 · nest-cli assets 로 dist 복사)
-│   └── config/               # cors.config.ts · trust-proxy.config.ts · sample-image.config.ts(/sample/ 정적 경로)
+│   └── config/               # cors.config.ts · trust-proxy.config.ts · sample-image.config.ts(/sample/ 정적 경로) · swagger.config.ts(Swagger 도메인 선택 상자 — swagger-ui 플러그인)
 ├── user-service/src/        # 이용자 서버 — DB 소유(마이그레이션 · 시드)
 │   ├── user/                 # 이용자 도메인: controllers/(user.controller.ts 내부 HTTP · user.controller.queue.ts RabbitMQ) → UserService
 │   ├── reservation/          # 예약 도메인(객실 그룹별 예약 가능 시간(그룹 → 시간대 → 호수) · 예약(지금 바로 포함) · 결제 확인(이미 시작했으면 이용 중 · QR 발급, 연장 구간이면 끝 · 합계 · QR 유효 끝) · 취소(사용중지 호실 전액 환불) · 내 예약 · 내 예약 QR(이용 중에만) · 이용 중 취소 요청 조회 · 승인 · 거절 · 연장 조회 · 신청(이용 중에만 — 구간을 잡아 두고 5분 결제) — 이용자): controllers/ → ReservationService → 공유 DB(업체 · 객실 · 상품 · 영업시간 읽기 · 호실 상태 · QR 이력 t_room_qr · 취소 요청) · PAYMENT_GATEWAY · DOOR_STORE(현재 QR)
@@ -185,7 +185,7 @@ scripts/          # db-schema.mjs(마이그레이션 생성 · 검사) · docker
   - 다른 그룹 계정은 로그인에서 없는 계정과 같은 404, 재발급에서 401(refresh 만료 단축). 각 도메인 service 가 자기 그룹 조건으로 찾는다(`findManager({..., login_scope: LOGIN_SCOPE.MANAGER})`).
   - `login_scope` 는 계정을 만들 때 권한에 맞춰 넣는다(가입 · 시드 · 입점 승인 · 업체 관리자 등록). 아이디 · 휴대폰 번호 유일성은 업체가 없는 계정(이용자 · 관리자)은 그룹 단위, 매니저 그룹은 **업체 단위**다(같은 아이디를 다른 업체에서 쓸 수 있다) — 그래서 매니저 로그인 · 계정 찾기는 업체코드로 업체를 먼저 찾는다(없으면 계정이 없는 것과 같은 404).
 - **그룹 안 권한(적용 — 업체 관리자 라우트 `/api/v1/admin-service/manager/staff…`)**: 그룹 안에서 권한을 더 좁히는 API(예: 업체 총관리자만)는 그룹 가드 뒤에 `RolesGuard` + `@Roles(AUTH_ID.HEAD_MANAGER)`(`guards/roles/roles.decorator.ts`)를 **한 세트로** 붙이고 `@ApiForbiddenResponse` 를 명시한다(`@UseGuards(PassportJwtManagerAuthGuard, RolesGuard)` → `@Roles(...)`) — 불일치 403 `{message: '접근 권한이 없습니다.'}`. 그룹 자체는 그룹 가드가 가르므로 그룹 전체에 열린 라우트에는 `@Roles` 를 붙이지 않는다. service 는 역할을 다시 보지 않고 actor 로 그 계정(업체 총관리자)을 찾아 그 업체만 다룬다.
-- **인증 없는 공개 라우트(적용 — 예약 가능 시간 `/api/v1/user-service/reservation/availability`, 업체 둘러보기 `/api/v1/user-service/discovery/store` · `/store/:store_id` · `/store/:store_id/room-group`)**: 로그인 전 둘러보기용이라 가드를 붙이지 않는다. 서비스 쪽 전역 InternalAuthGuard(게이트웨이 내부 토큰)는 그대로다. 문 쪽 타 업체 프로그램은 HTTP 라우트가 아니라 문 소켓(`/ws/v1/door` — 업체 ID + 시크릿 헤더, 아래 "실시간 소켓")으로 붙는다.
+- **인증 없는 공개 라우트(적용 — 예약 가능 시간 `/api/v1/user-service/reservation/availability`, 업체 둘러보기 `/api/v1/user-service/discovery/store` · `/store/:store_id` · `/store/:store_id/room-group`, 매니저 로그인용 업체 조회 `/api/v1/admin-service/store/login-store/:store_code`)**: 로그인 전 둘러보기 · 로그인 화면용이라 가드를 붙이지 않는다. 매니저 로그인용 업체 조회는 업체코드를 이미 아는 사람만 그 업체 이름 · ID 를 받는다(업체코드는 지금처럼 그 업체 사람만 안다). 서비스 쪽 전역 InternalAuthGuard(게이트웨이 내부 토큰)는 그대로다. 문 쪽 타 업체 프로그램은 HTTP 라우트가 아니라 문 소켓(`/ws/v1/door` — 업체 ID + 시크릿 헤더, 아래 "실시간 소켓")으로 붙는다.
 - **미적용 규약(정의만 있고 사용 0)**: 게이트웨이 안에서만 쓰는 회원 값은 `@PassportUser('user_id')`.
 - 서비스 내부 HTTP 의 로그인 회원은 `@InternalActor('user_id') user_id: string`(게이트웨이가 actor 헤더로 넘긴다 — user-service store 내 신청 · reservation 내 예약 · admin-service room · store 내 업체 · reservation 업체 현황 · manager 업체 관리자 · stats 내 업체 통계 라우트).
 - 서비스 내부 HTTP 의 클라이언트 IP 는 `@ClientIp()`.

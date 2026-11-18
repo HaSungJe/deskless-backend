@@ -17,6 +17,7 @@ import {StoreApplicationDetailParamDto, StoreApplicationDetailResultDto} from '@
 import {StoreApplicationListDto, StoreApplicationListResultDto} from '@app/contracts/store/dto/store-application-list.dto.js';
 import {StoreDetailParamDto, StoreDetailResultDto} from '@app/contracts/store/dto/store-detail.dto.js';
 import {StoreListDto, StoreListResultDto} from '@app/contracts/store/dto/store-list.dto.js';
+import {StoreLoginStoreParamDto, StoreLoginStoreResultDto} from '@app/contracts/store/dto/store-login-store.dto.js';
 import {StoreMineFileUploadUrlDto, StoreMineFileUploadUrlResultDto} from '@app/contracts/store/dto/store-mine-file-upload-url.dto.js';
 import {StoreMineUnavailablePeriodListDto, StoreMineUnavailablePeriodListResultDto} from '@app/contracts/store/dto/store-mine-unavailable-period-list.dto.js';
 import {StoreMineResultDto} from '@app/contracts/store/dto/store-mine.dto.js';
@@ -28,7 +29,7 @@ import {InternalHttpClient} from '../../../../../modules/transport/internal-http
 
 /**
  * 업체 공개 API — 동기 경로(내부 HTTP → admin-service store 도메인). 조회 · 업로드 주소.
- * 내 업체 라우트(/mine…)는 매니저 가드, 나머지는 관리자 가드(이용자의 내 신청은 /api/v1/user-service/store). `/mine…` · `/application…` 를 `/:store_id` 보다 먼저 선언한다.
+ * 내 업체 라우트(/mine…)는 매니저 가드, 매니저 로그인용 업체 조회(/login-store/:store_code)는 가드 없음(로그인 전 화면), 나머지는 관리자 가드(이용자의 내 신청은 /api/v1/user-service/store). `/mine…` · `/application…` · `/login-store…` 를 `/:store_id` 보다 먼저 선언한다.
  * 큐 경로(승인 · 반려 · 수정 · 상태 · 영업중 여부 · 내 업체 설정)는 같은 경로 접두의 store.controller.queue.ts(StoreQueueController)에 둔다.
  */
 @ApiTags('업체')
@@ -128,6 +129,21 @@ export class StoreController {
     @ApiInternalServerErrorResponse({type: ApiFailResultDto})
     async getApplication(@PassportActor() actor: Actor, @Param() param: StoreApplicationDetailParamDto): Promise<StoreApplicationDetailResultDto> {
         return this.internalHttp.request<StoreApplicationDetailResultDto>('admin', 'GET', STORE_INTERNAL_PATH.application(param.store_application_id), {actor});
+    }
+
+    /**
+     * 매니저 로그인용 업체 조회 (로그인 없음) — 업체코드 → 업체 ID · 업체코드 · 업체명. 없는 · 탈퇴 업체(모양이 틀린 코드 포함) 404, 영업중지 400 + 정지 사유(suspend_comment)
+     */
+    @Get('/login-store/:store_code')
+    @HttpCode(200)
+    @ApiOperation({summary: '매니저 로그인용 업체 조회'})
+    @ApiOkResponse({type: StoreLoginStoreResultDto})
+    @ApiBadRequestResponse({type: ApiFailResultDto})
+    @ApiNotFoundResponse({type: ApiFailResultDto})
+    @ApiServiceUnavailableResponse({type: ApiFailResultDto})
+    @ApiInternalServerErrorResponse({type: ApiFailResultDto})
+    async getLoginStore(@Param() param: StoreLoginStoreParamDto): Promise<StoreLoginStoreResultDto> {
+        return this.internalHttp.request<StoreLoginStoreResultDto>('admin', 'GET', STORE_INTERNAL_PATH.loginStore(param.store_code));
     }
 
     /**
