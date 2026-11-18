@@ -133,7 +133,10 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
 
     describe('[SUCCESS]', () => {
         it('대표 사진 키는 CDN 공개 주소로, 없으면 null — 잘림 판단용으로 301개를 묻는다', async () => {
-            repo.findStoreRows.mockResolvedValueOnce([storeRow(), storeRow({store_id: STORE_ID_2, store_name: '루미 역삼점', distance_m: 2500, cover_file_key: null, min_hourly_price: null})]);
+            repo.findStoreRows.mockResolvedValueOnce([
+                storeRow(),
+                storeRow({store_id: STORE_ID_2, store_name: '루미 역삼점', distance_m: 2500, cover_file_key: null, cover_file_storage: null, min_hourly_price: null}),
+            ]);
 
             const res = await request(app.getHttpServer())
                 .get(PATH)
@@ -173,13 +176,15 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
                 is_truncated: 0,
             });
             expect(storage.getPublicUrl).toHaveBeenCalledTimes(1);
-            expect(storage.getPublicUrl).toHaveBeenCalledWith(`store/${STORE_ID}/cover.jpg`);
+            expect(storage.getPublicUrl).toHaveBeenCalledWith({file_key: `store/${STORE_ID}/cover.jpg`, file_storage: 'LOCAL'});
             expect(repo.findStoreRows).toHaveBeenCalledTimes(1);
             expect(repo.findStoreRows.mock.calls[0][1]).toBe(301);
         });
 
         it('301행이면 앞 300개만 · is_truncated 1', async () => {
-            repo.findStoreRows.mockResolvedValueOnce(Array.from({length: 301}, (_, index) => storeRow({store_id: index.toString(16).padStart(32, '0'), cover_file_key: null})));
+            repo.findStoreRows.mockResolvedValueOnce(
+                Array.from({length: 301}, (_, index) => storeRow({store_id: index.toString(16).padStart(32, '0'), cover_file_key: null, cover_file_storage: null})),
+            );
 
             const res = await request(app.getHttpServer())
                 .get(PATH)

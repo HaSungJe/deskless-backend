@@ -24,13 +24,14 @@ export interface RoomPlanRow {
     max_extensions: number;
 }
 
-/** 객실 그룹 목록 행 — 그룹 컬럼 + 지워지지 않은 호실 수 · 대표 사진(지워지지 않은 사진 중 정렬 순서 · 등록일이 가장 앞) 저장 키 (QueryBuilder raw — 서브쿼리) */
+/** 객실 그룹 목록 행 — 그룹 컬럼 + 지워지지 않은 호실 수 · 대표 사진(지워지지 않은 사진 중 정렬 순서 · 등록일이 가장 앞) 저장 키 · 저장소 (QueryBuilder raw — 서브쿼리) */
 export interface RoomGroupRow {
     room_group_id: string;
     room_group_name: string;
     created_at: Date;
     room_count: number;
     cover_file_key: string | null;
+    cover_file_storage: string | null;
 }
 
 /** 그룹 상품 조회 행 — 그룹 상품 컬럼 + 상품 종류명 (QueryBuilder raw — t_room_plan_type 조인) */

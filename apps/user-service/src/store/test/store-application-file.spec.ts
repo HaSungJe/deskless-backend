@@ -51,6 +51,7 @@ describe('user.store.application-file — 업체 정보 파일 등록 (큐 경�
                 store_application_id: APPLICATION_ID,
                 store_id: null,
                 file_key: LICENSE_KEY,
+                file_storage: 'LOCAL',
                 file_name: '사업자등록증.jpg',
                 content_type: 'image/jpeg',
                 sort_order: 0,

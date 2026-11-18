@@ -216,7 +216,10 @@ export class RoomService {
         const total_count = await this.roomRepository.countRoomGroups(where);
         const pagination = new Pagination({...dto, total_count});
         const rows = await this.roomRepository.findRoomGroupRows(where, pagination.limit, pagination.offset);
-        return {list: rows.map((row) => toRoomGroupListItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl(row.cover_file_key) : null)), pagination: pagination.getPagination()};
+        return {
+            list: rows.map((row) => toRoomGroupListItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl({file_key: row.cover_file_key, file_storage: row.cover_file_storage}) : null)),
+            pagination: pagination.getPagination(),
+        };
     }
 
     /**
@@ -239,7 +242,7 @@ export class RoomService {
         const plans = await this.roomRepository.findRoomGroupPlanRows(room_group_id);
         return toRoomGroupDetail(
             group,
-            images.map((image) => toRoomGroupImageItem(image, this.storageGateway.getPublicUrl(image.file_key))),
+            images.map((image) => toRoomGroupImageItem(image, this.storageGateway.getPublicUrl(image))),
             sortByPlanType(plans).map(toRoomGroupPlanItem),
         );
     }
@@ -353,7 +356,7 @@ export class RoomService {
 
         // 6. 저장소 파일 삭제 (마지막)
         for (const image of images) {
-            await this.storageGateway.remove(image.file_key);
+            await this.storageGateway.remove(image);
         }
     }
 
@@ -437,6 +440,7 @@ export class RoomService {
         image.room_group_image_id = generateId();
         image.room_group_id = group.room_group_id;
         image.file_key = dto.file_key;
+        image.file_storage = this.storageGateway.getUploadStorage();
         image.file_name = dto.file_name;
         image.content_type = dto.content_type;
         image.sort_order = nextSortOrder(images);
@@ -514,7 +518,7 @@ export class RoomService {
 
         // 4. 행 소프트 삭제 → 저장소 파일 삭제(마지막)
         await this.roomRepository.deleteRoomGroupImage({room_group_image_id: image.room_group_image_id});
-        await this.storageGateway.remove(image.file_key);
+        await this.storageGateway.remove(image);
     }
 
     /**

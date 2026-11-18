@@ -59,3 +59,44 @@
 - 실제 기동 확인은 사용자 몫 — `cp .env.example .env`(로컬 기본값 — 이미 `.env` 가 있으면 포트 · 주소(`USER_SERVICE_PORT=3010` · `ADMIN_SERVICE_PORT=3020` · `USER_SERVICE_URL` · `ADMIN_SERVICE_URL` · `CORS_ORIGINS` · `USER_WEB_URL`) · `GATEWAY_PUBLIC_URL` · `SEED_SAMPLE_DATA=1` 을 맞춘다) → `npm run docker:network`(볼륨) → `npm run docker:up`(이미지 다시 빌드 — Dockerfile 폴더 소유자 · assets · nginx 포트 포함).
 - 이미 Docker 로 띄운 적 있는 환경은 `docker:network` 를 한 번 더 돌려야 볼륨이 생긴다(없으면 compose 가 external 볼륨이 없다고 띄우지 않는다).
 - 나중에 S3 를 켜면 내부 저장소에 올린 파일은 S3 에 없다(옮기지 않음) · IAM 역할만으로 돌리면 SMS 는 생략된다 — 가이드에 적음.
+
+## Modification - 261118-1
+
+### Change summary
+S3 로 바꾼 뒤에도 내부 파일 저장소에 올린 사진을 계속 연다(사용자 결정 2026-11-18 — 파일 테이블에 구분값). 파일 행(`t_store_file` · `t_room_group_image`)에 올릴 때의 저장소 `file_storage`(`S3` · `LOCAL`, 기본 `LOCAL`)를 적고, 저장소 포트 `STORAGE_GATEWAY` 를 `RoutingStorageGateway` 하나로 — 업로드 주소 · 업로드 확인은 지금 업로드 저장소, 공개 주소 · 열람 주소 · 삭제는 파일 행의 저장소로 보낸다. 샘플 키(`sample/`) 분기는 두 어댑터에서 빼 라우터 한 곳으로. 게이트웨이 `/files` 는 늘 붙이고 S3 모드에서는 읽기만(업로드 404). 공개 API 모양은 그대로(프론트 수정 요청 문서 대상 아님).
+
+### Changed files
+| File | Change Type | Description |
+|------|-----------|------|
+| `libs/database/src/entities/store/store-file.entity.ts` · `entities/room/room-group-image.entity.ts` | modified | `file_storage` varchar(10) NOT NULL DEFAULT `'LOCAL'` + 주석 |
+| `libs/database/src/migrations/1794961426515-FileStorage.ts` · `migrations.ts` | created · modified | `npm run db:generate -- FileStorage` 결과(두 테이블 ADD COLUMN · COMMENT) — 기존 행은 기본값으로 `LOCAL`. 적용은 사용자 |
+| `libs/database/src/seeder/sample-seed.targets.ts` | modified | 업체 사진 · 그룹 사진 시드 행 `file_storage = 'LOCAL'` |
+| `libs/integration/src/integration.constants.ts` | modified | `FILE_STORAGE` |
+| `libs/integration/src/interfaces/integration.interface.ts` | modified | `FileStorage` · `StoredFile` · 포트(`getUploadStorage` · 행을 받는 세 메서드) · 어댑터용 `StorageBackendInterface` |
+| `libs/integration/src/storage/routing-storage.gateway.ts` | created | `RoutingStorageGateway` — 두 어댑터를 들고 나눠 보냄 · 샘플 키 · 업로드 저장소 어댑터만 부팅 안내 |
+| `libs/integration/src/storage/s3-storage.gateway.ts` · `local-storage.gateway.ts` | modified | `StorageBackendInterface` 구현, 샘플 키 분기 삭제 · 주석 |
+| `libs/integration/src/storage/storage.module.ts` | modified | `useClass: RoutingStorageGateway`(`useFactory` 삭제) |
+| `apps/gateway/src/modules/local-file/local-file.server.ts` · `local-file.module.ts` · `gateway.module.ts` | modified | 경로 늘 붙임 · S3 모드 업로드는 다음 처리(404) · 시작 로그 "읽기만" · 주석 |
+| `apps/admin-service/src/room/room.service.ts` · `repositories/room.repository.ts` · `interfaces/room.repository.interface.ts` | modified | 대표 사진 `{file_key, file_storage}` · 사진 행 그대로 넘김 · 등록 `getUploadStorage()` · `cover_file_storage` 하위 쿼리 · `RoomGroupRow` |
+| `apps/admin-service/src/store/store.service.ts` · `repositories/store.repository.ts` · `interfaces/store.repository.interface.ts` | modified | 열람 · 공개 주소 · 삭제에 행 · 등록 `getUploadStorage()` · 파일 행 select `file_storage` · `StoreFileRow` |
+| `apps/user-service/src/discovery/discovery.service.ts` · `repositories/discovery.repository.ts` · `interfaces/discovery.repository.interface.ts` | modified | 반경 업체 대표 사진 · 업체 · 그룹 사진에 행 · `cover_file_storage` 하위 쿼리 · `DiscoveryStoreRow` |
+| `apps/user-service/src/store/store.service.ts` · `repositories/store.repository.ts` · `interfaces/store.repository.interface.ts` | modified | 내 신청 열람 · 공개 주소 · 파일 삭제 · 신청 취소에 행 · 등록 `getUploadStorage()` · 파일 행 select `file_storage` · `StoreFileRow` |
+| `docs/guides/aws-setup.md` · `docs/integration.md` · `docs/architecture.md` · `docs/data-layer.md` · `AGENTS.md` · `README.md` | modified | S3 로 바꿔도 옛 사진은 그대로 열림 · 옮기는 법(볼륨 → 버킷 + UPDATE) · 라우터 · `/files` 읽기 · 룩업 없는 코드 값 컬럼 · 체크리스트 |
+
+### Tests written
+- 도우미 4곳(`room` · admin `store` · user `store` · `discovery` `*.test-helper.ts`): 저장소 mock 에 `getUploadStorage`(기본 `'LOCAL'`), `getPublicUrl` · `createDownloadUrl` mock 은 파일 행을 받아 `file_key` 로 주소를 만든다(응답 주소 값은 예전과 같다), 행 생성 함수에 `file_storage` · `cover_file_storage`.
+- service spec: 저장소 호출 단언을 키 문자열 → 파일 행(`expect.objectContaining({file_key, file_storage: 'LOCAL'})`, 대표 사진은 `{file_key, file_storage}` 그대로) — 신청 상세 · 내 업체 · 내 신청 · 업체 사진 삭제 · 신청 파일 삭제 · 신청 취소 · 그룹 상세 · 그룹 목록 · 그룹 사진 삭제 · 그룹 삭제 · 반경 업체. 등록 3곳(그룹 사진 · 업체 사진 · 신청 파일) insert 엔티티에 `file_storage: 'LOCAL'`.
+- **[SUCCESS] 업로드 저장소가 S3 면 등록 행에 S3 를 적는다** — `room-group-image.spec.ts` 1건(새 사례).
+- repository spec(Data-Access Smoke): 객실 그룹 목록 · 반경 업체의 `cover_file_storage` 하위 쿼리 SQL · 행 키 목록, 그룹 사진 엔티티 select 에 `i_file_storage`, 두 store 파일 행 select 에 `file_storage` · 별칭 목록.
+- 라우터 · 두 어댑터 · 게이트웨이 `/files` 는 spec 없음(revision 의 테스트 생략(위임형) — libs · 게이트웨이 인프라) → scratchpad 점검으로 확인.
+
+### Verification
+- `npm run typecheck` · `npm run lint` 통과, prettier(바꾼 파일) 통과 — 남은 경고는 이번에 건드리지 않은 기존 파일(`apps/*/tsconfig.app.json` 4개 · `apps/scheduler/src/user/test/user.repository.spec.ts`).
+- `npm run db:check` — 엔티티와 마이그레이션 일치. `npm run build`(네 앱) 통과.
+- `npm test` — 123 파일 · 1,355건 통과(이번 회차 실행 — AGENTS.md 가 Claude 실행을 허용).
+- scratchpad `check-routing.mjs`(빌드 결과 — 앱 기동 아님, 전부 통과): 버킷 없음 → 업로드 `LOCAL` · 게이트웨이 업로드 주소 · `LOCAL` 공개 주소 · 샘플 `/sample/` · 구분 없는 행은 내부. 버킷 있음 → 업로드 `S3` · S3 presigned 업로드 주소 · `S3` 행 CDN 주소 · **`LOCAL` 행은 계속 게이트웨이 주소 · 서명 열람** · `S3` 행 S3 presigned 열람, 삭제는 `LOCAL` 행 → 폴더 파일 지움(S3 호출 없음) · `S3` 행 → `DeleteObject` · 샘플 건너뜀, 업로드 확인 → `HeadObject`. 게이트웨이 S3 모드 → 시작 로그 "읽기만" · 업로드 404 · 저장 안 함 · 옛 공개 파일 200 · 옛 비공개 서명 열람 200. 시드 업체 사진 · 그룹 사진 행 모두 `LOCAL`.
+- 기존 점검 `check-local-file.mjs` 통과, `check-sample.mjs` 는 샘플 공개 주소 확인을 어댑터 → 라우터로 옮겨(어댑터는 샘플을 가르지 않음도 확인) 통과.
+
+### Remaining issues
+- 마이그레이션 적용은 사용자 몫 — `npm run docker:user-service`(migrate 컨테이너가 `FileStorage` 를 적용, 기존 행은 `LOCAL`) → 나머지 앱 이미지 다시 빌드(`npm run docker:up`). 로컬 실행이면 `npm run db:migrate`.
+- 옛 사진을 S3 로 옮기는 일(볼륨 → 버킷 + `UPDATE … file_storage = 'S3'`)은 자동으로 하지 않는다 — aws-setup.md 에 방법만 적음. 옮기기 전까지 볼륨 `roomless-files` 를 지우지 않는다.

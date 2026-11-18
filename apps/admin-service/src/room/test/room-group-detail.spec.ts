@@ -61,8 +61,8 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
             expect(repo.findRoomGroupImages).toHaveBeenCalledWith(ROOM_GROUP_ID);
             expect(repo.findRoomGroupPlanRows).toHaveBeenCalledWith(ROOM_GROUP_ID);
             expect(storage.getPublicUrl).toHaveBeenCalledTimes(2);
-            expect(storage.getPublicUrl).toHaveBeenNthCalledWith(1, IMAGE_KEY);
-            expect(storage.getPublicUrl).toHaveBeenNthCalledWith(2, KEY_B);
+            expect(storage.getPublicUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
+            expect(storage.getPublicUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({file_key: KEY_B, file_storage: 'LOCAL'}));
             expect(storage.createDownloadUrl).not.toHaveBeenCalled();
             expect(res.body).toEqual({
                 room_group_id: ROOM_GROUP_ID,

@@ -253,7 +253,7 @@ describe('[SMOKE:data-access] 목록 · 파일 조회 · 파일 업체 지정 ·
 
     const FILE_SELECT =
         'SELECT "f"."store_file_id" AS "store_file_id", "f"."store_file_purpose_id" AS "store_file_purpose_id", "f"."store_application_id" AS "store_application_id", ' +
-        '"f"."store_id" AS "store_id", "f"."file_key" AS "file_key", "f"."file_name" AS "file_name", "f"."content_type" AS "content_type", "f"."sort_order" AS "sort_order", ' +
+        '"f"."store_id" AS "store_id", "f"."file_key" AS "file_key", "f"."file_storage" AS "file_storage", "f"."file_name" AS "file_name", "f"."content_type" AS "content_type", "f"."sort_order" AS "sort_order", ' +
         '"f"."created_at" AS "created_at", "p"."is_private" AS "is_private" FROM "t_store_file" "f" INNER JOIN "t_store_file_purpose" "p" ON "p"."store_file_purpose_id" = "f"."store_file_purpose_id"';
 
     const FILE_ORDER = 'ORDER BY "f"."store_file_purpose_id" ASC, "f"."sort_order" ASC, "f"."created_at" ASC';
@@ -314,7 +314,19 @@ describe('[SMOKE:data-access] 목록 · 파일 조회 · 파일 업체 지정 ·
         const [sql] = repository.buildStoreFileRowsQuery('store_id', 's1').getQueryAndParameters();
         const aliases = [...sql.matchAll(/ AS "([a-z_]+)"/g)].map((m) => m[1]);
 
-        expect(aliases).toEqual(['store_file_id', 'store_file_purpose_id', 'store_application_id', 'store_id', 'file_key', 'file_name', 'content_type', 'sort_order', 'created_at', 'is_private']);
+        expect(aliases).toEqual([
+            'store_file_id',
+            'store_file_purpose_id',
+            'store_application_id',
+            'store_id',
+            'file_key',
+            'file_storage',
+            'file_name',
+            'content_type',
+            'sort_order',
+            'created_at',
+            'is_private',
+        ]);
     });
 
     it('승인 — 신청의 지워지지 않은 업체 정보 파일 행에 store_id · 수정일을 채운다', () => {

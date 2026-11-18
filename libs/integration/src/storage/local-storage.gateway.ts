@@ -2,24 +2,25 @@ import {rm, stat} from 'node:fs/promises';
 import {Injectable, InternalServerErrorException, Logger, OnApplicationBootstrap, ServiceUnavailableException} from '@nestjs/common';
 import {dayjs} from '@app/common/utils/dayjs.js';
 import {LOCAL_FILE_ROUTE, STORAGE_DOWNLOAD_URL_TTL_SECONDS, STORAGE_PUBLIC_URL_MISSING_MESSAGE, STORAGE_UNAVAILABLE_MESSAGE, STORAGE_UPLOAD_URL_TTL_SECONDS} from '../integration.constants.js';
-import {gatewayPublicUrl, isSampleFileKey} from '../integration.util.js';
-import type {StorageDownloadResult, StorageGatewayInterface, StorageUploadInput, StorageUploadResult} from '../interfaces/integration.interface.js';
+import {gatewayPublicUrl} from '../integration.util.js';
+import type {StorageBackendInterface, StorageDownloadResult, StorageUploadInput, StorageUploadResult} from '../interfaces/integration.interface.js';
 import {localFileStorageDir, resolveLocalFilePath, signLocalFileRequest} from './local-storage.util.js';
 import type {LocalFileRequest} from './local-storage.util.js';
 
 /**
- * 파일 저장소 어댑터 — 내부 파일 저장소(AWS_S3_BUCKET 이 비었을 때 — 사용자 결정 2026-11-15). 실제로 저장 · 제공한다(가짜 저장소가 아니다).
+ * 파일 저장소 어댑터 — 내부 파일 저장소. 실제로 저장 · 제공한다(가짜 저장소가 아니다).
+ * 저장소 포트(RoutingStorageGateway)가 AWS_S3_BUCKET 이 빌 때 업로드 저장소로(사용자 결정 2026-11-15), 버킷이 있어도 file_storage 가 LOCAL 인 행(S3 로 바꾸기 전에 올린 파일)을 읽고 지울 때 쓴다(사용자 결정 2026-11-18). 샘플 키는 라우터가 맡는다.
  * 파일은 FILE_STORAGE_DIR(기본 storage/files — Docker 는 공용 볼륨 roomless-files)에 있고, 받기 · 내주기는 게이트웨이 /files(modules/local-file), 확인 · 삭제는 이 어댑터가 같은 폴더에서 한다.
  * 업로드 · 열람 주소는 INTERNAL_API_TOKEN 으로 서명한다(S3 presigned 와 같은 쓰임 — 10분, 업로드는 Content-Type 까지). 키 · DB 행 모양은 S3 와 같다.
  * 세팅: docs/guides/aws-setup.md "AWS 없이 돌리기"
  */
 @Injectable()
-export class LocalStorageGateway implements StorageGatewayInterface, OnApplicationBootstrap {
+export class LocalStorageGateway implements StorageBackendInterface, OnApplicationBootstrap {
     private readonly logger = new Logger(LocalStorageGateway.name);
     private readonly root = localFileStorageDir();
 
     /**
-     * 내부 파일 저장소를 쓴다고 부팅 때 한 번 알리고, GATEWAY_PUBLIC_URL 이 비어 있으면 경고한다. 부팅은 막지 않고 파일 주소 요청만 실패한다.
+     * 내부 파일 저장소를 업로드 저장소로 쓴다고 부팅 때 한 번 알리고(그때만 라우터가 부른다), GATEWAY_PUBLIC_URL 이 비어 있으면 경고한다. 부팅은 막지 않고 파일 주소 요청만 실패한다.
      */
     onApplicationBootstrap(): void {
         this.logger.log(`AWS_S3_BUCKET 이 비어 있어 내부 파일 저장소를 씁니다 — ${this.root} (게이트웨이 ${LOCAL_FILE_ROUTE})`);
@@ -64,7 +65,7 @@ export class LocalStorageGateway implements StorageGatewayInterface, OnApplicati
     }
 
     /**
-     * 공개 주소 — GATEWAY_PUBLIC_URL + `/files/<키>`. 샘플 키는 `/sample/…`(게이트웨이 정적 경로).
+     * 공개 주소 — GATEWAY_PUBLIC_URL + `/files/<키>`.
      *
      * @param key 저장 키
      * @returns 공개 주소
@@ -76,7 +77,7 @@ export class LocalStorageGateway implements StorageGatewayInterface, OnApplicati
             this.logger.error('GATEWAY_PUBLIC_URL 이 비어 있어 파일 공개 주소를 만들 수 없습니다 — docs/guides/aws-setup.md');
             throw new InternalServerErrorException({message: STORAGE_PUBLIC_URL_MISSING_MESSAGE});
         }
-        return isSampleFileKey(key) ? `${base}/${key}` : `${base}${LOCAL_FILE_ROUTE}/${key}`;
+        return `${base}${LOCAL_FILE_ROUTE}/${key}`;
     }
 
     /**
@@ -93,15 +94,12 @@ export class LocalStorageGateway implements StorageGatewayInterface, OnApplicati
     }
 
     /**
-     * 파일을 지운다 — 없어도 성공. 샘플 키는 저장소(게이트웨이 assets)에 든 파일이라 지우지 않는다(행 소프트 삭제만).
+     * 파일을 지운다 — 없어도 성공.
      *
      * @param key 저장 키
      * @throws ServiceUnavailableException 파일 시스템 오류
      */
     async remove(key: string): Promise<void> {
-        if (isSampleFileKey(key)) {
-            return;
-        }
         const path = resolveLocalFilePath(this.root, key);
         if (!path) {
             return;

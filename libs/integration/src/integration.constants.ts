@@ -66,3 +66,6 @@ export const LOCAL_FILE_TOO_LARGE_MESSAGE = '파일은 10MB 이하만 올릴 수
 
 /** 내부 파일 저장소 — 열람할 파일이 없음 */
 export const LOCAL_FILE_NOT_FOUND_MESSAGE = '파일을 찾을 수 없습니다.';
+
+/** 파일 저장소 구분 — 파일 행(t_store_file · t_room_group_image)의 file_storage. 업로드는 AWS_S3_BUCKET 이 있으면 S3, 비면 LOCAL — S3 로 바꾼 뒤에도 LOCAL 행은 내부 파일 저장소(게이트웨이 /files)에서 연다 */
+export const FILE_STORAGE = {S3: 'S3', LOCAL: 'LOCAL'} as const;

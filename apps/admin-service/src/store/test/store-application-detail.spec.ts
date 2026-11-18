@@ -49,7 +49,7 @@ describe('GET /internal/v1/admin-service/store/application/:store_application_id
             expect(repo.findApplication).toHaveBeenCalledWith({store_application_id: APPLICATION_ID});
             expect(repo.findStore).toHaveBeenCalledWith({store_id: 'b'.repeat(32)});
             expect(repo.findApplicant).toHaveBeenCalledWith(USER_ACTOR.user_id);
-            expect(storage.createDownloadUrl).toHaveBeenCalledWith(LICENSE_KEY);
+            expect(storage.createDownloadUrl).toHaveBeenCalledWith(expect.objectContaining({file_key: LICENSE_KEY, file_storage: 'LOCAL'}));
             expect(storage.getPublicUrl).not.toHaveBeenCalled();
             expect(res.body).toMatchObject({
                 store_application_id: APPLICATION_ID,

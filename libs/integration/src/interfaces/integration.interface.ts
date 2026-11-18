@@ -44,46 +44,80 @@ export interface StorageDownloadResult {
     expires_at: Date;
 }
 
+/** 파일 저장소 구분 — 파일 행(t_store_file · t_room_group_image)의 file_storage (integration.constants.ts FILE_STORAGE 값) */
+export type FileStorage = 'S3' | 'LOCAL';
+
+/** 저장소에 있는 파일 하나 — 파일 행의 저장 키 + 저장소 구분(엔티티 · 조회 행을 그대로 넘긴다, 구분이 없으면 LOCAL 로 본다) */
+export interface StoredFile {
+    file_key: string;
+    file_storage: string | null;
+}
+
 /**
  * 파일 저장소 포트 — 공개 파일(업체 · 객실 그룹 사진 — 공개 주소)과 비공개 파일(사업자등록증 — private/, 서명된 열람 주소).
- * 어댑터는 S3(AWS_S3_BUCKET 이 있을 때 — CDN 공개 주소) 또는 내부 파일 저장소(비었을 때 — 게이트웨이 /files).
+ * 새 파일은 지금 업로드 저장소(AWS_S3_BUCKET 이 있으면 S3, 비면 내부 파일 저장소 — 게이트웨이 /files)로 올리고, 그 값(getUploadStorage)을 파일 행 file_storage 에 적는다.
+ * 읽기 · 삭제는 행의 file_storage 를 따른다 — S3 로 바꾼 뒤에도 그 전에 올린 LOCAL 행은 내부에서 연다(사용자 결정 2026-11-18).
  * 어느 쪽이든 클라이언트가 createUploadUrl 의 주소로 직접 올리고, 등록 명령에는 키만 보낸다(파일 본문은 서비스 · 브로커를 거치지 않는다).
  */
 export interface StorageGatewayInterface {
     /**
-     * 키 하나에 쓸 1회용 업로드 주소를 발급한다.
+     * 새 파일을 올리는 저장소 — 파일 행을 등록할 때 file_storage 에 넣는다.
+     */
+    getUploadStorage(): FileStorage;
+
+    /**
+     * 지금 업로드 저장소에 키 하나에 쓸 1회용 업로드 주소를 발급한다.
      *
      * @throws ServiceUnavailableException `{message: STORAGE_UNAVAILABLE_MESSAGE}` — 저장소에 닿지 못했을 때
      */
     createUploadUrl(input: StorageUploadInput): Promise<StorageUploadResult>;
 
     /**
-     * 클라이언트가 그 키로 실제로 올렸는지 확인한다 — 사진 등록 명령에서 저장 전에 부른다.
+     * 클라이언트가 그 키로 지금 업로드 저장소에 실제로 올렸는지 확인한다 — 사진 등록 명령에서 저장 전에 부른다.
      *
      * @throws ServiceUnavailableException `{message: STORAGE_UNAVAILABLE_MESSAGE}` — 저장소에 닿지 못했을 때
      */
     exists(key: string): Promise<boolean>;
 
     /**
-     * 화면에 보일 공개 주소 — 저장소에 묻지 않고 키로 만든다.
+     * 화면에 보일 공개 주소 — 저장소에 묻지 않고 행의 키 · 저장소로 만든다(샘플 키는 게이트웨이 /sample/).
      *
      * @throws InternalServerErrorException `{message: STORAGE_PUBLIC_URL_MISSING_MESSAGE}` — 설정된 공개 주소가 없을 때
      */
-    getPublicUrl(key: string): string;
+    getPublicUrl(file: StoredFile): string;
 
     /**
-     * 비공개 파일(private/ 접두 — CDN · 공개 읽기 밖)을 잠깐 볼 수 있는 열람 주소를 발급한다(presigned GET).
+     * 비공개 파일(private/ 접두 — 공개 읽기 밖)을 잠깐 볼 수 있는 열람 주소를 발급한다(행의 저장소대로 — S3 presigned GET · 게이트웨이 서명 주소).
      *
      * @throws ServiceUnavailableException `{message: STORAGE_UNAVAILABLE_MESSAGE}` — 서명하지 못했을 때
      */
-    createDownloadUrl(key: string): Promise<StorageDownloadResult>;
+    createDownloadUrl(file: StoredFile): Promise<StorageDownloadResult>;
 
     /**
-     * 파일을 지운다. 없는 키여도 실패하지 않는다.
+     * 파일을 행의 저장소에서 지운다. 없는 키여도 실패하지 않는다(샘플 키는 건너뛴다).
      *
      * @throws ServiceUnavailableException `{message: STORAGE_UNAVAILABLE_MESSAGE}` — 저장소에 닿지 못했을 때
      */
+    remove(file: StoredFile): Promise<void>;
+}
+
+/**
+ * 저장소 하나의 어댑터(S3StorageGateway · LocalStorageGateway) — 저장소 포트(RoutingStorageGateway)만 쓴다. 키를 받는다.
+ * 실패 계약은 저장소 포트와 같다(주소 발급 · 확인 · 삭제 503, 공개 주소 기준 없음 500).
+ */
+export interface StorageBackendInterface {
+    /** 키 하나의 1회용 업로드 주소 */
+    createUploadUrl(input: StorageUploadInput): Promise<StorageUploadResult>;
+    /** 그 키로 올라왔는지 */
+    exists(key: string): Promise<boolean>;
+    /** 공개 주소 */
+    getPublicUrl(key: string): string;
+    /** 비공개 파일 열람 주소 */
+    createDownloadUrl(key: string): Promise<StorageDownloadResult>;
+    /** 파일 삭제(없어도 성공) */
     remove(key: string): Promise<void>;
+    /** 부팅 안내 — 업로드 저장소일 때만 라우터가 부른다 */
+    onApplicationBootstrap(): void;
 }
 
 /** 문 상태 — DOOR_STATE 값 */

@@ -134,7 +134,7 @@ export class StoreService {
         const rows = await this.storeRepository.findApplicationFileRows(store_application_id);
         const files: StoreMyApplicationFileResultDto[] = [];
         for (const row of rows) {
-            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row.file_key)).download_url : this.storageGateway.getPublicUrl(row.file_key);
+            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row)).download_url : this.storageGateway.getPublicUrl(row);
             files.push(toMyApplicationFile(row, file_url));
         }
         return toMyApplicationDetail(application, store?.store_code ?? null, files);
@@ -226,6 +226,7 @@ export class StoreService {
         file.store_application_id = store_application_id;
         file.store_id = null;
         file.file_key = dto.file_key;
+        file.file_storage = this.storageGateway.getUploadStorage();
         file.file_name = dto.file_name;
         file.content_type = dto.content_type;
         file.sort_order = count;
@@ -260,7 +261,7 @@ export class StoreService {
 
         // 3. 행 소프트 삭제 → 저장소 파일 삭제(마지막)
         await this.storeRepository.deleteStoreFile({store_file_id});
-        await this.storageGateway.remove(file.file_key);
+        await this.storageGateway.remove(file);
     }
 
     /**
@@ -293,7 +294,7 @@ export class StoreService {
 
         // 4. 저장소 파일 삭제 (마지막)
         for (const row of rows) {
-            await this.storageGateway.remove(row.file_key);
+            await this.storageGateway.remove(row);
         }
     }
 }

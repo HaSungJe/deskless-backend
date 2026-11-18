@@ -58,7 +58,7 @@ export function createDiscoveryRepositoryMock(): DiscoveryRepositoryMock {
  * @returns mock
  */
 export function createStorageGatewayMock(): StorageGatewayMock {
-    return {getPublicUrl: vi.fn((key: string) => `https://cdn.test/${key}`)};
+    return {getPublicUrl: vi.fn((file: {file_key: string}) => `https://cdn.test/${file.file_key}`)};
 }
 
 /**
@@ -161,6 +161,7 @@ export function storeRow(override: Record<string, unknown> = {}): Record<string,
         longitude: 127.0276,
         distance_m: 1234,
         cover_file_key: `store/${STORE_ID}/cover.jpg`,
+        cover_file_storage: 'LOCAL',
         is_open: 1,
         is_always_open: 0,
         min_hourly_price: 30000,

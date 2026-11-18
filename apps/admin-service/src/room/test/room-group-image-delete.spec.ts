@@ -55,7 +55,7 @@ describe('admin.room.group-image-delete — 그룹 사진 삭제 (큐 경로)', 
             expect(repo.deleteRoomGroupImage).toHaveBeenCalledTimes(1);
             expect(repo.deleteRoomGroupImage).toHaveBeenCalledWith({room_group_image_id: ROOM_GROUP_IMAGE_ID});
             expect(storage.remove).toHaveBeenCalledTimes(1);
-            expect(storage.remove).toHaveBeenCalledWith(IMAGE_KEY);
+            expect(storage.remove).toHaveBeenCalledWith(expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(repo.deleteRoomGroupImage.mock.invocationCallOrder[0]).toBeLessThan(storage.remove.mock.invocationCallOrder[0]);
             expect(repo.updateRoomGroupImage).not.toHaveBeenCalled();
         });

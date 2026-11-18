@@ -206,6 +206,7 @@ export class StoreRepository implements StoreRepositoryInterface {
             .addSelect('f.store_application_id', 'store_application_id')
             .addSelect('f.store_id', 'store_id')
             .addSelect('f.file_key', 'file_key')
+            .addSelect('f.file_storage', 'file_storage')
             .addSelect('f.file_name', 'file_name')
             .addSelect('f.content_type', 'content_type')
             .addSelect('f.sort_order', 'sort_order')

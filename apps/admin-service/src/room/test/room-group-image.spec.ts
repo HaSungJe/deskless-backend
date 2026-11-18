@@ -62,7 +62,8 @@ describe('admin.room.group-image — 그룹 사진 등록 (큐 경로)', () => {
             const inserted = repo.insertRoomGroupImage.mock.calls[0][0] as RoomGroupImageEntity;
             expect(inserted).toBeInstanceOf(RoomGroupImageEntity);
             expect(inserted.room_group_image_id).toMatch(ID_PATTERN);
-            expect(inserted).toMatchObject({room_group_id: ROOM_GROUP_ID, file_key: NEW_KEY, file_name: '침대.jpg', content_type: 'image/jpeg', sort_order: 3, is_deleted: 0});
+            expect(storage.getUploadStorage).toHaveBeenCalledTimes(1);
+            expect(inserted).toMatchObject({room_group_id: ROOM_GROUP_ID, file_key: NEW_KEY, file_storage: 'LOCAL', file_name: '침대.jpg', content_type: 'image/jpeg', sort_order: 3, is_deleted: 0});
             expect(result).toEqual({result: {room_group_image_id: inserted.room_group_image_id}, error: null});
         });
 
@@ -72,6 +73,16 @@ describe('admin.room.group-image — 그룹 사진 등록 (큐 경로)', () => {
             await runCommand(dispatcher, {type: ROOM_COMMAND.GROUP_IMAGE, payload: PAYLOAD, actor: MANAGER_ACTOR});
 
             expect((repo.insertRoomGroupImage.mock.calls[0][0] as RoomGroupImageEntity).sort_order).toBe(0);
+        });
+
+        it('업로드 저장소가 S3 면 등록 행에 S3 를 적는다(주소 · 열람 · 삭제가 이 값을 따른다)', async () => {
+            storage.getUploadStorage.mockReturnValueOnce('S3');
+
+            await runCommand(dispatcher, {type: ROOM_COMMAND.GROUP_IMAGE, payload: PAYLOAD, actor: MANAGER_ACTOR});
+
+            expect(storage.getUploadStorage).toHaveBeenCalledTimes(1);
+            expect(repo.insertRoomGroupImage).toHaveBeenCalledTimes(1);
+            expect((repo.insertRoomGroupImage.mock.calls[0][0] as RoomGroupImageEntity).file_storage).toBe('S3');
         });
     });
 

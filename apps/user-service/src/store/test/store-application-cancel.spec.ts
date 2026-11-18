@@ -52,8 +52,8 @@ describe('user.store.application-cancel — 입점 신청 취소 (큐 경로)', 
             expect(repo.deleteApplication).toHaveBeenCalledWith({store_application_id: APPLICATION_ID, user_id: USER_ACTOR.user_id, store_application_state_id: 'WAIT'});
             expect(repo.deleteApplicationFiles.mock.invocationCallOrder[0]).toBeLessThan(repo.deleteApplication.mock.invocationCallOrder[0]);
             expect(storage.remove).toHaveBeenCalledTimes(2);
-            expect(storage.remove).toHaveBeenNthCalledWith(1, LICENSE_KEY);
-            expect(storage.remove).toHaveBeenNthCalledWith(2, IMAGE_KEY);
+            expect(storage.remove).toHaveBeenNthCalledWith(1, expect.objectContaining({file_key: LICENSE_KEY, file_storage: 'LOCAL'}));
+            expect(storage.remove).toHaveBeenNthCalledWith(2, expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(repo.deleteApplication.mock.invocationCallOrder[0]).toBeLessThan(storage.remove.mock.invocationCallOrder[0]);
         });
 

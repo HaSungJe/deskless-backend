@@ -137,6 +137,19 @@ export class DiscoveryRepository implements DiscoveryRepositoryInterface {
                         .limit(1),
                 'cover_file_key',
             )
+            .addSelect(
+                (sub) =>
+                    sub
+                        .select('"f"."file_storage"')
+                        .from(StoreFileEntity, 'f')
+                        .where('"f"."store_id" = "s"."store_id"')
+                        .andWhere('"f"."store_file_purpose_id" = :image_purpose')
+                        .andWhere('"f"."is_deleted" = 0')
+                        .orderBy('"f"."sort_order"', 'ASC')
+                        .addOrderBy('"f"."created_at"', 'ASC')
+                        .limit(1),
+                'cover_file_storage',
+            )
             .addSelect('s.is_open', 'is_open')
             .addSelect('s.is_always_open', 'is_always_open')
             .addSelect(

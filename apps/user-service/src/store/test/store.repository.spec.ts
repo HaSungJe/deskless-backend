@@ -175,7 +175,7 @@ describe('[SMOKE:data-access] 내 신청 목록 · 신청 파일 조회 · 신�
 
     const FILE_SELECT =
         'SELECT "f"."store_file_id" AS "store_file_id", "f"."store_file_purpose_id" AS "store_file_purpose_id", "f"."store_application_id" AS "store_application_id", ' +
-        '"f"."store_id" AS "store_id", "f"."file_key" AS "file_key", "f"."file_name" AS "file_name", "f"."content_type" AS "content_type", "f"."sort_order" AS "sort_order", ' +
+        '"f"."store_id" AS "store_id", "f"."file_key" AS "file_key", "f"."file_storage" AS "file_storage", "f"."file_name" AS "file_name", "f"."content_type" AS "content_type", "f"."sort_order" AS "sort_order", ' +
         '"f"."created_at" AS "created_at", "p"."is_private" AS "is_private" FROM "t_store_file" "f" INNER JOIN "t_store_file_purpose" "p" ON "p"."store_file_purpose_id" = "f"."store_file_purpose_id"';
 
     const FILE_ORDER = 'ORDER BY "f"."store_file_purpose_id" ASC, "f"."sort_order" ASC, "f"."created_at" ASC';
@@ -200,7 +200,19 @@ describe('[SMOKE:data-access] 내 신청 목록 · 신청 파일 조회 · 신�
 
         expect(parameters).toEqual(['a1']);
         expect(sql.replace(/\s+/g, ' ')).toBe(`${FILE_SELECT} WHERE "f"."store_application_id" = $1 AND "f"."is_deleted" = 0 ${FILE_ORDER}`);
-        expect(aliases).toEqual(['store_file_id', 'store_file_purpose_id', 'store_application_id', 'store_id', 'file_key', 'file_name', 'content_type', 'sort_order', 'created_at', 'is_private']);
+        expect(aliases).toEqual([
+            'store_file_id',
+            'store_file_purpose_id',
+            'store_application_id',
+            'store_id',
+            'file_key',
+            'file_storage',
+            'file_name',
+            'content_type',
+            'sort_order',
+            'created_at',
+            'is_private',
+        ]);
     });
 
     it('신청 취소 — 아직 업체에 붙지 않은(store_id IS NULL) 지워지지 않은 신청 파일만 삭제 표시한다(소프트 삭제 — DELETE 없음)', () => {

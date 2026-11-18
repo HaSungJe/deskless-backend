@@ -66,7 +66,7 @@ export const IMAGE_KEY = `store/${STORE_ID}/room-group/${ROOM_GROUP_ID}/${'2'.re
 export type RoomRepositoryMock = {[K in keyof RoomRepositoryInterface]: Mock};
 
 /** 파일 저장소 포트 mock */
-export type StorageGatewayMock = {createUploadUrl: Mock; exists: Mock; getPublicUrl: Mock; remove: Mock; createDownloadUrl: Mock};
+export type StorageGatewayMock = {getUploadStorage: Mock; createUploadUrl: Mock; exists: Mock; getPublicUrl: Mock; remove: Mock; createDownloadUrl: Mock};
 
 /** 문 정보 포트 mock — 포트 메서드마다 vi.fn() */
 export type DoorStoreMock = {[K in keyof DoorStoreInterface]: Mock};
@@ -141,11 +141,12 @@ export function createDoorStoreMock(): DoorStoreMock {
  */
 export function createStorageGatewayMock(): StorageGatewayMock {
     return {
+        getUploadStorage: vi.fn().mockReturnValue('LOCAL'),
         createUploadUrl: vi.fn().mockResolvedValue({upload_url: 'https://s3.test/upload', expires_at: new Date(2026, 0, 1, 0, 10)}),
         exists: vi.fn().mockResolvedValue(true),
-        getPublicUrl: vi.fn((key: string) => `https://cdn.test/${key}`),
+        getPublicUrl: vi.fn((file: {file_key: string}) => `https://cdn.test/${file.file_key}`),
         remove: vi.fn().mockResolvedValue(undefined),
-        createDownloadUrl: vi.fn((key: string) => Promise.resolve({download_url: `https://s3.test/signed/${key}`, expires_at: new Date(2026, 0, 1, 0, 10)})),
+        createDownloadUrl: vi.fn((file: {file_key: string}) => Promise.resolve({download_url: `https://s3.test/signed/${file.file_key}`, expires_at: new Date(2026, 0, 1, 0, 10)})),
     };
 }
 
@@ -323,7 +324,7 @@ export function planRow(override: Partial<RoomPlanRow> = {}): RoomPlanRow {
  * @returns 그룹 목록 행
  */
 export function roomGroupRow(override: Partial<RoomGroupRow> = {}): RoomGroupRow {
-    return {room_group_id: ROOM_GROUP_ID, room_group_name: '스탠다드', created_at: FIXED_TIME, room_count: 3, cover_file_key: IMAGE_KEY, ...override};
+    return {room_group_id: ROOM_GROUP_ID, room_group_name: '스탠다드', created_at: FIXED_TIME, room_count: 3, cover_file_key: IMAGE_KEY, cover_file_storage: 'LOCAL', ...override};
 }
 
 /**
@@ -357,6 +358,7 @@ export function imageRow(override: Record<string, unknown> = {}): Record<string,
         room_group_image_id: ROOM_GROUP_IMAGE_ID,
         room_group_id: ROOM_GROUP_ID,
         file_key: IMAGE_KEY,
+        file_storage: 'LOCAL',
         file_name: '객실.jpg',
         content_type: 'image/jpeg',
         sort_order: 0,

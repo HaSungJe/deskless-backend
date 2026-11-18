@@ -11,6 +11,7 @@ export interface StoreFileRow {
     store_application_id: string | null;
     store_id: string | null;
     file_key: string;
+    file_storage: string;
     file_name: string;
     content_type: string;
     sort_order: number;

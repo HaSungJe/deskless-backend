@@ -3,23 +3,22 @@ import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
 import {Injectable, InternalServerErrorException, Logger, OnApplicationBootstrap, ServiceUnavailableException} from '@nestjs/common';
 import {dayjs} from '@app/common/utils/dayjs.js';
 import {STORAGE_DOWNLOAD_URL_TTL_SECONDS, STORAGE_PUBLIC_URL_MISSING_MESSAGE, STORAGE_UNAVAILABLE_MESSAGE, STORAGE_UPLOAD_URL_TTL_SECONDS} from '../integration.constants.js';
-import {gatewayPublicUrl, isSampleFileKey} from '../integration.util.js';
-import type {StorageDownloadResult, StorageGatewayInterface, StorageUploadInput, StorageUploadResult} from '../interfaces/integration.interface.js';
+import type {StorageBackendInterface, StorageDownloadResult, StorageUploadInput, StorageUploadResult} from '../interfaces/integration.interface.js';
 
 /**
- * 파일 저장소 어댑터 — Amazon S3(AWS_S3_BUCKET 이 있을 때 — 비면 StorageModule 이 LocalStorageGateway 를 고른다). 업로드는 presigned URL(PutObject, Content-Type 서명)로 클라이언트가 직접 한다.
- * 버킷 AWS_S3_BUCKET, 공개 주소 기준 AWS_S3_PUBLIC_URL, 리전 AWS_REGION, 자격증명은 AWS SDK 기본 체인.
- * 샘플 키(`sample/` — 테스트 데이터 시드 사진)는 S3 에 없다 — 공개 주소는 GATEWAY_PUBLIC_URL 기준, 삭제는 건너뛴다(docs/guides/sample-data.md).
+ * 파일 저장소 어댑터 — Amazon S3. 저장소 포트(RoutingStorageGateway)가 AWS_S3_BUCKET 이 있을 때 업로드 저장소로, file_storage 가 S3 인 행을 읽고 지울 때 쓴다.
+ * 업로드는 presigned URL(PutObject, Content-Type 서명)로 클라이언트가 직접 한다.
+ * 버킷 AWS_S3_BUCKET, 공개 주소 기준 AWS_S3_PUBLIC_URL, 리전 AWS_REGION, 자격증명은 AWS SDK 기본 체인. 샘플 키는 라우터가 맡는다.
  * AWS 세팅: docs/guides/aws-setup.md
  */
 @Injectable()
-export class S3StorageGateway implements StorageGatewayInterface, OnApplicationBootstrap {
+export class S3StorageGateway implements StorageBackendInterface, OnApplicationBootstrap {
     private readonly logger = new Logger(S3StorageGateway.name);
     /** 체크섬은 필요할 때만 — SDK 기본값(WHEN_SUPPORTED)이면 presigned PutObject 주소에 빈 본문의 CRC32 가 박혀 실제 파일 업로드를 S3 가 거부한다 */
     private readonly client = new S3Client({region: process.env.AWS_REGION, requestChecksumCalculation: 'WHEN_REQUIRED'});
 
     /**
-     * AWS_REGION · AWS_S3_PUBLIC_URL 중 비어 있는 값이 있으면 부팅 때 한 번 경고한다(버킷은 있어야 이 어댑터가 골라진다). 부팅은 막지 않고 파일 요청만 실패한다.
+     * AWS_REGION · AWS_S3_PUBLIC_URL 중 비어 있는 값이 있으면 부팅 때 한 번 경고한다(S3 가 업로드 저장소일 때만 라우터가 부른다). 부팅은 막지 않고 파일 요청만 실패한다.
      */
     onApplicationBootstrap(): void {
         if (!process.env.AWS_REGION || !process.env.AWS_S3_PUBLIC_URL) {
@@ -67,21 +66,16 @@ export class S3StorageGateway implements StorageGatewayInterface, OnApplicationB
     }
 
     /**
-     * 공개 주소 — AWS_S3_PUBLIC_URL(끝의 / 는 뗀다) 뒤에 키. 샘플 키는 GATEWAY_PUBLIC_URL(게이트웨이 /sample/ 정적 경로) 뒤에 키.
+     * 공개 주소 — AWS_S3_PUBLIC_URL(끝의 / 는 뗀다) 뒤에 키.
      *
      * @param key 저장 키
      * @returns 공개 주소
-     * @throws InternalServerErrorException 기준 주소(AWS_S3_PUBLIC_URL · 샘플 키면 GATEWAY_PUBLIC_URL)가 비어 있을 때
+     * @throws InternalServerErrorException AWS_S3_PUBLIC_URL 이 비어 있을 때 — 설정된 공개 주소가 없다
      */
     getPublicUrl(key: string): string {
-        const sample = isSampleFileKey(key);
-        const base = sample ? gatewayPublicUrl() : (process.env.AWS_S3_PUBLIC_URL ?? '').replace(/\/+$/, '');
+        const base = (process.env.AWS_S3_PUBLIC_URL ?? '').replace(/\/+$/, '');
         if (!base) {
-            this.logger.error(
-                sample
-                    ? 'GATEWAY_PUBLIC_URL 이 비어 있어 샘플 사진 주소를 만들 수 없습니다 — docs/guides/sample-data.md'
-                    : 'AWS_S3_PUBLIC_URL 이 비어 있어 파일 공개 주소를 만들 수 없습니다 — docs/guides/aws-setup.md',
-            );
+            this.logger.error('AWS_S3_PUBLIC_URL 이 비어 있어 파일 공개 주소를 만들 수 없습니다 — docs/guides/aws-setup.md');
             throw new InternalServerErrorException({message: STORAGE_PUBLIC_URL_MISSING_MESSAGE});
         }
         return `${base}/${key}`;
@@ -104,15 +98,12 @@ export class S3StorageGateway implements StorageGatewayInterface, OnApplicationB
     }
 
     /**
-     * 파일을 지운다 — S3 는 없는 키도 성공으로 답한다. 샘플 키는 저장소(게이트웨이 assets)에 든 파일이라 지우지 않는다(행 소프트 삭제만).
+     * 파일을 지운다 — S3 는 없는 키도 성공으로 답한다.
      *
      * @param key 저장 키
      * @throws ServiceUnavailableException 저장소에 닿지 못했을 때
      */
     async remove(key: string): Promise<void> {
-        if (isSampleFileKey(key)) {
-            return;
-        }
         try {
             await this.client.send(new DeleteObjectCommand({Bucket: process.env.AWS_S3_BUCKET, Key: key}));
         } catch (error) {

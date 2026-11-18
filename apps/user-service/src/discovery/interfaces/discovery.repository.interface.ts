@@ -28,6 +28,7 @@ export interface DiscoveryStoreRow {
     longitude: number;
     distance_m: number;
     cover_file_key: string | null;
+    cover_file_storage: string | null;
     is_open: number;
     is_always_open: number;
     min_hourly_price: number | null;

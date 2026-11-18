@@ -52,9 +52,9 @@ describe('GET /internal/v1/user-service/store/application/mine/:store_applicatio
             expect(repo.findStore).not.toHaveBeenCalled();
             expect(repo.findApplicationFileRows).toHaveBeenCalledWith(APPLICATION_ID);
             expect(storage.createDownloadUrl).toHaveBeenCalledTimes(1);
-            expect(storage.createDownloadUrl).toHaveBeenCalledWith(LICENSE_KEY);
+            expect(storage.createDownloadUrl).toHaveBeenCalledWith(expect.objectContaining({file_key: LICENSE_KEY, file_storage: 'LOCAL'}));
             expect(storage.getPublicUrl).toHaveBeenCalledTimes(1);
-            expect(storage.getPublicUrl).toHaveBeenCalledWith(IMAGE_KEY);
+            expect(storage.getPublicUrl).toHaveBeenCalledWith(expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(res.body).toMatchObject({
                 store_application_id: APPLICATION_ID,
                 owner_name: '홍길동',

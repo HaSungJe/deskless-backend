@@ -63,8 +63,8 @@ describe('GET /internal/v1/admin-service/store/mine — 내 업체 상세 (업�
             expect(repo.findStoreHours).toHaveBeenCalledWith(STORE_ID);
             expect(repo.findStoreBreaks).toHaveBeenCalledWith(STORE_ID);
             expect(repo.findStoreFileRows).toHaveBeenCalledWith(STORE_ID);
-            expect(storage.createDownloadUrl).toHaveBeenCalledWith(LICENSE_KEY);
-            expect(storage.getPublicUrl).toHaveBeenCalledWith(IMAGE_KEY);
+            expect(storage.createDownloadUrl).toHaveBeenCalledWith(expect.objectContaining({file_key: LICENSE_KEY, file_storage: 'LOCAL'}));
+            expect(storage.getPublicUrl).toHaveBeenCalledWith(expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(res.body).toEqual({
                 store_id: STORE_ID,
                 store_code: STORE_CODE,

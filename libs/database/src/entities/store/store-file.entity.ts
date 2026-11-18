@@ -38,6 +38,15 @@ export class StoreFileEntity {
     })
     file_key: string;
 
+    @Column({
+        name: 'file_storage',
+        length: 10,
+        nullable: false,
+        default: 'LOCAL',
+        comment: '저장소(S3: Amazon S3, LOCAL: 내부 파일 저장소 — 게이트웨이 /files · 샘플 사진도 LOCAL) — 올릴 때의 저장소, 주소 · 열람 · 삭제가 이 값을 따른다',
+    })
+    file_storage: string;
+
     @Column({name: 'file_name', length: 255, nullable: false, comment: '원본 파일명'})
     file_name: string;
 

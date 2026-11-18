@@ -41,7 +41,9 @@ export class DiscoveryService {
 
         // 2. 대표 사진 공개 주소
         return {
-            list: rows.slice(0, DISCOVERY_STORE_LIMIT).map((row) => toDiscoveryStoreItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl(row.cover_file_key) : null)),
+            list: rows
+                .slice(0, DISCOVERY_STORE_LIMIT)
+                .map((row) => toDiscoveryStoreItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl({file_key: row.cover_file_key, file_storage: row.cover_file_storage}) : null)),
             is_truncated: rows.length > DISCOVERY_STORE_LIMIT ? 1 : 0,
         };
     }
@@ -68,7 +70,7 @@ export class DiscoveryService {
         const plans = (await this.discoveryRepository.findStorePlanRows(store.store_id)).filter(isStorePlanUsed);
         return toDiscoveryStoreDetail(
             store,
-            images.map((image) => toDiscoveryImage(this.storageGateway.getPublicUrl(image.file_key), image.sort_order)),
+            images.map((image) => toDiscoveryImage(this.storageGateway.getPublicUrl(image), image.sort_order)),
             hours,
             breaks,
             plans,
@@ -116,7 +118,7 @@ export class DiscoveryService {
                 store_plans,
                 group_plans,
                 periods,
-                images.map((image) => ({room_group_id: image.room_group_id, ...toDiscoveryImage(this.storageGateway.getPublicUrl(image.file_key), image.sort_order)})),
+                images.map((image) => ({room_group_id: image.room_group_id, ...toDiscoveryImage(this.storageGateway.getPublicUrl(image), image.sort_order)})),
             ),
         };
     }

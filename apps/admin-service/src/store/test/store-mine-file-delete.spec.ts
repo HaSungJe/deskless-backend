@@ -44,7 +44,7 @@ describe('admin.store.mine-file-delete — 내 업체 사진 삭제 (큐 경로)
             expect(repo.findStoreByManager).toHaveBeenCalledWith(MANAGER_ACTOR.user_id, true);
             expect(repo.findStoreFile).toHaveBeenCalledWith({store_file_id: FILE_ID, store_id: STORE_ID, store_file_purpose_id: 'STORE_IMAGE'});
             expect(repo.deleteStoreFile).toHaveBeenCalledWith({store_file_id: FILE_ID});
-            expect(storage.remove).toHaveBeenCalledWith(IMAGE_KEY);
+            expect(storage.remove).toHaveBeenCalledWith(expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(repo.deleteStoreFile.mock.invocationCallOrder[0]).toBeLessThan(storage.remove.mock.invocationCallOrder[0]);
         });
     });

@@ -145,6 +145,7 @@ export function buildSampleStoreFiles(): StoreFileEntity[] {
             file.store_application_id = null;
             file.store_id = sampleId(SAMPLE_ID_KIND.STORE, no);
             file.file_key = `${SAMPLE_IMAGE_KEY_PREFIX}${file_name}`;
+            file.file_storage = 'LOCAL'; // 게이트웨이가 내주는 파일 — libs/integration FILE_STORAGE.LOCAL (샘플 키는 /sample/)
             file.file_name = file_name;
             file.content_type = 'image/png';
             file.sort_order = photo - 1;
@@ -281,6 +282,7 @@ export function buildSampleRoomGroupImages(): RoomGroupImageEntity[] {
                 image.room_group_image_id = sampleId(SAMPLE_ID_KIND.ROOM_GROUP_IMAGE, groupNo * 10 + photo);
                 image.room_group_id = sampleId(SAMPLE_ID_KIND.ROOM_GROUP, groupNo);
                 image.file_key = `${SAMPLE_IMAGE_KEY_PREFIX}${file_name}`;
+                image.file_storage = 'LOCAL'; // 게이트웨이가 내주는 파일 — libs/integration FILE_STORAGE.LOCAL (샘플 키는 /sample/)
                 image.file_name = file_name;
                 image.content_type = 'image/png';
                 image.sort_order = photo - 1;

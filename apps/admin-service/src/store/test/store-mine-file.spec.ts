@@ -54,6 +54,7 @@ describe('admin.store.mine-file — 내 업체 사진 등록 (큐 경로)', () =
                 store_application_id: null,
                 store_id: STORE_ID,
                 file_key: IMAGE_KEY,
+                file_storage: 'LOCAL',
                 file_name: '라운지.jpg',
                 content_type: 'image/jpeg',
                 sort_order: 3,

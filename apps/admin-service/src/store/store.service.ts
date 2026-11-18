@@ -150,7 +150,7 @@ export class StoreService {
         const rows = await this.storeRepository.findApplicationFileRows(store_application_id);
         const files: StoreApplicationDetailFileResultDto[] = [];
         for (const row of rows) {
-            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row.file_key)).download_url : this.storageGateway.getPublicUrl(row.file_key);
+            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row)).download_url : this.storageGateway.getPublicUrl(row);
             files.push(toApplicationDetailFile(row, file_url));
         }
         return toApplicationDetail(application, store?.store_code ?? null, toApplicant(applicant), files);
@@ -334,7 +334,7 @@ export class StoreService {
         const rows = await this.storeRepository.findStoreFileRows(store_id);
         const files: StoreDetailFileResultDto[] = [];
         for (const row of rows) {
-            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row.file_key)).download_url : this.storageGateway.getPublicUrl(row.file_key);
+            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row)).download_url : this.storageGateway.getPublicUrl(row);
             files.push(toStoreDetailFile(row, file_url));
         }
         return toStoreDetail(store, files);
@@ -443,7 +443,7 @@ export class StoreService {
         const rows = await this.storeRepository.findStoreFileRows(store.store_id);
         const files: StoreMineFileItemResultDto[] = [];
         for (const row of rows) {
-            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row.file_key)).download_url : this.storageGateway.getPublicUrl(row.file_key);
+            const file_url = Number(row.is_private) === 1 ? (await this.storageGateway.createDownloadUrl(row)).download_url : this.storageGateway.getPublicUrl(row);
             files.push(toMineFileItem(row, file_url));
         }
         return toMineDetail(store, hours.map(toMineHourItem), breaks.map(toMineBreakItem), files);
@@ -546,6 +546,7 @@ export class StoreService {
         file.store_application_id = null;
         file.store_id = store.store_id;
         file.file_key = dto.file_key;
+        file.file_storage = this.storageGateway.getUploadStorage();
         file.file_name = dto.file_name;
         file.content_type = dto.content_type;
         file.sort_order = nextSortOrder(images);
@@ -576,7 +577,7 @@ export class StoreService {
 
         // 3. 행 소프트 삭제 → 저장소 파일 삭제(마지막)
         await this.storeRepository.deleteStoreFile({store_file_id});
-        await this.storageGateway.remove(file.file_key);
+        await this.storageGateway.remove(file);
     }
 
     /**

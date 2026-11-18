@@ -20,6 +20,15 @@ export class RoomGroupImageEntity {
     @Column({name: 'file_key', length: 255, nullable: false, comment: '저장 키(S3 공개 store/<store_id>/room-group/<room_group_id>/…) — 같은 키를 덮어쓰지 않는다'})
     file_key: string;
 
+    @Column({
+        name: 'file_storage',
+        length: 10,
+        nullable: false,
+        default: 'LOCAL',
+        comment: '저장소(S3: Amazon S3, LOCAL: 내부 파일 저장소 — 게이트웨이 /files · 샘플 사진도 LOCAL) — 올릴 때의 저장소, 주소 · 열람 · 삭제가 이 값을 따른다',
+    })
+    file_storage: string;
+
     @Column({name: 'file_name', length: 255, nullable: false, comment: '원본 파일명'})
     file_name: string;
 

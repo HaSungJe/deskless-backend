@@ -39,7 +39,7 @@ apps/
 │   ├── modules/transport/    # InternalHttpClient · CommandStreamService
 │   ├── modules/api-log/      # API 로그 — 모든 HTTP 요청을 응답이 끝난 뒤 로그 전용 DB 연결(t_api_log 만, 풀 5)로 바로 적재(미들웨어 · writer — 게이트웨이의 유일한 DB 사용)
 │   ├── modules/door-socket/  # 문 소켓(표준 WebSocket /ws/v1/door — 업체 ID + 시크릿, QR 확인 · 잠금 알림 · 바로 열기 명령) → user-service 내부 HTTP(door) · Redis 채널 구독
-│   ├── modules/local-file/   # 내부 파일 저장소 경로(/files — AWS_S3_BUCKET 이 빌 때만): 서명된 업로드 받기 · 비공개 열람 · 공개 파일 — 폴더는 user-service · admin-service 와 공유(FILE_STORAGE_DIR · Docker 공용 볼륨 roomless-files)
+│   ├── modules/local-file/   # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때만, 읽기는 늘 — S3 로 바꾸기 전에 올린 LOCAL 행): 서명된 업로드 받기 · 비공개 열람 · 공개 파일 — 폴더는 user-service · admin-service 와 공유(FILE_STORAGE_DIR · Docker 공용 볼륨 roomless-files)
 │   ├── assets/sample/        # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, /sample/ 정적 경로 · nest-cli assets 로 dist 복사)
 │   └── config/               # cors.config.ts · trust-proxy.config.ts · sample-image.config.ts(/sample/ 정적 경로)
 ├── user-service/src/        # 이용자 서버 — DB 소유(마이그레이션 · 시드)
@@ -66,7 +66,7 @@ libs/
 ├── common/       # 실패 응답 DTO · toFailResult · 예외 필터 · 반환된 예외 인터셉터 · ValidationPipe 팩토리 · 순수 util · 내부 요청 가드
 ├── contracts/    # 게이트웨이↔서비스 공유 규격: 요청/응답 DTO, 명령 type · 큐 · 바인딩 · 내부 HTTP 경로 상수, 메시지 봉투, Actor, 내부 헤더, SSE 이벤트
 ├── database/     # entities/<domain>/ · entities.ts · migrations/ · migrations.ts · DatabaseModule · JobLockService · typeorm-error · soft-delete(notDeleted) · api-log-partition(t_api_log 월 파티션 달 · DDL) · seeder(기본 데이터 + 테스트 데이터 sample-seed.* — SEED_SAMPLE_DATA=1)
-├── integration/  # 외부 연동 포트 — SMS 발송(SMS_SENDER · Amazon SNS) · 파일 저장(STORAGE_GATEWAY · S3 + CloudFront, 버킷이 비면 내부 파일 저장소 LocalStorageGateway) · 문 정보(DOOR_STORE · Redis) · 결제(PAYMENT_GATEWAY · 토스페이먼츠) · SmsModule · StorageModule · RedisModule · DoorStoreModule · PaymentModule(전역)
+├── integration/  # 외부 연동 포트 — SMS 발송(SMS_SENDER · Amazon SNS) · 파일 저장(STORAGE_GATEWAY = RoutingStorageGateway — 업로드는 S3 + CloudFront, 버킷이 비면 내부 파일 저장소 LocalStorageGateway · 읽기 · 삭제는 파일 행의 file_storage) · 문 정보(DOOR_STORE · Redis) · 결제(PAYMENT_GATEWAY · 토스페이먼츠) · SmsModule · StorageModule · RedisModule · DoorStoreModule · PaymentModule(전역)
 └── messaging/    # RabbitMQ 연결 · 발행 · 소비 · @OnCommand · CommandDispatcher
 scripts/          # db-schema.mjs(마이그레이션 생성 · 검사) · docker-network.mjs(공용 네트워크 · 볼륨) · check-broker-acl.mjs · sample-images.mjs(테스트 데이터 사진 생성)
 ```
@@ -230,10 +230,11 @@ scripts/          # db-schema.mjs(마이그레이션 생성 · 검사) · docker
 - **전역 모듈**: `TransportModule`(게이트웨이) · `DatabaseModule` · `MessagingModule` · `SmsModule` · `StorageModule` · `RedisModule` · `DoorStoreModule` · `PaymentModule` 은 전역이라 도메인 모듈은 import 없이 주입받는다.
 - **외부 연동** (첫 사용처: user-service 휴대폰 SMS 인증 · 아이디 찾기 · 비밀번호 초기화 — `SmsModule`):
   - **mock · 가짜 어댑터를 두지 않는다.** 실제 서비스 어댑터 + 세팅 가이드(`docs/guides/`)로 만들고, 세팅 전에는 `.env` 값이 비어 요청만 실패한다(부팅은 된다).
-  - **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: `AWS_S3_BUCKET` 이 비면 `STORAGE_GATEWAY` 는 내부 파일 저장소(`LocalStorageGateway` — 실제로 저장 · 제공, 게이트웨이 `/files`), AWS 키(`AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY`)가 비면 SMS 는 보내지 않고 받는 번호 · 본문을 로그에 남긴 뒤 성공한다. 그 밖(토스 · Redis)은 위 원칙 그대로 — [docs/guides/aws-setup.md](docs/guides/aws-setup.md) "AWS 없이 돌리기".
+  - **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: `AWS_S3_BUCKET` 이 비면 `STORAGE_GATEWAY`(`RoutingStorageGateway`)는 새 파일을 내부 파일 저장소(`LocalStorageGateway` — 실제로 저장 · 제공, 게이트웨이 `/files`)에 올리고, AWS 키(`AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY`)가 비면 SMS 는 보내지 않고 받는 번호 · 본문을 로그에 남긴 뒤 성공한다. 그 밖(토스 · Redis)은 위 원칙 그대로 — [docs/guides/aws-setup.md](docs/guides/aws-setup.md) "AWS 없이 돌리기".
   - 발송은 SMS 하나다 — `SMS_SENDER.send({to, text})`(Amazon SNS). 이메일 · 알림톡 · 푸시는 쓰지 않는다.
+  - **파일 행마다 저장소를 적는다(사용자 결정 2026-11-18)** — `t_store_file` · `t_room_group_image` 의 `file_storage`(`S3` · `LOCAL`). service 는 등록 때 `storageGateway.getUploadStorage()` 를 적고, 공개 주소 · 열람 주소 · 삭제는 키가 아니라 파일 행(`{file_key, file_storage}` — 조회 행은 `cover_file_storage` 같이 읽는다)을 넘긴다. 라우터가 그 행의 저장소 어댑터로 보내므로 S3 로 바꾼 뒤에도 그 전에 올린 `LOCAL` 파일이 게이트웨이 `/files` 로 열린다(읽기는 S3 모드에서도 열려 있다).
   - 사진은 `STORAGE_GATEWAY` 의 업로드 주소로 올린다 — S3 면 presigned URL(파일 본문은 게이트웨이 · 브로커를 거치지 않는다), 내부 파일 저장소면 게이트웨이 `/files/upload` 서명 주소(HMAC `INTERNAL_API_TOKEN` · Content-Type 포함 · 10분 · 10MB — 게이트웨이가 저장소다, 브로커 · 서비스는 거치지 않는다). 프론트의 올리는 방식(같은 Content-Type 으로 PUT)은 같다.
-  - 열람 주소는 파일 용도 룩업의 `is_private` 로 고른다 — 0 이면 공개 주소(`getPublicUrl` — S3 는 CDN(CloudFront), 내부 저장소는 `GATEWAY_PUBLIC_URL/files/<키>`), 1 이면 서명된 열람 주소(`createDownloadUrl`, 10분 — 내부 저장소는 `/files/download`). 저장 키가 `sample/` 이면(테스트 데이터 사진) 어느 어댑터든 공개 주소는 `GATEWAY_PUBLIC_URL/sample/…`(게이트웨이 정적 경로), 삭제는 건너뛴다. user-service 는 입점 신청의 업체 정보 파일(업로드 주소 · 존재 확인 · 삭제 · 열람 주소)과 업체 둘러보기의 공개 주소(`getPublicUrl`)에 쓴다.
+  - 열람 주소는 파일 용도 룩업의 `is_private` 로 고른다 — 0 이면 공개 주소(`getPublicUrl` — `S3` 행은 CDN(CloudFront), `LOCAL` 행은 `GATEWAY_PUBLIC_URL/files/<키>`), 1 이면 서명된 열람 주소(`createDownloadUrl`, 10분 — `LOCAL` 행은 `/files/download`). 저장 키가 `sample/` 이면(테스트 데이터 사진) 저장소와 상관없이 라우터가 공개 주소를 `GATEWAY_PUBLIC_URL/sample/…`(게이트웨이 정적 경로)로 만들고 삭제는 건너뛴다. user-service 는 입점 신청의 업체 정보 파일(업로드 주소 · 존재 확인 · 삭제 · 열람 주소)과 업체 둘러보기의 공개 주소(`getPublicUrl`)에 쓴다.
   - 저장 키는 서버가 만들고 업로드마다 새 키다(덮어쓰지 않는다 → CDN 캐시를 길게 두고 무효화하지 않는다). 비공개는 `private/` 접두(CDN 이 읽지 못한다), 공개는 `store/` 접두.
   - 포트를 쓰는 앱 루트 모듈이 `SmsModule` · `StorageModule` 중 필요한 것을 import 한다.
   - 외부 실패는 어댑터가 503(`SMS_UNAVAILABLE_MESSAGE` · `STORAGE_UNAVAILABLE_MESSAGE`)으로 던지고, service 는 잡지 않는다. 재시도되면 다시 나가므로 발송은 명령의 마지막 단계에 둔다.
@@ -279,7 +280,7 @@ scripts/          # db-schema.mjs(마이그레이션 생성 · 검사) · docker
 - [ ] 로그인 그룹 = 도메인: 로그인 필요 라우트는 그 그룹의 가드(`PassportJwtAuthGuard` · `PassportJwtManagerAuthGuard` · `PassportJwtAdminAuthGuard`), 그룹마다 자기 service · DTO · 명령, 공통 계정 로직은 `libs/account`
 - [ ] 여러 인스턴스 전제: crontab 은 scheduler 앱에만 · 운영 가드 + `JobLockService.runExclusive`, 인스턴스 메모리에 상태를 두지 않는다
 - [ ] 실시간 소켓: gateway `modules/<이름>-socket/` 에만 · 표준 WebSocket · 접속 헤더 인증(틀리면 업그레이드 전 401) · 메시지 `{event, data}` 규격은 contracts · 판단은 서비스 내부 HTTP · 비밀값은 내려 주지 않음 · 서버 명령은 쓰기와 같은 Lua 의 Redis PUBLISH → 인스턴스마다 구독
-- [ ] 외부 연동: mock · 가짜 어댑터 없음(실제 어댑터 + `docs/guides/` 가이드 — 예외: AWS 미설정 개발 모드의 내부 파일 저장소 · SMS 로그), 발송은 `SMS_SENDER` 하나(이메일 · 알림톡 · 푸시 ❌), 파일은 `STORAGE_GATEWAY` 업로드 주소(S3 presigned 또는 내부 저장소 서명 주소 — 파일 본문을 브로커 · 서비스로 보내지 않음) · 열람 주소는 용도의 `is_private`(0 CDN · 1 서명 주소) · 키는 업로드마다 새로, 발송은 명령의 마지막 단계
+- [ ] 외부 연동: mock · 가짜 어댑터 없음(실제 어댑터 + `docs/guides/` 가이드 — 예외: AWS 미설정 개발 모드의 내부 파일 저장소 · SMS 로그), 발송은 `SMS_SENDER` 하나(이메일 · 알림톡 · 푸시 ❌), 파일은 `STORAGE_GATEWAY` 업로드 주소(S3 presigned 또는 내부 저장소 서명 주소 — 파일 본문을 브로커 · 서비스로 보내지 않음) · 열람 주소는 용도의 `is_private`(0 CDN · 1 서명 주소) · 등록 행에 `file_storage`(`getUploadStorage()`) · 주소 · 삭제는 파일 행을 넘김 · 키는 업로드마다 새로, 발송은 명령의 마지막 단계
 - [ ] README.md: 코드 · 설정 · 구조 · 명령 · 실행 방법이 바뀌었으면 같은 변경에서 갱신
 - [ ] 응답 필드 생략 금지 — 없으면 `null`
 - [ ] 날짜 · 시각: 파싱 · 비교 · 계산 · 시간대는 `@app/common/utils/dayjs.js` 의 dayjs(직접 계산 · `'dayjs'` 직접 import ❌)

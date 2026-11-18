@@ -51,7 +51,7 @@ export const STORE_CODE = 'c'.repeat(32);
 export type StoreRepositoryMock = {[K in keyof StoreRepositoryInterface]: Mock};
 
 /** 파일 저장소 포트 mock */
-export type StorageGatewayMock = {createUploadUrl: Mock; exists: Mock; getPublicUrl: Mock; remove: Mock; createDownloadUrl: Mock};
+export type StorageGatewayMock = {getUploadStorage: Mock; createUploadUrl: Mock; exists: Mock; getPublicUrl: Mock; remove: Mock; createDownloadUrl: Mock};
 
 /** SMS 포트 mock */
 export type SmsSenderMock = {send: Mock};
@@ -109,11 +109,12 @@ export function createStoreRepositoryMock(): StoreRepositoryMock {
  */
 export function createStorageGatewayMock(): StorageGatewayMock {
     return {
+        getUploadStorage: vi.fn().mockReturnValue('LOCAL'),
         createUploadUrl: vi.fn().mockResolvedValue({upload_url: 'https://s3.test/upload', expires_at: new Date(2026, 0, 1, 0, 10)}),
         exists: vi.fn().mockResolvedValue(true),
-        getPublicUrl: vi.fn((key: string) => `https://cdn.test/${key}`),
+        getPublicUrl: vi.fn((file: {file_key: string}) => `https://cdn.test/${file.file_key}`),
         remove: vi.fn().mockResolvedValue(undefined),
-        createDownloadUrl: vi.fn((key: string) => Promise.resolve({download_url: `https://s3.test/signed/${key}`, expires_at: new Date(2026, 0, 1, 0, 10)})),
+        createDownloadUrl: vi.fn((file: {file_key: string}) => Promise.resolve({download_url: `https://s3.test/signed/${file.file_key}`, expires_at: new Date(2026, 0, 1, 0, 10)})),
     };
 }
 
@@ -283,6 +284,7 @@ export function fileRow(override: Partial<StoreFileRow> = {}): StoreFileRow {
         store_application_id: APPLICATION_ID,
         store_id: null,
         file_key: `private/store-application/${APPLICATION_ID}/${'1'.repeat(32)}.jpg`,
+        file_storage: 'LOCAL',
         file_name: '사업자등록증.jpg',
         content_type: 'image/jpeg',
         sort_order: 0,

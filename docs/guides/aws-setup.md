@@ -14,7 +14,8 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 - 필요한 값: `GATEWAY_PUBLIC_URL`(브라우저가 게이트웨이에 닿는 주소) · `INTERNAL_API_TOKEN`(서명 — 이미 필수)
 - 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), Docker 는 공용 볼륨 `roomless-files`(`npm run docker:network` 가 만든다 — gateway · user-service · admin-service 가 같이 본다)
-- 나중에 S3 를 켜면 내부 저장소에 올린 파일은 S3 에 없다(옮기지 않는다) — 그 사진은 다시 올린다
+- 나중에 S3 를 켜도 **이미 내부 저장소에 올린 사진은 그대로 열린다**(사용자 결정 2026-11-18) — 파일 행마다 올릴 때의 저장소(`file_storage` — `LOCAL` · `S3`)가 적혀 있어, `LOCAL` 행은 계속 게이트웨이(`/files/…` — S3 모드에서는 읽기만, 새 업로드는 S3)로, 새로 올린 `S3` 행은 CloudFront 로 나간다. 삭제도 그 행의 저장소에서 한다. 그래서 S3 로 바꾼 뒤에도 볼륨(`roomless-files`)을 지우지 않는다.
+- 옛 사진까지 S3 로 옮기고 싶으면 볼륨 내용을 같은 키(경로)로 버킷에 올리고, 그 행의 `file_storage` 를 `S3` 로 바꾼다(`UPDATE t_store_file SET file_storage = 'S3' WHERE file_storage = 'LOCAL' AND file_key NOT LIKE 'sample/%'` — `t_room_group_image` 도 같이). 그 뒤 볼륨에서 지운다. 샘플 사진(`sample/` 키)은 저장소와 상관없이 게이트웨이 `/sample/` 로 나간다.
 - IAM 역할만으로 돌리는 배포는 키가 비어 SMS 가 생략된다 — SMS 를 보내려면 키를 넣는다(S3 는 버킷만 있으면 역할로 된다)
 - 키는 넣었는데 `AWS_REGION` · `AWS_S3_PUBLIC_URL` 이 비면 지금처럼 부팅 경고 후 그 요청만 실패한다(503, 사진 공개 주소는 500)
 

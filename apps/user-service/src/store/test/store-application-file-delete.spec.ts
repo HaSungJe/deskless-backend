@@ -37,14 +37,14 @@ describe('user.store.application-file-delete — 업체 정보 파일 삭제 (�
 
     describe('[SUCCESS]', () => {
         it('그 신청의 파일 행을 지운 뒤 저장소 파일을 지운다(마지막)', async () => {
-            repo.findStoreFile.mockResolvedValueOnce({store_file_id: FILE_ID, file_key: FILE_KEY});
+            repo.findStoreFile.mockResolvedValueOnce({store_file_id: FILE_ID, file_key: FILE_KEY, file_storage: 'LOCAL'});
 
             const {result} = await runCommand(dispatcher, {type: STORE_USER_COMMAND.APPLICATION_FILE_DELETE, payload: PAYLOAD, actor: USER_ACTOR});
 
             expect(result).toEqual({result: null, error: null});
             expect(repo.findStoreFile).toHaveBeenCalledWith({store_file_id: FILE_ID, store_application_id: APPLICATION_ID});
             expect(repo.deleteStoreFile).toHaveBeenCalledWith({store_file_id: FILE_ID});
-            expect(storage.remove).toHaveBeenCalledWith(FILE_KEY);
+            expect(storage.remove).toHaveBeenCalledWith(expect.objectContaining({file_key: FILE_KEY, file_storage: 'LOCAL'}));
             expect(repo.deleteStoreFile.mock.invocationCallOrder[0]).toBeLessThan(storage.remove.mock.invocationCallOrder[0]);
         });
     });

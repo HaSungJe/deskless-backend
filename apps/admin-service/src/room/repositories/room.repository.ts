@@ -239,6 +239,18 @@ export class RoomRepository implements RoomRepositoryInterface {
                         .addOrderBy('"i"."created_at"', 'ASC')
                         .limit(1),
                 'cover_file_key',
+            )
+            .addSelect(
+                (sub) =>
+                    sub
+                        .select('"i"."file_storage"')
+                        .from(RoomGroupImageEntity, 'i')
+                        .where('"i"."room_group_id" = "g"."room_group_id"')
+                        .andWhere('"i"."is_deleted" = 0')
+                        .orderBy('"i"."sort_order"', 'ASC')
+                        .addOrderBy('"i"."created_at"', 'ASC')
+                        .limit(1),
+                'cover_file_storage',
             );
     }
 

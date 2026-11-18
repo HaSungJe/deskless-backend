@@ -96,6 +96,7 @@ export class UserSettingEntity {
   - 예외(기존 컬럼): `t_user.leave_reserved_at` 은 `varchar(40)` 에 dayjs `'YYYY-MM-DD HH:mm:ss'` 문자열을 넣고 문자열 비교로 경과를 판단한다(user.entity.ts:78, user-leave-cleanup.crontab.ts:43-44). 새 시각 컬럼은 `timestamptz`.
 - **타임스탬프는 `@BeforeInsert`/`@BeforeUpdate` 훅**(❌ `@CreateDateColumn`/`@UpdateDateColumn`). 훅 메서드 이름은 `insertTimestamp()` · `updateTimestamp()`(jsonb 상세정보의 기본값 채움은 `@AfterLoad` `fillDetailDefaults()`). 훅은 `insert`/`update` 에 **엔티티 인스턴스**를 넘길 때만 돈다 — 그래서 service 는 `new XEntity()` + 할당으로 만든다.
 - **룩업 엔티티**(auth · state · sns · sms-purpose · store-state · store-application-state · store-file-purpose · room-state · room-plan-type)는 구조 컬럼 + 그 값으로 동작이 갈리는 플래그만 둔다 — `t_state.is_login_allowed`(로그인 가능), `t_store_file_purpose.is_private`(1 이면 서명된 열람 주소 · `private/` 키, 0 이면 CDN 공개 주소 · `store/` 키). 동작을 코드의 값 목록이 아니라 룩업 행이 정하므로, 조회는 룩업을 조인해 플래그를 읽는다(`buildLoginUserQuery` · `buildStoreFileRowsQuery`). 기본 데이터는 seeder.
+- **룩업 없는 코드 값 컬럼** — 값이 코드의 상수 몇 개로 정해지고 행이 동작을 바꾸지 않으면 룩업 테이블 없이 문자열 컬럼 + 주석에 값 목록을 둔다: `t_user.login_scope`(`LOGIN_SCOPE`), 파일 행의 저장소 `t_store_file.file_storage` · `t_room_group_image.file_storage`(`FILE_STORAGE` — `S3` · `LOCAL`, varchar(10) NOT NULL DEFAULT `'LOCAL'` — 올릴 때의 저장소, 저장소 포트가 공개 주소 · 열람 · 삭제를 이 값으로 고른다, 사용자 결정 2026-11-18). 더할 때 기존 행이 모두 기본값에 해당하면(내부 저장소만 쓰던 동안의 파일) 엔티티에 `default` 를 두고 그대로 둔다(`1794961426515-FileStorage.ts`).
 
 ## 마이그레이션
 

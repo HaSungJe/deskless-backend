@@ -49,7 +49,7 @@ describe('GET /internal/v1/admin-service/room/group — 객실 그룹 목록 (�
             expect(repo.findRoomGroupRows).toHaveBeenCalledWith({store_id: STORE_ID}, 20, 0);
             expect(repo.countRoomGroups.mock.invocationCallOrder[0]).toBeLessThan(repo.findRoomGroupRows.mock.invocationCallOrder[0]);
             expect(storage.getPublicUrl).toHaveBeenCalledTimes(1);
-            expect(storage.getPublicUrl).toHaveBeenCalledWith(IMAGE_KEY);
+            expect(storage.getPublicUrl).toHaveBeenCalledWith({file_key: IMAGE_KEY, file_storage: 'LOCAL'});
             expect(res.body.list).toEqual([
                 {room_group_id: ROOM_GROUP_ID, room_group_name: '스탠다드', room_count: 3, image_url: `https://cdn.test/${IMAGE_KEY}`, created_at: FIXED_TIME.toISOString()},
                 {room_group_id: OTHER_GROUP_ID, room_group_name: '디럭스', room_count: 0, image_url: null, created_at: FIXED_TIME.toISOString()},

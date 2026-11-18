@@ -60,8 +60,8 @@ describe('admin.room.group-delete — 객실 그룹 삭제 (큐 경로)', () => 
             expect(repo.deleteRoomGroup).toHaveBeenCalledTimes(1);
             expect(repo.deleteRoomGroup).toHaveBeenCalledWith({room_group_id: ROOM_GROUP_ID});
             expect(storage.remove).toHaveBeenCalledTimes(2);
-            expect(storage.remove).toHaveBeenNthCalledWith(1, IMAGE_KEY);
-            expect(storage.remove).toHaveBeenNthCalledWith(2, KEY_B);
+            expect(storage.remove).toHaveBeenNthCalledWith(1, expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
+            expect(storage.remove).toHaveBeenNthCalledWith(2, expect.objectContaining({file_key: KEY_B, file_storage: 'LOCAL'}));
             const order = [
                 repo.findRoomGroupImages.mock.invocationCallOrder[0],
                 repo.deleteRooms.mock.invocationCallOrder[0],

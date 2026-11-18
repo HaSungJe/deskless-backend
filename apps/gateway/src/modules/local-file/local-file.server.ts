@@ -20,8 +20,9 @@ import {isValidLocalFileSignature, localFileStorageDir, resolveLocalFilePath} fr
 import {createByteLimit, isTooLarge, readPublicKey, readQueryValue, sendFail} from './local-file.util.js';
 
 /**
- * 내부 파일 저장소 경로(/files) — AWS_S3_BUCKET 이 비었을 때 게이트웨이가 S3 자리를 대신한다(사용자 결정 2026-11-15). S3 면 경로를 열지 않는다(404).
- * - `PUT /files/upload?key&expires&signature` — 서명(INTERNAL_API_TOKEN · Content-Type 포함) · 만료 확인 → 임시 파일에 받아(10MB 까지) 이름 바꾸기 → 200
+ * 내부 파일 저장소 경로(/files) — AWS_S3_BUCKET 이 비었을 때 게이트웨이가 S3 자리를 대신한다(사용자 결정 2026-11-15).
+ * S3 로 바꾼 뒤에도 file_storage 가 LOCAL 인 행(그 전에 올린 파일)은 계속 여기서 내준다 — 읽기(공개 · 서명 열람)는 늘 열고, 받기(업로드)만 버킷이 빌 때 연다(사용자 결정 2026-11-18).
+ * - `PUT /files/upload?key&expires&signature` — 버킷이 빌 때만. 서명(INTERNAL_API_TOKEN · Content-Type 포함) · 만료 확인 → 임시 파일에 받아(10MB 까지) 이름 바꾸기 → 200
  * - `GET /files/download?key&expires&signature` — 비공개 파일(private/) 열람, 캐시 안 함
  * - `GET /files/<키>` — 공개 파일(업체 · 그룹 사진), private/ 키는 내주지 않는다(다음 처리 → 404), 하루 캐시
  * 폴더는 FILE_STORAGE_DIR(user-service · admin-service 의 LocalStorageGateway 와 같은 폴더 — Docker 공용 볼륨). 공개 API 가 아니라 Swagger 에 없다.
@@ -37,19 +38,18 @@ export class LocalFileServer implements OnModuleInit {
     constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
 
     /**
-     * S3 를 쓰지 않으면 express 앱에 `/files` 경로를 붙인다(Nest 라우트 뒤 · 404 처리 앞).
+     * express 앱에 `/files` 경로를 붙인다(Nest 라우트 뒤 · 404 처리 앞) — S3 모드여도 LOCAL 행의 파일을 내주려고 늘 붙인다.
      */
     onModuleInit(): void {
-        if (isS3StorageConfigured()) {
-            return;
-        }
         const app = this.httpAdapterHost.httpAdapter.getInstance<Express>();
         app.use(LOCAL_FILE_ROUTE, (req: Request, res: Response, next: NextFunction) => void this.handle(req, res, next));
-        this.logger.log(`내부 파일 저장소 경로 ${LOCAL_FILE_ROUTE} — ${this.root}`);
+        this.logger.log(
+            isS3StorageConfigured() ? `내부 파일 저장소 경로 ${LOCAL_FILE_ROUTE}(읽기만 — S3 로 바꾸기 전에 올린 파일) — ${this.root}` : `내부 파일 저장소 경로 ${LOCAL_FILE_ROUTE} — ${this.root}`,
+        );
     }
 
     /**
-     * 메서드 · 경로로 나눈다 — 나머지는 다음 처리(404).
+     * 메서드 · 경로로 나눈다 — 업로드는 버킷이 빌 때만, 나머지는 다음 처리(404).
      *
      * @param req 요청
      * @param res 응답
@@ -57,6 +57,11 @@ export class LocalFileServer implements OnModuleInit {
      */
     private async handle(req: Request, res: Response, next: NextFunction): Promise<void> {
         if (req.method === 'PUT' && req.path === '/upload') {
+            // 업로드는 버킷이 빌 때만 — S3 모드의 업로드 주소는 S3 로 나간다
+            if (isS3StorageConfigured()) {
+                next();
+                return;
+            }
             await this.upload(req, res);
             return;
         }
