@@ -16,6 +16,7 @@ import {ReservationUsage1794141398748} from './migrations/1794141398748-Reservat
 import {ReservationExtension1794157026139} from './migrations/1794157026139-ReservationExtension.js';
 import {ApiLogPartition1794253561123} from './migrations/1794253561123-ApiLogPartition.js';
 import {FileStorage1794961426515} from './migrations/1794961426515-FileStorage.js';
+import {DoorOpenLogManager1795050011114} from './migrations/1795050011114-DoorOpenLogManager.js';
 
 /**
  * DataSource 에 등록할 마이그레이션 목록 (실행 순서 = 클래스명 끝의 타임스탬프 순).
@@ -40,4 +41,5 @@ export const MIGRATIONS = [
     ReservationExtension1794157026139,
     ApiLogPartition1794253561123,
     FileStorage1794961426515,
+    DoorOpenLogManager1795050011114,
 ];

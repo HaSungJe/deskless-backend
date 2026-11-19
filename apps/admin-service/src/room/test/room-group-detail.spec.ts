@@ -11,6 +11,7 @@ import {
     internalHeaders,
     MANAGER_ACTOR,
     ROOM_GROUP_ID,
+    roomEntity,
     roomGroupEntity,
     RoomRepositoryMock,
     StorageGatewayMock,
@@ -22,6 +23,8 @@ const PATH = `/internal/v1/admin-service/room/group/${ROOM_GROUP_ID}`;
 const IMAGE_A = 'a'.repeat(32);
 const IMAGE_B = '1'.repeat(32);
 const KEY_B = `store/${STORE_ID}/room-group/${ROOM_GROUP_ID}/${'3'.repeat(32)}.png`;
+const ROOM_A = '7'.repeat(32);
+const ROOM_B = '8'.repeat(32);
 
 describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 그룹 상세 (업체 관리자, 동기 경로)', () => {
     let app: INestApplication;
@@ -38,10 +41,11 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
             imageRow({room_group_image_id: IMAGE_B, file_key: KEY_B, file_name: '욕실.png', content_type: 'image/png', sort_order: 1}),
         ]);
         repo.findRoomGroupPlanRows.mockResolvedValue([
-            groupPlanRow({room_group_plan_id: '6'.repeat(32), room_plan_type_id: 'LONG', room_plan_type_name: '연박'}),
-            groupPlanRow({room_group_plan_id: '4'.repeat(32), room_plan_type_id: 'HOURLY', room_plan_type_name: '시간 이용', is_used: 1, price: 25000}),
+            groupPlanRow({room_group_plan_id: '6'.repeat(32), room_plan_type_id: 'LONG', room_plan_type_name: '연박', price_count: 1}),
+            groupPlanRow({room_group_plan_id: '4'.repeat(32), room_plan_type_id: 'HOURLY', room_plan_type_name: '시간 이용', is_used: 1, price: 25000, price_count: 2}),
             groupPlanRow({is_used: 1, price: 89000}),
         ]);
+        repo.findRoomGroupRooms.mockResolvedValue([roomEntity({room_id: ROOM_A, room_name: '203호', floor: 2}), roomEntity({room_id: ROOM_B, room_name: 'B101호', floor: -1})]);
         app = await bootHttpPath(repo, storage);
     });
 
@@ -51,7 +55,7 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
     });
 
     describe('[SUCCESS]', () => {
-        it('그 업체의 그룹 · 사진(순서대로 CDN 주소) · 그룹 상품 3개(HOURLY · NIGHT · LONG 순)를 돌려준다', async () => {
+        it('그 업체의 그룹 · 사진(순서대로 CDN 주소) · 그룹 상품 3개(HOURLY · NIGHT · LONG 순 — 상품마다 기간 가격 수) · 호실(받은 순서)과 호실 수를 돌려준다', async () => {
             const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
 
             expect(res.status).toBe(200);
@@ -60,6 +64,8 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
             expect(repo.findRoomGroup).toHaveBeenCalledWith({room_group_id: ROOM_GROUP_ID, store_id: STORE_ID});
             expect(repo.findRoomGroupImages).toHaveBeenCalledWith(ROOM_GROUP_ID);
             expect(repo.findRoomGroupPlanRows).toHaveBeenCalledWith(ROOM_GROUP_ID);
+            expect(repo.findRoomGroupRooms).toHaveBeenCalledTimes(1);
+            expect(repo.findRoomGroupRooms).toHaveBeenCalledWith(ROOM_GROUP_ID);
             expect(storage.getPublicUrl).toHaveBeenCalledTimes(2);
             expect(storage.getPublicUrl).toHaveBeenNthCalledWith(1, expect.objectContaining({file_key: IMAGE_KEY, file_storage: 'LOCAL'}));
             expect(storage.getPublicUrl).toHaveBeenNthCalledWith(2, expect.objectContaining({file_key: KEY_B, file_storage: 'LOCAL'}));
@@ -74,9 +80,14 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
                     {room_group_image_id: IMAGE_B, file_name: '욕실.png', content_type: 'image/png', sort_order: 1, image_url: `https://cdn.test/${KEY_B}`},
                 ],
                 plans: [
-                    {room_plan_type_id: 'HOURLY', room_plan_type_name: '시간 이용', is_used: 1, price: 25000},
-                    {room_plan_type_id: 'NIGHT', room_plan_type_name: '1박', is_used: 1, price: 89000},
-                    {room_plan_type_id: 'LONG', room_plan_type_name: '연박', is_used: 0, price: 0},
+                    {room_plan_type_id: 'HOURLY', room_plan_type_name: '시간 이용', is_used: 1, price: 25000, price_count: 2},
+                    {room_plan_type_id: 'NIGHT', room_plan_type_name: '1박', is_used: 1, price: 89000, price_count: 0},
+                    {room_plan_type_id: 'LONG', room_plan_type_name: '연박', is_used: 0, price: 0, price_count: 1},
+                ],
+                room_count: 2,
+                rooms: [
+                    {room_id: ROOM_A, room_name: '203호', floor: 2},
+                    {room_id: ROOM_B, room_name: 'B101호', floor: -1},
                 ],
                 created_at: FIXED_TIME.toISOString(),
                 updated_at: FIXED_TIME.toISOString(),
@@ -92,6 +103,16 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
             expect(res.body.images).toEqual([]);
             expect(storage.getPublicUrl).not.toHaveBeenCalled();
         });
+
+        it('호실이 없으면 room_count 0 · rooms []', async () => {
+            repo.findRoomGroupRooms.mockResolvedValueOnce([]);
+
+            const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
+
+            expect(res.status).toBe(200);
+            expect(res.body.room_count).toBe(0);
+            expect(res.body.rooms).toEqual([]);
+        });
     });
 
     describe('[FAIL:service]', () => {
@@ -104,6 +125,7 @@ describe('GET /internal/v1/admin-service/room/group/:room_group_id — 객실 �
             expect(res.body).toEqual({message: '객실 그룹을 찾을 수 없습니다.', validation_errors: null});
             expect(repo.findRoomGroupImages).not.toHaveBeenCalled();
             expect(repo.findRoomGroupPlanRows).not.toHaveBeenCalled();
+            expect(repo.findRoomGroupRooms).not.toHaveBeenCalled();
         });
 
         it('소속 업체가 없으면 404, 그룹 조회 없음', async () => {

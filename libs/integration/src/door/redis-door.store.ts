@@ -1,33 +1,33 @@
 import {Injectable, Logger, ServiceUnavailableException} from '@nestjs/common';
 import {dayjs} from '@app/common/utils/dayjs.js';
-import {DOOR_COMMAND, DOOR_COMMAND_CHANNEL, DOOR_STATE, DOOR_TIME_NONE, REDIS_UNAVAILABLE_MESSAGE} from '../integration.constants.js';
-import type {DoorCommand, DoorRecord, DoorStoreInterface} from '../interfaces/integration.interface.js';
+import {DOOR_COMMAND, DOOR_COMMAND_CHANNEL, REDIS_UNAVAILABLE_MESSAGE} from '../integration.constants.js';
+import type {DoorCommand, DoorStoreInterface} from '../interfaces/integration.interface.js';
 import {RedisConnection} from '../redis/redis.connection.js';
 import type {RedisClient} from '../redis/redis.connection.js';
-
-/** 문 상태 키 접두 — `door:<room_id>` = `상태:시각` */
-const DOOR_KEY_PREFIX = 'door:';
 
 /** 현재 QR 키 접두 — `door-qr:<room_id>` = QR (만료 = 유효 종료) */
 const DOOR_QR_KEY_PREFIX = 'door-qr:';
 
+/** 마지막으로 연 시각 키 접두 — `door-opened:<room_id>` = 한국 시각 yyyyMMddHHmmss (만료 없음) */
+const DOOR_OPENED_KEY_PREFIX = 'door-opened:';
+
 /**
- * QR 확인 + 열림 — KEYS[1] `door-qr:<room_id>` · KEYS[2] `door:<room_id>` / ARGV[1] QR · ARGV[2] 상태(open) · ARGV[3] 시각.
- * 현재 QR 이 같을 때만 상태를 쓰고 1, 아니면 아무것도 바꾸지 않고 0.
+ * QR 확인 + 연 시각 — KEYS[1] `door-qr:<room_id>` · KEYS[2] `door-opened:<room_id>` / ARGV[1] QR · ARGV[2] 시각.
+ * 현재 QR 이 같을 때만 연 시각을 쓰고 1, 아니면 아무것도 바꾸지 않고 0.
  */
 const VERIFY_SCRIPT = `
 if redis.call('GET', KEYS[1]) ~= ARGV[1] then return 0 end
-redis.call('SET', KEYS[2], ARGV[2] .. ':' .. ARGV[3])
+redis.call('SET', KEYS[2], ARGV[2])
 return 1
 `;
 
 /**
- * 바로 열기 — KEYS[1] `door:<room_id>` / ARGV[1] 상태(open) · ARGV[2] 시각 · ARGV[3] 채널 · ARGV[4] 명령(JSON).
- * 상태를 쓰고 같은 스크립트에서 PUBLISH 한다(쓰기와 명령이 어긋나지 않는다).
+ * 바로 열기 — KEYS[1] `door-opened:<room_id>` / ARGV[1] 시각 · ARGV[2] 채널 · ARGV[3] 명령(JSON).
+ * 연 시각을 쓰고 같은 스크립트에서 PUBLISH 한다(쓰기와 명령이 어긋나지 않는다).
  */
 const OPEN_SCRIPT = `
-redis.call('SET', KEYS[1], ARGV[1] .. ':' .. ARGV[2])
-redis.call('PUBLISH', ARGV[3], ARGV[4])
+redis.call('SET', KEYS[1], ARGV[1])
+redis.call('PUBLISH', ARGV[2], ARGV[3])
 return 1
 `;
 
@@ -40,16 +40,6 @@ return 0
 `;
 
 /**
- * 문 상태 키
- *
- * @param room_id 호실 ID
- * @returns `door:<room_id>`
- */
-function doorKey(room_id: string): string {
-    return `${DOOR_KEY_PREFIX}${room_id}`;
-}
-
-/**
  * 현재 QR 키
  *
  * @param room_id 호실 ID
@@ -60,17 +50,13 @@ function doorQrKey(room_id: string): string {
 }
 
 /**
- * 문 상태 값(`상태:시각`)을 읽는다 — Phase 14 의 `QR:상태:시각` 도 뒤의 두 칸만 쓴다. 값이 없으면 기록 없는 문(close · DOOR_TIME_NONE).
+ * 마지막으로 연 시각 키
  *
- * @param value Redis 값
- * @returns 문 상태
+ * @param room_id 호실 ID
+ * @returns `door-opened:<room_id>`
  */
-function parseDoorValue(value: string | null): DoorRecord {
-    if (!value) {
-        return {state: DOOR_STATE.CLOSE, changed_at: DOOR_TIME_NONE};
-    }
-    const [state, changed_at] = value.split(':').slice(-2);
-    return {state: state === DOOR_STATE.OPEN ? DOOR_STATE.OPEN : DOOR_STATE.CLOSE, changed_at: changed_at || DOOR_TIME_NONE};
+function doorOpenedKey(room_id: string): string {
+    return `${DOOR_OPENED_KEY_PREFIX}${room_id}`;
 }
 
 /**
@@ -95,9 +81,9 @@ function parseDoorCommand(message: string): DoorCommand | null {
 }
 
 /**
- * 문 정보 어댑터 — Redis. `door:<room_id>` = `open|close:yyyyMMddHHmmss`, `door-qr:<room_id>` = 현재 QR(만료 = 유효 종료), 바로 열기 명령은 채널 `door-commands`.
- * QR 확인 + 열림 · 열림 + 명령 · 같을 때만 지우기는 Lua 스크립트 1개씩(원자적), 여러 문 읽기는 MGET 1번. QR 이력은 DB(t_room_qr)에 있다.
- * 세팅 · 저장 모양 확인: docs/guides/redis-setup.md
+ * 문 정보 어댑터 — Redis. `door-qr:<room_id>` = 현재 QR(만료 = 유효 종료), `door-opened:<room_id>` = 마지막으로 연 시각(한국 시각 yyyyMMddHHmmss), 바로 열기 · 연결 끊기 명령은 채널 `door-commands`.
+ * 열림 · 닫힘 상태는 두지 않는다(사용자 결정 2026-11-19 — 닫기 없음, 연 시각만). QR 이력은 DB(t_room_qr), QR 로 연 기록은 DB(t_door_open_log).
+ * QR 확인 + 연 시각 · 연 시각 + 열기 명령 · 같을 때만 지우기는 Lua 스크립트 1개씩(원자적), 여러 문의 연 시각은 MGET 1번. 세팅 · 저장 모양 확인: docs/guides/redis-setup.md
  */
 @Injectable()
 export class RedisDoorStore implements DoorStoreInterface {
@@ -109,17 +95,17 @@ export class RedisDoorStore implements DoorStoreInterface {
     constructor(private readonly redis: RedisConnection) {}
 
     /**
-     * 여러 문의 상태 — 받은 순서대로, 빈 배열이면 Redis 에 묻지 않는다.
+     * 여러 문의 마지막으로 연 시각 — 받은 순서대로, 연 적 없으면 null. 빈 배열이면 Redis 에 묻지 않는다.
      *
      * @param room_ids 호실 ID 목록
-     * @returns 문 상태 목록
+     * @returns 연 시각 목록 (한국 시각 yyyyMMddHHmmss 또는 null)
      */
-    async getMany(room_ids: string[]): Promise<DoorRecord[]> {
+    async getOpenedAt(room_ids: string[]): Promise<(string | null)[]> {
         if (room_ids.length === 0) {
             return [];
         }
-        const values = await this.run('문 정보 조회', (client) => client.mGet(room_ids.map(doorKey)));
-        return values.map((value) => parseDoorValue(typeof value === 'string' ? value : null));
+        const values = await this.run('연 시각 조회', (client) => client.mGet(room_ids.map(doorOpenedKey)));
+        return values.map((value) => (typeof value === 'string' ? value : null));
     }
 
     /**
@@ -144,38 +130,28 @@ export class RedisDoorStore implements DoorStoreInterface {
     }
 
     /**
-     * QR 확인 — 현재 QR 이 같으면 open + 시각으로 쓰고 true.
+     * QR 확인 — 현재 QR 이 같으면 연 시각을 쓰고 true.
      *
      * @param room_id 호실 ID
      * @param qr 문이 읽은 QR
-     * @param changed_at 시각 (한국 시각 yyyyMMddHHmmss)
+     * @param opened_at 연 시각 (한국 시각 yyyyMMddHHmmss)
      * @returns 같았으면 true
      */
-    async verify(room_id: string, qr: string, changed_at: string): Promise<boolean> {
-        const matched = await this.run('QR 확인', (client) => client.eval(VERIFY_SCRIPT, {keys: [doorQrKey(room_id), doorKey(room_id)], arguments: [qr, DOOR_STATE.OPEN, changed_at]}));
+    async verify(room_id: string, qr: string, opened_at: string): Promise<boolean> {
+        const matched = await this.run('QR 확인', (client) => client.eval(VERIFY_SCRIPT, {keys: [doorQrKey(room_id), doorOpenedKey(room_id)], arguments: [qr, opened_at]}));
         return matched === 1;
     }
 
     /**
-     * 바로 열기 — open + 시각을 쓰고 열기 명령을 보낸다.
+     * 바로 열기 — 연 시각을 쓰고 열기 명령을 보낸다.
      *
      * @param room_id 호실 ID
      * @param store_id 그 호실의 업체 ID (명령 대상)
-     * @param changed_at 시각 (한국 시각 yyyyMMddHHmmss)
+     * @param opened_at 연 시각 (한국 시각 yyyyMMddHHmmss)
      */
-    async open(room_id: string, store_id: string, changed_at: string): Promise<void> {
+    async open(room_id: string, store_id: string, opened_at: string): Promise<void> {
         const command: DoorCommand = {store_id, room_id, command: DOOR_COMMAND.OPEN};
-        await this.run('바로 열기', (client) => client.eval(OPEN_SCRIPT, {keys: [doorKey(room_id)], arguments: [DOOR_STATE.OPEN, changed_at, DOOR_COMMAND_CHANNEL, JSON.stringify(command)]}));
-    }
-
-    /**
-     * close + 시각을 쓴다.
-     *
-     * @param room_id 호실 ID
-     * @param changed_at 시각 (한국 시각 yyyyMMddHHmmss)
-     */
-    async close(room_id: string, changed_at: string): Promise<void> {
-        await this.run('문 닫기', (client) => client.set(doorKey(room_id), `${DOOR_STATE.CLOSE}:${changed_at}`));
+        await this.run('바로 열기', (client) => client.eval(OPEN_SCRIPT, {keys: [doorOpenedKey(room_id)], arguments: [opened_at, DOOR_COMMAND_CHANNEL, JSON.stringify(command)]}));
     }
 
     /**

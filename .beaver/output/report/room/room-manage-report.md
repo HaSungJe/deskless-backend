@@ -43,3 +43,29 @@ service 기능 spec 21개(194건) + repository spec 1개(68건) = 262건.
 ## Remaining Issues
 - 사용자 — 마이그레이션 `RoomState` 적용(`RoomSchema` 뒤). 데이터만 바꾼다: 스탠바이 호실은 예약가능으로 옮겨지고, 이용중 → 사용중으로 이름이 바뀐다.
 - 호실 상태의 시스템 전환(예약 → 예약완료 · 체크인 → 사용중 · 체크아웃 → 정비중)은 예약 · 이용 Phase 몫 — 지금은 업체 관리자 전환 4개만 있다.
+
+## Modification - 261120-1
+
+### Change summary
+프론트 요청(2026-11-20 — M5 객실 그룹 상세 · M4 호실, revision `.beaver/output/revision/room/room-manage-revision-261120-1.md`). 객실 그룹 상세 `plans[].price_count`(지워지지 않은 기간 가격 수 — COUNT 서브쿼리) · `room_count` · `rooms`(`{room_id, room_name, floor}` 층 · 호실명 순), 호실 목록 `floors`(내 업체 호실이 있는 층 전부, 오름차순 — 거르기 · 페이지와 상관없이).
+
+### Changed files
+| File | Change Type | Description |
+|------|-----------|------|
+| `libs/contracts/src/room/dto/room-group-detail.dto.ts` · `room-list.dto.ts` | modified | `price_count` · `RoomGroupDetailRoomResultDto` · `room_count` · `rooms` · `floors` |
+| `apps/admin-service/src/room/interfaces/room.repository.interface.ts` · `repositories/room.repository.ts` | modified | 그룹 상품 쿼리 `price_count` 서브쿼리, `findRoomGroupRooms` + `buildRoomGroupRoomsQuery`, `findRoomFloors` + `buildRoomFloorsQuery` |
+| `apps/admin-service/src/room/room.service.ts` · `room.util.ts` | modified | 그룹 상세 호실 · 기간 가격 수, 호실 목록 층 |
+| `apps/admin-service/src/room/test/room-group-detail.spec.ts` · `room-list.spec.ts` · `room.repository.spec.ts` · `room.test-helper.ts` | modified | 단언 · Data-Access Smoke · mock |
+| `.beaver/output/frontend/changes/2026-11-20-room-group-detail-floors.md` · `changes/README.md` | created · modified | 프론트 수정 요청 |
+| `README.md` · `AGENTS.md` | modified | 업체 관리 줄 · 스모크 목록 |
+
+### Tests written
+- room-group-detail — 상품마다 `price_count` · `room_count` = 호실 수 · `rooms` 받은 순서 · `findRoomGroupRooms(그룹)` 1번 / 호실 없으면 0 · [] / 404 면 호실 조회 없음.
+- room-list — 기본 `floors: []` · `findRoomFloors(업체)` 1번 / 거르기 · 페이지를 줘도 층 조회는 업체 ID 하나.
+- room.repository — Data-Access Smoke: 그룹 상품 SQL(`price_count` 서브쿼리 — 지워지지 않은 기간 가격) · 그룹 호실 SQL(관계 필드 where · 지워지지 않음 · 층 · 호실명 순) · 층 SQL(`DISTINCT` · 업체 · 지워지지 않음 · 오름차순 · LIMIT 없음), `findRoomFloors` 문자열 층 → 숫자, 두 조회 같은 인자 · 통일 500.
+
+### Verification
+- `npm run typecheck` 0 · `npm run lint` 0 · 객실 테스트 23 파일 · 302건 통과(아래 전체 실행은 보고에).
+
+### Remaining issues
+- 문 관련 변경(revision `door/door-state-revision-261119-1` — 아직 커밋 전)과 같은 `room` 파일을 고쳐 같은 ship 으로 나간다.

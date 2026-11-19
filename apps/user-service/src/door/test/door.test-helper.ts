@@ -56,12 +56,11 @@ export function createDoorRepositoryMock(): DoorRepositoryMock {
  */
 export function createDoorStoreMock(): DoorStoreMock {
     return {
-        getMany: vi.fn((room_ids: string[]) => Promise.resolve(room_ids.map(() => ({state: 'close', changed_at: '00000000000000'})))),
+        getOpenedAt: vi.fn((room_ids: string[]) => Promise.resolve(room_ids.map(() => null))),
         setQr: vi.fn().mockResolvedValue(undefined),
         revokeQr: vi.fn().mockResolvedValue(undefined),
         verify: vi.fn().mockResolvedValue(true),
         open: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn().mockResolvedValue(undefined),
         subscribe: vi.fn(),
     };
@@ -157,15 +156,3 @@ export function roomEntity(override: Record<string, unknown> = {}): Record<strin
         ...override,
     };
 }
-
-/**
- * [CASES:toDoorTime] — 지금(UTC) → 저장되는 문 시각(한국 시각 yyyyMMddHHmmss). 사용자 결정 2026-11-01
- * [이름, 지금, 문 시각]
- */
-export const DOOR_TIME_CASES: [string, string, string][] = [
-    ['한국은 다음 날', '2026-10-31T17:24:59Z', '20261101022459'],
-    ['한국 09시', '2026-11-01T00:00:00Z', '20261101090000'],
-    ['연도 경계', '2026-12-31T15:00:00Z', '20270101000000'],
-    ['밀리초는 버림', '2026-11-01T14:59:59.999Z', '20261101235959'],
-    ['윤년 2월 29일', '2028-02-28T15:30:00Z', '20280229003000'],
-];

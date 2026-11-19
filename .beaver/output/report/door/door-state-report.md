@@ -45,3 +45,52 @@
 - 사용자 — 배포 때 `.env` 에 `REDIS_PASSWORD` · `REDIS_URL` 을 넣고 `npm run docker:redis`(또는 `docker:infra`) → user-service 묶음 다시 띄우기. user-service compose 는 이제 `REDIS_URL` 이 없으면 뜨지 않는다. 로컬 실행은 hosts 에 `127.0.0.1 redis`.
 - 실제 Redis 동작 확인은 사용자 몫 — [docs/guides/redis-setup.md](../../../../docs/guides/redis-setup.md) 3절(키를 직접 넣고 문 열기 · 닫기 호출). QR 발급은 Phase 15 #112 전까지 부르는 곳이 없다.
 - 인증 없는 API 위험(spec Notes): 찍어 둔 QR 은 새로 발급되기 전까지 유효, 닫기는 누구나 아무 호실이나 닫힘 표시 가능(상태만). 남용이 보이면 문 쪽 프로그램 키를 붙인다.
+
+## Modification - 261119-1
+
+### Change summary
+문 열림 · 닫힘 상태를 없애고 문마다 **마지막으로 연 시각**만 둔다(사용자 결정 2026-11-19 — revision `.beaver/output/revision/door/door-state-revision-261119-1.md`, door-state · door-manage 를 같이 고친다).
+- Redis: `door:<room_id>`(`open|close:시각`) → 쓰지 · 읽지 않는다. `door-qr:<room_id>`(현재 QR) 그대로 + **`door-opened:<room_id>`** = 마지막으로 연 시각(한국 시각 `yyyyMMddHHmmss`, 만료 없음).
+- 문 소켓: 잠금 알림 `door.closed` · 내부 `POST /internal/v1/user-service/door/close` 삭제(보내면 `error` 400). 스냅샷은 `{room_id, room_name, floor}` 만(Redis 를 보지 않는다). QR 확인은 같으면 연 시각까지 Lua 1개, 응답 그대로.
+- 업체 관리자: 호실 목록 `door_state` · `door_changed_at` → **`door_opened_at`**(MGET, 없으면 null). 바로 열기 → 연 시각 쓰기 + 열기 명령 Lua 1개, 응답 **`{room_id, door_opened_at}`**.
+- 포트: `getMany` · `close` · `DoorState` · `DoorRecord` · `DOOR_STATE` · `DOOR_TIME_NONE` 삭제, `getOpenedAt` 추가, `verify(room_id, qr, opened_at)` · `open(room_id, store_id, opened_at)`. `toDoorTime` 은 그대로(연 시각 형식).
+
+### Changed files
+| File | Change Type | Description |
+|------|-----------|------|
+| `libs/integration/src/door/redis-door.store.ts` · `interfaces/integration.interface.ts` · `integration.constants.ts` · `integration.util.ts` | modified | 문 상태 키 · 읽기 · 닫기 삭제, 연 시각 키 · MGET · Lua 2개(QR 확인 + 연 시각, 연 시각 + 열기 명령) |
+| `libs/contracts/src/door/door.commands.ts` · `dto/door-snapshot.dto.ts` · `dto/door-verify.dto.ts` | modified | `door.closed` · `/close` 삭제, 스냅샷 항목에서 문 상태 삭제, 설명 |
+| `libs/contracts/src/door/dto/door-close.dto.ts` | deleted | 잠금 알림 |
+| `libs/contracts/src/room/dto/room-list.dto.ts` · `room-door-open.dto.ts` | modified | `door_opened_at` · 바로 열기 결과 `{room_id, door_opened_at}` |
+| `apps/user-service/src/door/door.service.ts` · `door.util.ts` · `controllers/door.controller.ts` | modified | 스냅샷 Redis 안 봄 · QR 확인에 연 시각 · 잠금 알림 삭제 |
+| `apps/admin-service/src/room/room.service.ts` · `room.util.ts` · `controllers/room.controller.ts` | modified | 목록 연 시각 · 바로 열기 연 시각 |
+| `apps/gateway/src/modules/door-socket/door-socket.server.ts` · `door-socket.util.ts` · `api/v1/admin-service/room/controllers/room.controller.ts` | modified | 소켓은 `door.verify` 만 받음 · 바로 열기 Swagger 응답 |
+| `apps/user-service/src/door/test/door-close.spec.ts` | deleted | 기능 삭제 |
+| `apps/user-service/src/door/test/door-snapshot.spec.ts` · `door-verify.spec.ts` · `door.test-helper.ts` · `apps/admin-service/src/room/test/room-list.spec.ts` · `room-door-open.spec.ts` · `room.test-helper.ts` · `apps/admin-service/src/store/test/store.test-helper.ts` | modified | 문 상태 단언 → 연 시각, mock `getMany` · `close` → `getOpenedAt` |
+| `docs/realtime.md` · `docs/integration.md` · `docs/guides/redis-setup.md` · `docs/architecture.md` · `AGENTS.md` · `README.md` | modified | 문 정보 = 현재 QR + 마지막으로 연 시각, 소켓 규격(잠금 알림 없음 · 스냅샷 모양), 옛 `door:*` 키 정리 방법 |
+| `.beaver/output/frontend/changes/2026-11-19-door-state-removed.md` · `changes/README.md` | created · modified | 프론트 수정 요청 — M4 호실(프론트와 함께 배포) |
+
+### Tests written
+- door-snapshot — 결과 `{room_id, room_name, floor}` 만, 문 저장소를 부르지 않는다(실패 사례도 그대로).
+- door-verify — `verify(room_id, qr, 한국 시각)` 1번(기존 사례 그대로 — 같으면 열림 기록 insert · 다르면 없음 · 503).
+- door-close — 삭제.
+- room-list — 기본 목록 `door_opened_at: null` · 그 페이지 호실을 한 번에 읽어 같은 순서로 `['20261104093012', null]` · 문 상태 필드 없음 · 빈 페이지 `getOpenedAt([])` · Redis 503.
+- room-door-open — 응답 `{room_id, door_opened_at}` · `open(room_id, store_id, 시각)` · `[CASES:toDoorTime]` 5건(사용자 결정 2026-11-01 — 1차에서 지웠다가 되살림) · 404 · 400.
+- 새 repository 메서드 없음 → 쿼리 스모크 변경 없음.
+
+### Verification
+- `npm run typecheck` 0건 · `npm run lint` 경고 0 · prettier(바꾼 파일) · `npm run build`(네 앱) 통과, `npm test` 123 파일 · 1,351건 통과(door-close 파일이 빠져 파일 수가 하나 줄었다).
+- 남은 흔적 grep — `DOOR_STATE` · `DOOR_TIME_NONE` · `DoorRecord` · `door.closed` · `door/close` · `door_state` · `door_changed_at`(검증 단언 1곳 제외) 0건.
+- Lua 두 개는 커밋돼 있던 스크립트와 같은 모양(비교 후 SET · SET 후 PUBLISH)에 값만 시각으로 — 실제 Redis 로는 돌려 보지 않았다(서버 · Redis 기동은 사용자 몫).
+
+### Remaining issues
+- 배포 — 프론트와 함께(호실 목록 · 바로 열기 응답 모양이 바뀐다). user-service · admin-service · gateway 새 이미지, 마이그레이션 없음.
+- 문 쪽 프로그램 — `door.closed` 를 보내던 구현이 있다면 지워야 한다(이제 `error` 400). 스냅샷 항목에 문 상태가 없다. 규격 원본은 docs/realtime.md.
+- 옛 `door:*` 키는 Redis 에 남아도 무해하다 — 지우는 방법은 docs/guides/redis-setup.md 3절(사용자 몫).
+
+### Modification - 261119-1 추가 결정 2 — 바로 열기도 문 열림 기록
+- `t_door_open_log` — `open_type`(`QR` · `MANAGER`, 기존 행 기본 `QR`) · `user_id`(바로 열기 한 업체 관리자, nullable FK RESTRICT) 추가, `reservation_id` · `room_qr_id` nullable(FK CASCADE → RESTRICT), CHECK `CHK_DoorOpenLog_OpenType`. 마이그레이션 `1795050011114-DoorOpenLogManager.ts`(`npm run db:generate` 결과 — down 의 인덱스 칸 순서만 원래대로 고침), `npm run db:check` 일치. 적용은 사용자.
+- admin-service `openMyRoomDoor` — `@Transactional()`, 기록 insert(MANAGER · 업체 관리자 · 연 시각) → Redis 연 시각 + 열기 명령(마지막 단계 — 503 이면 롤백). room repository `insertRoomDoorOpenLog`(room 어휘, 통일 500). user-service QR 확인 기록은 `open_type: 'QR'` 명시.
+- 테스트 — room-door-open: 기록 insert 1번(DoorOpenLogEntity · MANAGER · 업체 관리자 · 예약 · QR null · 시각) → open 순서, 404 면 기록 없음, Redis 503 → 503(기록 insert 는 불림 · 롤백). door-verify: 기록에 `QR` · user_id null. room.repository: insert 그대로 · 통일 500.
+- 검증 — typecheck 0 · lint 0 · `db:check` 일치 · build · `npm test` 123 파일 · 1,354건 통과.
+- 공개 API 변화 없음(프론트 수정 요청 대상 아님). 조회 API 는 여전히 없다.

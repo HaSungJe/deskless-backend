@@ -6,6 +6,7 @@ import type {FindOptionsWhere, Repository, SelectQueryBuilder} from 'typeorm';
 import {createValidationError} from '@app/common/utils/validation.js';
 import {RESERVATION_OCCUPYING_STATES} from '@app/contracts/reservation/reservation.constants.js';
 import {LOGIN_SCOPE} from '@app/contracts/roles.js';
+import {DoorOpenLogEntity} from '@app/database/entities/door/door-open-log.entity.js';
 import {ReservationEntity} from '@app/database/entities/reservation/reservation.entity.js';
 import {RoomGroupImageEntity} from '@app/database/entities/room/room-group-image.entity.js';
 import {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
@@ -37,6 +38,11 @@ export class RoomRepository implements RoomRepositoryInterface {
      * @param txHost 트랜잭션 전파용 EntityManager 홀더
      */
     constructor(private readonly txHost: TransactionHost<TransactionalAdapterTypeOrm>) {}
+
+    /** t_door_open_log — 업체 관리자 바로 열기 기록(문 열림 기록 표를 room 어휘로 쓰기만) */
+    private get doorOpenLogs(): Repository<DoorOpenLogEntity> {
+        return this.txHost.tx.getRepository(DoorOpenLogEntity);
+    }
 
     /** t_reservation — 호실 · 그룹 삭제 전 점유 예약 확인(예약 표를 room 어휘로 읽기만) */
     private get reservations(): Repository<ReservationEntity> {
@@ -346,7 +352,7 @@ export class RoomRepository implements RoomRepositoryInterface {
     }
 
     /**
-     * 그룹 상품 조회 쿼리 — 매핑 민감(상품 종류 조인 · raw select — 별칭이 RoomGroupPlanRow 키와 같다)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
+     * 그룹 상품 조회 쿼리 — 매핑 민감(상품 종류 조인 · raw select · 기간 가격 수 서브쿼리 — 별칭이 RoomGroupPlanRow 키와 같다)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
      *
      * @param room_group_id 객실 그룹 ID
      * @returns 쿼리 빌더
@@ -360,6 +366,10 @@ export class RoomRepository implements RoomRepositoryInterface {
             .addSelect('t.room_plan_type_name', 'room_plan_type_name')
             .addSelect('gp.is_used', 'is_used')
             .addSelect('gp.price', 'price')
+            .addSelect(
+                (sub) => sub.select('CAST(COUNT(*) AS integer)').from(RoomGroupPlanPriceEntity, 'pp').where('"pp"."room_group_plan_id" = "gp"."room_group_plan_id"').andWhere('"pp"."is_deleted" = 0'),
+                'price_count',
+            )
             .innerJoin(RoomPlanTypeEntity, 't', 't.room_plan_type_id = gp.room_plan_type_id')
             .where('gp.room_group_id = :room_group_id', {room_group_id});
     }
@@ -679,6 +689,68 @@ export class RoomRepository implements RoomRepositoryInterface {
         } catch {
             throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
         }
+    }
+
+    /**
+     * 호실 문 열림 기록 — 업체 관리자 바로 열기(MANAGER). 받은 엔티티 그대로 insert(@BeforeInsert 가 돈다), 실패는 통일 500
+     *
+     * @param entity new DoorOpenLogEntity() + 할당
+     */
+    async insertRoomDoorOpenLog(entity: DoorOpenLogEntity): Promise<void> {
+        try {
+            await this.doorOpenLogs.insert(entity);
+        } catch {
+            throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
+        }
+    }
+
+    /**
+     * 업체 호실이 있는 층 전부 — 지워지지 않은 호실, 오름차순(호실 목록의 층 거르기 선택지 — 거르기 · 페이지와 상관없이)
+     *
+     * @param store_id 업체 ID
+     * @returns 층 목록 (숫자)
+     */
+    async findRoomFloors(store_id: string): Promise<number[]> {
+        try {
+            const rows = await this.buildRoomFloorsQuery(store_id).getRawMany<{floor: number | string}>();
+            return rows.map((row) => Number(row.floor));
+        } catch {
+            throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
+        }
+    }
+
+    /**
+     * 층 목록 쿼리 — 매핑 민감(raw select · DISTINCT · 정렬)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
+     *
+     * @param store_id 업체 ID
+     * @returns 쿼리 빌더
+     */
+    buildRoomFloorsQuery(store_id: string): SelectQueryBuilder<RoomEntity> {
+        return this.rooms.createQueryBuilder('r').select('r.floor', 'floor').distinct(true).where('r.store_id = :store_id', {store_id}).andWhere('r.is_deleted = 0').orderBy('r.floor', 'ASC');
+    }
+
+    /**
+     * 그 그룹의 호실 — 지워지지 않은 호실, 층 · 호실명 순(객실 그룹 상세)
+     *
+     * @param room_group_id 객실 그룹 ID
+     * @returns 호실 목록
+     */
+    async findRoomGroupRooms(room_group_id: string): Promise<RoomEntity[]> {
+        try {
+            return await this.buildRoomGroupRoomsQuery(room_group_id).getMany();
+        } catch {
+            throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
+        }
+    }
+
+    /**
+     * 그룹 호실 쿼리 — 매핑 민감(관계 필드 where · 정렬)이라 Data-Access Smoke spec 으로 SQL 을 고정한다(그룹 사진 쿼리와 같은 모양).
+     *
+     * @param room_group_id 객실 그룹 ID
+     * @returns 쿼리 빌더
+     */
+    buildRoomGroupRoomsQuery(room_group_id: string): SelectQueryBuilder<RoomEntity> {
+        return this.rooms.createQueryBuilder('r').setFindOptions({where: notDeleted<RoomEntity>({room_group_id}), order: {floor: 'ASC', room_name: 'ASC'}, loadRelationIds: true});
     }
 
     /**

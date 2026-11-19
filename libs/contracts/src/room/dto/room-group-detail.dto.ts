@@ -63,6 +63,23 @@ export class RoomGroupDetailPlanResultDto {
 
     @ApiProperty({description: '기본 요금(원) — 시간 이용 1회 · 1박 · 연박 1박당'})
     price: number;
+
+    @ApiProperty({description: '이 상품의 기간 가격 수 (지워지지 않은 것 — 지난 기간 포함)'})
+    price_count: number;
+}
+
+/**
+ * 객실 그룹 상세의 호실 — 지워지지 않은 호실
+ */
+export class RoomGroupDetailRoomResultDto {
+    @ApiProperty({description: '호실 ID'})
+    room_id: string;
+
+    @ApiProperty({description: '호실명 (예: 101호)'})
+    room_name: string;
+
+    @ApiProperty({description: '층 (지하는 음수, B1 = -1)'})
+    floor: number;
 }
 
 /**
@@ -86,6 +103,12 @@ export class RoomGroupDetailResultDto {
 
     @ApiProperty({description: '그룹 상품 (HOURLY · NIGHT · LONG 순)', type: () => [RoomGroupDetailPlanResultDto]})
     plans: RoomGroupDetailPlanResultDto[];
+
+    @ApiProperty({description: '호실 수 (지워지지 않은 호실) — 그룹 목록의 room_count 와 같은 값'})
+    room_count: number;
+
+    @ApiProperty({description: '이 그룹의 호실 (지워지지 않은 호실, 층 · 호실명 순)', type: () => [RoomGroupDetailRoomResultDto]})
+    rooms: RoomGroupDetailRoomResultDto[];
 
     @ApiProperty({description: '등록일시 (ISO 8601)'})
     created_at: string;

@@ -54,11 +54,12 @@ export class RoomListItemResultDto {
     @ApiProperty({description: '등록일시 (ISO 8601)'})
     created_at: string;
 
-    @ApiProperty({description: '문 상태 (open: 열림, close: 닫힘 — 기록이 없으면 close)', enum: ['open', 'close']})
-    door_state: string;
-
-    @ApiProperty({description: '문을 마지막으로 열거나 닫은 시각 — 한국 시각 yyyyMMddHHmmss, 기록이 없으면 00000000000000'})
-    door_changed_at: string;
+    @ApiProperty({
+        description: '문을 마지막으로 연 시각 — 한국 시각 yyyyMMddHHmmss(QR 확인이 맞았거나 바로 열기를 한 때 — 실제로 문이 열린 시각은 아니다), 연 적 없으면 null',
+        type: String,
+        nullable: true,
+    })
+    door_opened_at: string | null;
 }
 
 /**
@@ -70,4 +71,7 @@ export class RoomListResultDto {
 
     @ApiProperty({description: '페이지 정보', type: () => PaginationResultDto})
     pagination: PaginationResultDto;
+
+    @ApiProperty({description: '내 업체 호실이 있는 층 전부 (오름차순 — 거르기 · 페이지와 상관없이, 층 거르기 선택지)', type: [Number]})
+    floors: number[];
 }

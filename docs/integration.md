@@ -1,6 +1,6 @@
 # 외부 연동 (`libs/integration`)
 
-> 사용처: user-service 의 휴대폰 SMS 인증 · 아이디 찾기 · 문 소켓 QR 확인 · 잠금 · 내 예약 QR · 결제 확인 QR · 취소 때 QR 지우기(문 정보 — Redis) · 입점 신청 업체 정보 파일(업로드 주소 · 존재 확인 · 삭제 · 열람 주소) · 업체 둘러보기 사진(공개 주소 — `StorageModule`), admin-service 의 매니저 아이디 찾기 · 비밀번호 초기화 · 입점 승인 · 업체 취소 · 호실 이동 · 이용 중 취소 요청(승인 링크) SMS · 업체 정보 파일 · 객실 그룹 사진 · 호실 문 상태 · 바로 열기(문 정보 — Redis), gateway 의 문 소켓 명령 구독, scheduler 의 이용 시작 · QR 동기화(문 정보 — Redis) · QR 확인 링크 SMS(루트 모듈이 `SmsModule` · `DoorStoreModule` 중 쓰는 것을 import 한다). 결제(`PaymentModule`)는 user-service 예약(결제 환경 — 예약 · 연장 신청, 결제 확인 `getPayment` — 기본 · 연장 구간)과 scheduler(결제 대기 만료(기본 · 연장 구간) · 늦은 승인 재확인 `findByPaymentId` · 환불 `cancel`)가 쓴다. AWS 세팅은 [guides/aws-setup.md](guides/aws-setup.md), Redis 는 [guides/redis-setup.md](guides/redis-setup.md), 토스는 [guides/toss-setup.md](guides/toss-setup.md).
+> 사용처: user-service 의 휴대폰 SMS 인증 · 아이디 찾기 · 문 소켓 QR 확인 · 내 예약 QR · 결제 확인 QR · 취소 때 QR 지우기(문 정보 — Redis) · 입점 신청 업체 정보 파일(업로드 주소 · 존재 확인 · 삭제 · 열람 주소) · 업체 둘러보기 사진(공개 주소 — `StorageModule`), admin-service 의 매니저 아이디 찾기 · 비밀번호 초기화 · 입점 승인 · 업체 취소 · 호실 이동 · 이용 중 취소 요청(승인 링크) SMS · 업체 정보 파일 · 객실 그룹 사진 · 호실 문 상태 · 바로 열기(문 정보 — Redis), gateway 의 문 소켓 명령 구독, scheduler 의 이용 시작 · QR 동기화(문 정보 — Redis) · QR 확인 링크 SMS(루트 모듈이 `SmsModule` · `DoorStoreModule` 중 쓰는 것을 import 한다). 결제(`PaymentModule`)는 user-service 예약(결제 환경 — 예약 · 연장 신청, 결제 확인 `getPayment` — 기본 · 연장 구간)과 scheduler(결제 대기 만료(기본 · 연장 구간) · 늦은 승인 재확인 `findByPaymentId` · 환불 `cancel`)가 쓴다. AWS 세팅은 [guides/aws-setup.md](guides/aws-setup.md), Redis 는 [guides/redis-setup.md](guides/redis-setup.md), 토스는 [guides/toss-setup.md](guides/toss-setup.md).
 
 ## 원칙
 
@@ -61,12 +61,12 @@
 
 ## 문 정보 (`DOOR_STORE` · Redis)
 
-- **저장 모양** — `door:<room_id>` = `상태:시각`(상태 `open` | `close`, 시각은 한국 시각 yyyyMMddHHmmss — 만드는 쪽은 service 가 `toDoorTime` 으로), `door-qr:<room_id>` = 그 호실의 현재 QR(만료 PXAT = QR 유효 끝 → 이용 끝에 저절로 사라진다). 기록이 없는 문은 키가 없고 `getMany` 가 `{state: 'close', changed_at: '00000000000000'}` 으로 읽는다(Phase 14 의 `QR:상태:시각` 값도 뒤의 두 칸만 읽는다).
-- **QR 이력 · 유효 시간의 원본은 DB `t_room_qr`** — 예약당 1행(시작 · 끝), 이용 시작 때 발급하고 이용 중 예약이 취소되면(사용중지 호실 이용자 취소 · 이용 중 취소 승인) 끝을 지금으로 당긴다. QR 로 문을 연 기록은 `t_door_open_log`(문 소켓 QR 확인이 맞을 때 — 이력에 없는 QR 이면 Redis 를 보지 않는다). Redis 는 문이 비교할 현재 값만 든다 — 발급 · 조회 때마다 `setQr` 로 다시 쓰고(scheduler `reservation-qr-sync` 가 매분 맞춘다), 취소는 `revokeQr`(값이 같을 때만 지운다).
-- **원자적 3동작** — QR 확인(`verify` — 현재 QR 이 같을 때만 open + 시각, 아니면 아무것도 바꾸지 않는다) · 바로 열기(`open` — open + 시각을 쓰고 같은 스크립트에서 `door-commands` 채널에 `{store_id, room_id, command: 'open'}` PUBLISH) · QR 지우기(`revokeQr`)는 Lua 스크립트 1개씩이다. 잠금(`close`)은 SET 하나다.
+- **저장 모양** — `door-qr:<room_id>` = 그 호실의 현재 QR(만료 PXAT = QR 유효 끝 → 이용 끝에 저절로 사라진다), `door-opened:<room_id>` = 문을 마지막으로 연 시각(한국 시각 yyyyMMddHHmmss — `toDoorTime`, 만료 없음, 연 적 없으면 키가 없고 `getOpenedAt` 이 null). **열림 · 닫힘 상태는 두지 않는다**(사용자 결정 2026-11-19 — 서버가 아는 열림은 "열어도 됨" 을 답한 때뿐이고 닫힘은 문 프로그램이 알려 줄 때뿐이라 실제 문을 비추지 못한다, 닫기 · 잠금 알림 없음). 연 시각도 실제로 문이 열린 때가 아니라 서버가 열기를 허락 · 명령한 때다. 옛 `door:<room_id>` 키는 코드가 읽지 않는다.
+- **QR 이력 · 유효 시간의 원본은 DB `t_room_qr`** — 예약당 1행(시작 · 끝), 이용 시작 때 발급하고 이용 중 예약이 취소되면(사용중지 호실 이용자 취소 · 이용 중 취소 승인) 끝을 지금으로 당긴다. 문을 연 기록은 `t_door_open_log`(문 소켓 QR 확인이 맞을 때 `QR` — 이력에 없는 QR 이면 Redis 를 보지 않는다, 업체 관리자 바로 열기 때 `MANAGER` + 연 사람 — 기록 insert 뒤 Redis 가 마지막 단계). Redis 는 문이 비교할 현재 값만 든다 — 발급 · 조회 때마다 `setQr` 로 다시 쓰고(scheduler `reservation-qr-sync` 가 매분 맞춘다), 취소는 `revokeQr`(값이 같을 때만 지운다).
+- **원자적 3동작** — QR 확인(`verify` — 현재 QR 이 같을 때만 연 시각을 쓴다, 아니면 아무것도 바꾸지 않는다) · 바로 열기(`open` — 연 시각을 쓰고 같은 스크립트에서 `door-commands` 채널에 `{store_id, room_id, command: 'open'}` PUBLISH) · QR 지우기(`revokeQr` — 값이 같을 때만)는 Lua 스크립트 1개씩이다. 여러 문의 연 시각은 MGET 1번(`getOpenedAt`), 연결 끊기(`disconnect`)는 PUBLISH, QR 쓰기(`setQr`)는 SET PXAT.
 - **서버 명령은 Redis 채널** — gateway 인스턴스마다 `subscribe` 로 `door-commands` 를 구독해 그 업체의 자기 소켓 연결에 적용한다([realtime.md](realtime.md)) — 바로 열기 `{store_id, room_id, command: 'open'}` → `door.open`, 연결 끊기 `{store_id, command: 'disconnect'}`(`disconnect` — 업체 문 시크릿 변경 뒤 store service 가 마지막 단계에서 보낸다) → 그 업체 연결을 모두 1008 로 끊는다. 구독은 구독 전용 연결이라 명령 연결과 섞이지 않는다.
-- **단일 노드 전제** — 스크립트가 여러 키를 함께 쓰므로 클러스터 모드가 아닌 Redis(ElastiCache 는 클러스터 모드 끔)여야 한다.
-- **원본이다** — 캐시가 아니라 문 상태의 유일한 저장소라 Docker 묶음은 AOF 영속, 운영은 백업을 켠다([guides/redis-setup.md](guides/redis-setup.md)).
+- **단일 노드 전제** — QR 확인 스크립트가 두 키(`door-qr:` · `door-opened:`)를 함께 쓰므로 클러스터 모드가 아닌 Redis(ElastiCache 는 클러스터 모드 끔)여야 한다.
+- **영속은 켠다** — 현재 QR 은 DB(`t_room_qr`)에서 다시 만들 수 있지만(scheduler 가 매분 다시 쓴다) 그 사이 이용 중인 문이 안 열리지 않게, 그리고 마지막으로 연 시각은 Redis 에만 있으므로 Docker 묶음은 AOF 영속, 운영은 백업을 켠다([guides/redis-setup.md](guides/redis-setup.md)).
 - 서버는 문을 직접 움직이지 않는다 — 문 쪽 타 업체 프로그램이 읽은 QR 을 문 소켓으로 묻고, `door.verified ok` 면 문을 연다. HTTP 문 열기 · 닫기 API 는 없다.
 
 ## 쓰는 법

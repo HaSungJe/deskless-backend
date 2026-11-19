@@ -15,6 +15,7 @@ import {StoreEntity} from '@app/database/entities/store/store.entity.js';
 import type {RoomGroupPlanRow, RoomGroupRow, RoomPlanRow, RoomRow} from '../interfaces/room.repository.interface.js';
 import {RoomRepository} from '../repositories/room.repository.js';
 import {buildPlanPriceOverlapWhere} from '../room.util.js';
+import {DoorOpenLogEntity} from '@app/database/entities/door/door-open-log.entity.js';
 
 /** RoomPlanRow 키 — raw select 별칭과 비교 */
 const ROOM_PLAN_ROW_KEYS: (keyof RoomPlanRow)[] = [
@@ -37,7 +38,7 @@ const ROOM_PLAN_ROW_KEYS: (keyof RoomPlanRow)[] = [
 const ROOM_GROUP_ROW_KEYS: (keyof RoomGroupRow)[] = ['room_group_id', 'room_group_name', 'created_at', 'room_count', 'cover_file_key', 'cover_file_storage'];
 
 /** RoomGroupPlanRow 키 */
-const ROOM_GROUP_PLAN_ROW_KEYS: (keyof RoomGroupPlanRow)[] = ['room_group_plan_id', 'room_group_id', 'room_plan_type_id', 'room_plan_type_name', 'is_used', 'price'];
+const ROOM_GROUP_PLAN_ROW_KEYS: (keyof RoomGroupPlanRow)[] = ['room_group_plan_id', 'room_group_id', 'room_plan_type_id', 'room_plan_type_name', 'is_used', 'price', 'price_count'];
 
 /** RoomRow 키 */
 const ROOM_ROW_KEYS: (keyof RoomRow)[] = ['room_id', 'room_group_id', 'room_group_name', 'room_name', 'floor', 'room_state_id', 'room_state_name', 'created_at'];
@@ -89,10 +90,12 @@ function makeRepository() {
         [RoomGroupPlanPriceEntity, fake()],
         [RoomEntity, fake()],
         [ReservationEntity, fake()],
+        [DoorOpenLogEntity, fake()],
     ]);
     const txHost = {tx: {getRepository: (entity: unknown) => repos.get(entity)}} as unknown as TransactionHost<TransactionalAdapterTypeOrm>;
     return {
         repository: new RoomRepository(txHost),
+        openLog: repos.get(DoorOpenLogEntity)!,
         store: repos.get(StoreEntity)!,
         roomPlan: repos.get(RoomPlanEntity)!,
         group: repos.get(RoomGroupEntity)!,
@@ -287,6 +290,7 @@ describe('RoomRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         ['countRooms', 'room', 'count'],
         ['findRoom', 'room', 'findOne'],
         ['insertRoom', 'room', 'insert'],
+        ['insertRoomDoorOpenLog', 'openLog', 'insert'],
         ['updateRoom', 'room', 'update'],
         ['deleteRoom', 'room', 'update'],
         ['deleteRooms', 'room', 'update'],
@@ -297,6 +301,17 @@ describe('RoomRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         await expect((fakes.repository[method] as (...args: unknown[]) => Promise<unknown>)({}, {})).rejects.toBeInstanceOf(InternalServerErrorException);
     });
 
+    it('[SUCCESS] insertRoomDoorOpenLog — 받은 엔티티 그대로 insert(@BeforeInsert 가 돈다)', async () => {
+        const {repository, openLog} = makeRepository();
+        const log = new DoorOpenLogEntity();
+        log.door_open_log_id = 'l1';
+
+        await repository.insertRoomDoorOpenLog(log);
+
+        expect(openLog.insert).toHaveBeenCalledTimes(1);
+        expect(openLog.insert).toHaveBeenCalledWith(log);
+    });
+
     it.each([
         ['findManagerStore', 'buildManagerStoreQuery', ['u1', true]],
         ['findRoomPlanRows', 'buildRoomPlanRowsQuery', ['s1']],
@@ -305,6 +320,8 @@ describe('RoomRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         ['findRoomGroupImages', 'buildRoomGroupImagesQuery', ['g1']],
         ['findRoomGroupPlanPriceList', 'buildRoomGroupPlanPriceListQuery', [{room_group_plan_id: 'gp1'}, 20, 0]],
         ['findRoomRows', 'buildRoomRowsQuery', [{store_id: 's1', floor: null, room_group_id: null}, 20, 0]],
+        ['findRoomFloors', 'buildRoomFloorsQuery', ['s1']],
+        ['findRoomGroupRooms', 'buildRoomGroupRoomsQuery', ['g1']],
         ['countGroupActiveReservations', 'buildGroupActiveReservationsQuery', ['g1']],
     ] as const)('%s 는 같은 인자로 %s 를 실행하고, 실패는 통일 500', async (method, builder, args) => {
         const {repository} = makeRepository();
@@ -319,6 +336,15 @@ describe('RoomRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         await expect((repository[method] as (...params: unknown[]) => Promise<unknown>)(...args)).rejects.toBeInstanceOf(InternalServerErrorException);
         expect(spy).toHaveBeenCalledTimes(1);
         expect(spy).toHaveBeenCalledWith(...args);
+    });
+
+    it('[SUCCESS] findRoomFloors — 층 값이 문자열로 와도 숫자 목록으로 돌려준다(받은 순서 그대로)', async () => {
+        const {repository} = makeRepository();
+        vi.spyOn(repository, 'buildRoomFloorsQuery').mockReturnValue({getRawMany: vi.fn().mockResolvedValue([{floor: '-1'}, {floor: 2}, {floor: '3'}])} as unknown as ReturnType<
+            typeof repository.buildRoomFloorsQuery
+        >);
+
+        await expect(repository.findRoomFloors('s1')).resolves.toEqual([-1, 2, 3]);
     });
 
     it('[SUCCESS] countRoomActiveReservations — 호실 · 점유 상태(결제 대기 · 확정 · 이용 중) IN', async () => {
@@ -348,7 +374,12 @@ describe('[SMOKE:data-access] 소속 업체 · 상품 설정 · 그룹 목록 ·
         'SELECT "g"."room_group_id" AS "room_group_id", "g"."room_group_name" AS "room_group_name", "g"."created_at" AS "created_at", (SELECT CAST(COUNT(*) AS integer) FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0) AS "room_count", (SELECT "i"."file_key" FROM "t_room_group_image" "i" WHERE "i"."room_group_id" = "g"."room_group_id" AND "i"."is_deleted" = 0 ORDER BY "i"."sort_order" ASC, "i"."created_at" ASC LIMIT 1) AS "cover_file_key", (SELECT "i"."file_storage" FROM "t_room_group_image" "i" WHERE "i"."room_group_id" = "g"."room_group_id" AND "i"."is_deleted" = 0 ORDER BY "i"."sort_order" ASC, "i"."created_at" ASC LIMIT 1) AS "cover_file_storage" FROM "t_room_group" "g" WHERE (("g"."store_id" = $1) AND ("g"."room_group_name" ILIKE $2) AND ("g"."is_deleted" = $3)) ORDER BY "g"."created_at" DESC LIMIT 20 OFFSET 0';
     /** 그룹 상품 행 */
     const ROOM_GROUP_PLAN_ROWS_SQL =
-        'SELECT "gp"."room_group_plan_id" AS "room_group_plan_id", "gp"."room_group_id" AS "room_group_id", "gp"."room_plan_type_id" AS "room_plan_type_id", "gp"."is_used" AS "is_used", "gp"."price" AS "price", "t"."room_plan_type_name" AS "room_plan_type_name" FROM "t_room_group_plan" "gp" INNER JOIN "t_room_plan_type" "t" ON "t"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "gp"."room_group_id" = $1';
+        'SELECT "gp"."room_group_plan_id" AS "room_group_plan_id", "gp"."room_group_id" AS "room_group_id", "gp"."room_plan_type_id" AS "room_plan_type_id", "gp"."is_used" AS "is_used", "gp"."price" AS "price", "t"."room_plan_type_name" AS "room_plan_type_name", (SELECT CAST(COUNT(*) AS integer) FROM "t_room_group_plan_price" "pp" WHERE "pp"."room_group_plan_id" = "gp"."room_group_plan_id" AND "pp"."is_deleted" = 0) AS "price_count" FROM "t_room_group_plan" "gp" INNER JOIN "t_room_plan_type" "t" ON "t"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "gp"."room_group_id" = $1';
+    /** 그룹 호실 */
+    const ROOM_GROUP_ROOMS_SQL =
+        'SELECT "r"."room_id" AS "r_room_id", "r"."room_name" AS "r_room_name", "r"."floor" AS "r_floor", "r"."is_deleted" AS "r_is_deleted", "r"."created_at" AS "r_created_at", "r"."updated_at" AS "r_updated_at", "r"."store_id" AS "r_store_id", "r"."room_group_id" AS "r_room_group_id", "r"."room_state_id" AS "r_room_state_id" FROM "t_room" "r" WHERE (("r"."room_group_id" = $1) AND ("r"."is_deleted" = $2)) ORDER BY "r"."floor" ASC, "r"."room_name" ASC';
+    /** 층 목록 */
+    const ROOM_FLOORS_SQL = 'SELECT DISTINCT "r"."floor" AS "floor" FROM "t_room" "r" WHERE "r"."store_id" = $1 AND "r"."is_deleted" = 0 ORDER BY "r"."floor" ASC';
     /** 그룹 사진 */
     const ROOM_GROUP_IMAGES_SQL =
         'SELECT "i"."room_group_image_id" AS "i_room_group_image_id", "i"."file_key" AS "i_file_key", "i"."file_storage" AS "i_file_storage", "i"."file_name" AS "i_file_name", "i"."content_type" AS "i_content_type", "i"."sort_order" AS "i_sort_order", "i"."is_deleted" AS "i_is_deleted", "i"."created_at" AS "i_created_at", "i"."updated_at" AS "i_updated_at", "i"."room_group_id" AS "i_room_group_id" FROM "t_room_group_image" "i" WHERE (("i"."room_group_id" = $1) AND ("i"."is_deleted" = $2)) ORDER BY "i"."sort_order" ASC, "i"."created_at" ASC';
@@ -443,9 +474,35 @@ describe('[SMOKE:data-access] 소속 업체 · 상품 설정 · 그룹 목록 ·
         expect(flat).toContain('FROM "t_room_group_plan" "gp"');
         expect(flat).toContain('INNER JOIN "t_room_plan_type" "t"');
         expect(flat).toContain('"gp"."room_group_id" = $1');
-        expect(flat).not.toContain('is_deleted');
+        expect(flat).not.toContain('"gp"."is_deleted"');
+        expect(flat).toContain(
+            '(SELECT CAST(COUNT(*) AS integer) FROM "t_room_group_plan_price" "pp" WHERE "pp"."room_group_plan_id" = "gp"."room_group_plan_id" AND "pp"."is_deleted" = 0) AS "price_count"',
+        );
         expect([...selectAliases(flat)].sort()).toEqual([...ROOM_GROUP_PLAN_ROW_KEYS].sort());
         expect(flat).toBe(ROOM_GROUP_PLAN_ROWS_SQL);
+    });
+
+    it('그룹 호실 — 그 그룹 · 지워지지 않은 호실, 층 · 호실명 순', () => {
+        const [sql, parameters] = repository.buildRoomGroupRoomsQuery('g1').getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual(['g1', 0]);
+        expect(flat).toContain('FROM "t_room" "r"');
+        expect(flat).toContain('WHERE (("r"."room_group_id" = $1) AND ("r"."is_deleted" = $2))');
+        expect(flat).toContain('ORDER BY "r"."floor" ASC, "r"."room_name" ASC');
+        expect(flat).toBe(ROOM_GROUP_ROOMS_SQL);
+    });
+
+    it('층 목록 — 그 업체 · 지워지지 않은 호실의 층을 한 번씩, 오름차순(거르기 · 페이지 없음)', () => {
+        const [sql, parameters] = repository.buildRoomFloorsQuery('s1').getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual(['s1']);
+        expect(flat).toContain('SELECT DISTINCT "r"."floor" AS "floor"');
+        expect(flat).toContain('FROM "t_room" "r"');
+        expect(flat).toContain('"r"."is_deleted" = 0');
+        expect(flat).not.toContain('LIMIT');
+        expect(flat).toBe(ROOM_FLOORS_SQL);
     });
 
     it('그룹 사진 — 그 그룹 · 지워지지 않은 사진, 정렬 순서 · 등록일 순', () => {

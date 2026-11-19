@@ -1,5 +1,4 @@
 import {Body, Controller, HttpCode, Post} from '@nestjs/common';
-import {DoorCloseDto, DoorCloseResultDto} from '@app/contracts/door/dto/door-close.dto.js';
 import {DoorSnapshotDto, DoorSnapshotResultDto} from '@app/contracts/door/dto/door-snapshot.dto.js';
 import {DoorVerifyDto, DoorVerifyResultDto} from '@app/contracts/door/dto/door-verify.dto.js';
 import {DoorService} from '../door.service.js';
@@ -30,14 +29,5 @@ export class DoorController {
     @HttpCode(200)
     async verifyStoreDoor(@Body() dto: DoorVerifyDto): Promise<DoorVerifyResultDto> {
         return this.doorService.verifyStoreDoor(dto);
-    }
-
-    /**
-     * 문 소켓 잠금 알림 (gateway 문 소켓 — actor 없음, 내부 토큰만)
-     */
-    @Post('/close')
-    @HttpCode(200)
-    async closeStoreDoor(@Body() dto: DoorCloseDto): Promise<DoorCloseResultDto> {
-        return this.doorService.closeStoreDoor(dto);
     }
 }

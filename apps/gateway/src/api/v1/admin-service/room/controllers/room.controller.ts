@@ -135,7 +135,7 @@ export class RoomController {
     }
 
     /**
-     * 호실 문 바로 열기 (업체 관리자) — 서버는 Redis 문 상태를 open + 지금 시각으로 바꾸고 그 업체 문 소켓에 열기 명령(door.open)을 보낸다. 실제 문은 문 쪽 프로그램이 연다
+     * 호실 문 바로 열기 (업체 관리자) — 서버는 마지막으로 연 시각을 쓰고 그 업체 문 소켓에 열기 명령(door.open)을 보낸다(열림 · 닫힘 상태는 없다). 실제 문은 문 쪽 프로그램이 연다
      */
     @Post('/:room_id/door-open')
     @UseGuards(PassportJwtManagerAuthGuard)

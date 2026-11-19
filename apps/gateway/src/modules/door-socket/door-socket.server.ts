@@ -4,8 +4,7 @@ import {Inject, Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy} fro
 import {HttpAdapterHost} from '@nestjs/core';
 import {WebSocket, WebSocketServer} from 'ws';
 import type {RawData} from 'ws';
-import {DOOR_INTERNAL_PATH, DOOR_SOCKET_EVENT} from '@app/contracts/door/door.commands.js';
-import type {DoorCloseResultDto} from '@app/contracts/door/dto/door-close.dto.js';
+import {DOOR_INTERNAL_PATH} from '@app/contracts/door/door.commands.js';
 import type {DoorSnapshotResultDto} from '@app/contracts/door/dto/door-snapshot.dto.js';
 import type {DoorVerifyResultDto} from '@app/contracts/door/dto/door-verify.dto.js';
 import {DOOR_COMMAND} from '@app/integration/integration.constants.js';
@@ -33,8 +32,8 @@ import type {DoorSocketFailure} from './door-socket.util.js';
 /**
  * 문 소켓 — 문 쪽 타 업체 프로그램이 업체 단위로 붙는 표준 WebSocket(`/ws/v1/door`).
  * - HTTP 서버의 업그레이드를 직접 받아 헤더(x-store-id · x-store-secret)를 user-service 에 확인한 뒤에만 연결한다(틀리면 업그레이드 전 HTTP 401).
- * - 연결 직후 그 업체 호실 전체의 문 상태(door.snapshot).
- * - 문 프로그램의 QR 확인(door.verify)은 user-service 가 Redis 현재 QR 과 비교해 답하고(door.verified — 그 연결에만), 잠금 알림(door.closed)은 기록만 한다(성공은 답하지 않는다). 실패는 error 메시지(연결 유지).
+ * - 연결 직후 그 업체 호실 전체(door.snapshot — 호실 ID · 이름 · 층, 문 상태는 두지 않는다).
+ * - 문 프로그램의 QR 확인(door.verify)은 user-service 가 Redis 현재 QR 과 비교해 답한다(door.verified — 그 연결에만). 그 밖의 메시지 · 실패는 error 메시지(연결 유지).
  * - 관리자 바로 열기는 Redis 채널 door-commands 를 구독해 그 업체 연결 모두에 door.open 으로 보낸다.
  * - 30초마다 ping, 다음 ping 까지 pong 이 없으면 끊는다. 재연결은 문 프로그램이 한다.
  * - 연결 목록은 인스턴스 메모리다(연결 자체가 이 인스턴스에 붙어 있다) — 상태 원본은 Redis · DB, 인스턴스마다 따로 구독한다(sticky 불필요).
@@ -120,7 +119,7 @@ export class DoorSocketServer implements OnApplicationBootstrap, OnModuleDestroy
      * 연결 등록 — 업체 묶음에 넣고 처음 상태를 보낸다.
      *
      * @param client 연결
-     * @param snapshot 업체 호실 전체의 문 상태
+     * @param snapshot 업체 호실 전체(호실 ID · 이름 · 층)
      */
     private accept(client: WebSocket, snapshot: DoorSnapshotResultDto): void {
         const store_id = snapshot.store_id;
@@ -136,7 +135,7 @@ export class DoorSocketServer implements OnApplicationBootstrap, OnModuleDestroy
     }
 
     /**
-     * 문 프로그램 메시지 — QR 확인은 결과를 그 연결에 답하고, 잠금 알림은 기록만 한다(성공은 답하지 않는다). 실패는 error 메시지.
+     * 문 프로그램 메시지 — QR 확인만 받아 결과를 그 연결에 답한다. 모르는 메시지 · 실패는 error 메시지.
      *
      * @param client 보낸 연결
      * @param store_id 그 연결의 업체 ID (접속 때 확인한 값 — 클라이언트가 보낸 업체 ID 는 믿지 않는다)
@@ -149,12 +148,8 @@ export class DoorSocketServer implements OnApplicationBootstrap, OnModuleDestroy
             return;
         }
         try {
-            if (request.event === DOOR_SOCKET_EVENT.VERIFY) {
-                const result = await this.internalHttp.request<DoorVerifyResultDto>('user', 'POST', DOOR_INTERNAL_PATH.VERIFY, {body: {store_id, room_id: request.room_id, qr: request.qr}});
-                this.send(client, buildVerifiedMessage(result));
-            } else {
-                await this.internalHttp.request<DoorCloseResultDto>('user', 'POST', DOOR_INTERNAL_PATH.CLOSE, {body: {store_id, room_id: request.room_id}});
-            }
+            const result = await this.internalHttp.request<DoorVerifyResultDto>('user', 'POST', DOOR_INTERNAL_PATH.VERIFY, {body: {store_id, room_id: request.room_id, qr: request.qr}});
+            this.send(client, buildVerifiedMessage(result));
         } catch (error) {
             this.send(client, buildErrorMessage(toDoorSocketFailure(error)));
         }

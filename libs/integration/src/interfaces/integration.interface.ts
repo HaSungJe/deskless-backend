@@ -120,17 +120,6 @@ export interface StorageBackendInterface {
     onApplicationBootstrap(): void;
 }
 
-/** 문 상태 — DOOR_STATE 값 */
-export type DoorState = 'open' | 'close';
-
-/** 호실 문 1개의 상태 — Redis `door:<room_id>` 의 값 `상태:시각` */
-export interface DoorRecord {
-    /** 문 상태 */
-    state: DoorState;
-    /** 마지막으로 열거나 닫은 시각 — 한국 시각 yyyyMMddHHmmss, 기록이 없으면 DOOR_TIME_NONE */
-    changed_at: string;
-}
-
 /** 바로 열기 명령 — gateway 가 그 업체 소켓에 door.open 을 보낸다 */
 export interface DoorOpenCommand {
     /** 그 호실의 업체 ID — gateway 가 그 업체 소켓에만 보낸다 */
@@ -153,16 +142,16 @@ export interface DoorDisconnectCommand {
 export type DoorCommand = DoorOpenCommand | DoorDisconnectCommand;
 
 /**
- * 문 정보 포트 — 호실 문마다 열림/닫힘 · 마지막 시각, 그 호실의 현재 유효 QR(Redis)과 문 명령 채널. QR 이력은 DB(t_room_qr)에 있다.
+ * 문 정보 포트 — 호실마다 현재 유효 QR · 마지막으로 연 시각(Redis)과 문 명령 채널. 열림 · 닫힘 상태는 두지 않는다(사용자 결정 2026-11-19 — 닫기 없음). QR 이력은 DB(t_room_qr), QR 로 연 기록은 DB(t_door_open_log)에 있다.
  * 서버는 문을 직접 움직이지 않는다 — 문 쪽 타 업체 프로그램이 문 소켓(gateway)의 QR 확인 답 · 열기 명령을 보고 움직인다.
  */
 export interface DoorStoreInterface {
     /**
-     * 여러 문의 상태를 한 번에 읽는다(MGET) — 받은 순서대로, 기록이 없으면 `{state: 'close', changed_at: DOOR_TIME_NONE}`. 빈 배열이면 Redis 에 묻지 않는다.
+     * 여러 문의 마지막으로 연 시각을 한 번에 읽는다(MGET) — 받은 순서대로, 연 적 없으면 null. 빈 배열이면 Redis 에 묻지 않는다.
      *
      * @throws ServiceUnavailableException `{message: REDIS_UNAVAILABLE_MESSAGE}` — Redis 에 닿지 못했을 때
      */
-    getMany(room_ids: string[]): Promise<DoorRecord[]>;
+    getOpenedAt(room_ids: string[]): Promise<(string | null)[]>;
 
     /**
      * 그 호실의 현재 QR 을 쓴다 — expires_at 에 저절로 사라진다(PXAT). 같은 값이면 그대로(멱등).
@@ -179,25 +168,18 @@ export interface DoorStoreInterface {
     revokeQr(room_id: string, qr: string): Promise<void>;
 
     /**
-     * QR 확인 — 그 호실의 현재 QR 이 qr 이면 문을 open + changed_at 으로 쓰고 true, 다르거나 없으면 아무것도 바꾸지 않고 false(비교와 쓰기를 한 번에).
+     * QR 확인 — 그 호실의 현재 QR 이 qr 이면 마지막으로 연 시각을 opened_at 으로 쓰고 true, 다르거나 없으면 아무것도 바꾸지 않고 false(비교와 쓰기를 한 번에).
      *
      * @throws ServiceUnavailableException `{message: REDIS_UNAVAILABLE_MESSAGE}` — Redis 에 닿지 못했을 때
      */
-    verify(room_id: string, qr: string, changed_at: string): Promise<boolean>;
+    verify(room_id: string, qr: string, opened_at: string): Promise<boolean>;
 
     /**
-     * 바로 열기 — 문을 open + changed_at 으로 쓰고 같은 스크립트에서 열기 명령(DoorCommand)을 보낸다.
+     * 바로 열기 — 마지막으로 연 시각을 opened_at 으로 쓰고 같은 스크립트에서 그 업체 문 소켓에 열기 명령(DoorCommand)을 보낸다.
      *
      * @throws ServiceUnavailableException `{message: REDIS_UNAVAILABLE_MESSAGE}` — Redis 에 닿지 못했을 때
      */
-    open(room_id: string, store_id: string, changed_at: string): Promise<void>;
-
-    /**
-     * 문을 close + changed_at 으로 쓴다(하드웨어 잠금 알림).
-     *
-     * @throws ServiceUnavailableException `{message: REDIS_UNAVAILABLE_MESSAGE}` — Redis 에 닿지 못했을 때
-     */
-    close(room_id: string, changed_at: string): Promise<void>;
+    open(room_id: string, store_id: string, opened_at: string): Promise<void>;
 
     /**
      * 그 업체 문 소켓 연결을 모두 끊으라는 명령을 보낸다(업체 문 시크릿 변경 — 옛 시크릿으로 붙은 연결을 남기지 않는다).

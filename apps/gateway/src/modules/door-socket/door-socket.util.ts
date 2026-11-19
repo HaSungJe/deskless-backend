@@ -36,8 +36,8 @@ export interface DoorSocketCredential {
     door_secret: string;
 }
 
-/** 문 프로그램이 보낸 메시지 — QR 확인 · 잠금 알림 */
-export type DoorSocketRequest = {event: typeof DOOR_SOCKET_EVENT.VERIFY; room_id: string; qr: string} | {event: typeof DOOR_SOCKET_EVENT.CLOSED; room_id: string};
+/** 문 프로그램이 보낸 메시지 — QR 확인만(잠금 알림은 없다 — 사용자 결정 2026-11-19) */
+export type DoorSocketRequest = {event: typeof DOOR_SOCKET_EVENT.VERIFY; room_id: string; qr: string};
 
 /** 소켓 실패 — 상태 코드 · 메시지 */
 export interface DoorSocketFailure {
@@ -71,7 +71,7 @@ export function readDoorSocketCredential(headers: IncomingHttpHeaders): DoorSock
 }
 
 /**
- * 받은 메시지(JSON)를 읽는다 — `door.verify {room_id, qr}` · `door.closed {room_id}`(32자 hex)만, 아니면 null.
+ * 받은 메시지(JSON)를 읽는다 — `door.verify {room_id, qr}`(32자 hex)만, 아니면 null(→ error).
  *
  * @param raw 받은 메시지 문자열
  * @returns 요청 또는 null
@@ -83,18 +83,18 @@ export function readDoorSocketRequest(raw: string): DoorSocketRequest | null {
         if (typeof room_id !== 'string' || !ID_PATTERN.test(room_id)) {
             return null;
         }
-        if (message.event === DOOR_SOCKET_EVENT.VERIFY) {
-            const qr = message.data?.qr;
-            return typeof qr === 'string' && ID_PATTERN.test(qr) ? {event: DOOR_SOCKET_EVENT.VERIFY, room_id, qr} : null;
+        if (message.event !== DOOR_SOCKET_EVENT.VERIFY) {
+            return null;
         }
-        return message.event === DOOR_SOCKET_EVENT.CLOSED ? {event: DOOR_SOCKET_EVENT.CLOSED, room_id} : null;
+        const qr = message.data?.qr;
+        return typeof qr === 'string' && ID_PATTERN.test(qr) ? {event: DOOR_SOCKET_EVENT.VERIFY, room_id, qr} : null;
     } catch {
         return null;
     }
 }
 
 /**
- * 접속 직후 메시지 — 업체 호실 전체의 문 상태
+ * 접속 직후 메시지 — 업체 호실 전체(호실 ID · 이름 · 층)
  *
  * @param snapshot user-service 접속 확인 결과
  * @returns JSON 문자열

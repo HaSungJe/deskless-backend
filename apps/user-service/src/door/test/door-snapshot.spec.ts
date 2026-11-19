@@ -32,10 +32,6 @@ describe('POST /internal/v1/user-service/door/snapshot — 문 소켓 접속 확
         ]);
         vi.mocked(matchBcrypt).mockResolvedValue(true);
         door = createDoorStoreMock();
-        door.getMany.mockResolvedValue([
-            {state: 'open', changed_at: '20261104093012'},
-            {state: 'close', changed_at: '00000000000000'},
-        ]);
         app = await bootHttpPath(repo, door);
     });
 
@@ -45,22 +41,23 @@ describe('POST /internal/v1/user-service/door/snapshot — 문 소켓 접속 확
     });
 
     describe('[SUCCESS]', () => {
-        it('탈퇴하지 않은 업체 · 시크릿 일치면 그 업체 호실 전체(층 · 호실명 순 그대로)의 문 상태를 돌려준다', async () => {
+        it('탈퇴하지 않은 업체 · 시크릿 일치면 그 업체 호실 전체(층 · 호실명 순 그대로)를 돌려준다 — 문 상태 없음 · Redis 를 보지 않는다', async () => {
             const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders()).send({store_id: STORE_ID, door_secret: SECRET});
 
             expect(res.status).toBe(200);
             expect(res.body).toEqual({
                 store_id: STORE_ID,
                 list: [
-                    {room_id: ROOM_ID, room_name: '101호', floor: 1, door_state: 'open', door_changed_at: '20261104093012'},
-                    {room_id: ROOM_ID_2, room_name: 'B101호', floor: -1, door_state: 'close', door_changed_at: '00000000000000'},
+                    {room_id: ROOM_ID, room_name: '101호', floor: 1},
+                    {room_id: ROOM_ID_2, room_name: 'B101호', floor: -1},
                 ],
             });
             expect(repo.findDoorStore).toHaveBeenCalledWith({store_id: STORE_ID, store_state_id: Not('LEAVE')});
             expect(matchBcrypt).toHaveBeenCalledWith(SECRET, SECRET_HASH);
             expect(repo.findStoreDoorRoomRows).toHaveBeenCalledWith(STORE_ID);
-            expect(door.getMany).toHaveBeenCalledTimes(1);
-            expect(door.getMany).toHaveBeenCalledWith([ROOM_ID, ROOM_ID_2]);
+            for (const fn of Object.values(door)) {
+                expect(fn).not.toHaveBeenCalled();
+            }
         });
     });
 
@@ -74,7 +71,6 @@ describe('POST /internal/v1/user-service/door/snapshot — 문 소켓 접속 확
             expect(res.body).toEqual(AUTH_FAILED);
             expect(matchBcrypt).not.toHaveBeenCalled();
             expect(repo.findStoreDoorRoomRows).not.toHaveBeenCalled();
-            expect(door.getMany).not.toHaveBeenCalled();
         });
 
         it('시크릿을 정하지 않은 업체면 401, 비밀번호 비교 없음', async () => {
@@ -96,7 +92,6 @@ describe('POST /internal/v1/user-service/door/snapshot — 문 소켓 접속 확
             expect(res.status).toBe(401);
             expect(res.body).toEqual(AUTH_FAILED);
             expect(repo.findStoreDoorRoomRows).not.toHaveBeenCalled();
-            expect(door.getMany).not.toHaveBeenCalled();
         });
     });
 

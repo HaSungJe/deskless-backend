@@ -40,7 +40,7 @@ describe('GET /internal/v1/admin-service/room — 호실 목록 (업체 관리�
     });
 
     describe('[SUCCESS]', () => {
-        it('필터가 없으면 내 업체 호실을 세고 기본 페이지로 층 · 호실명 순 목록(그룹명 · 상태명 포함)을 돌려준다', async () => {
+        it('필터가 없으면 내 업체 호실을 세고 기본 페이지로 층 · 호실명 순 목록(그룹명 · 상태명 · 문을 마지막으로 연 시각 포함)을 돌려준다', async () => {
             const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
 
             expect(res.status).toBe(200);
@@ -59,12 +59,25 @@ describe('GET /internal/v1/admin-service/room — 호실 목록 (업체 관리�
                         room_state_id: 'AVAILABLE',
                         room_state_name: '예약가능',
                         created_at: FIXED_TIME.toISOString(),
-                        door_state: 'close',
-                        door_changed_at: '00000000000000',
+                        door_opened_at: null,
                     },
                 ],
                 pagination: expect.objectContaining({total_count: 1, page: 1}),
+                floors: [],
             });
+            expect(repo.findRoomFloors).toHaveBeenCalledTimes(1);
+            expect(repo.findRoomFloors).toHaveBeenCalledWith(STORE_ID);
+        });
+
+        it('내 업체 호실이 있는 층 전부(floors)는 거르기 · 페이지와 상관없이 업체 ID 로만 읽는다', async () => {
+            repo.findRoomFloors.mockResolvedValueOnce([-1, 2, 3]);
+
+            const res = await request(app.getHttpServer()).get(`${PATH}?floor=2&room_group_id=${ROOM_GROUP_ID}&page=3`).set(internalHeaders(MANAGER_ACTOR));
+
+            expect(res.status).toBe(200);
+            expect(res.body.floors).toEqual([-1, 2, 3]);
+            expect(repo.findRoomFloors).toHaveBeenCalledTimes(1);
+            expect(repo.findRoomFloors).toHaveBeenCalledWith(STORE_ID);
         });
 
         it('층(지하 음수 — 정수 문자열) · 그룹 필터는 숫자 층 · 그룹 ID 로 같은 조건을 세고 목록에 넘긴다', async () => {
@@ -75,33 +88,31 @@ describe('GET /internal/v1/admin-service/room — 호실 목록 (업체 관리�
             expect(repo.findRoomRows).toHaveBeenCalledWith({store_id: STORE_ID, floor: -1, room_group_id: ROOM_GROUP_ID}, 20, 0);
         });
 
-        it('문 상태 · 시각은 그 페이지 호실들을 한 번에(findRoomRows 순서대로) 읽어 같은 순서로 붙인다', async () => {
+        it('문을 마지막으로 연 시각은 그 페이지 호실들을 한 번에(findRoomRows 순서대로) 읽어 같은 순서로 붙인다 — 연 적 없으면 null', async () => {
             const ROOM_ID_2 = '6'.repeat(32);
             repo.findRoomRows.mockResolvedValueOnce([roomRow(), roomRow({room_id: ROOM_ID_2, room_name: '102호'})]);
-            door.getMany.mockResolvedValueOnce([
-                {state: 'open', changed_at: '20261104093012'},
-                {state: 'close', changed_at: '00000000000000'},
-            ]);
+            door.getOpenedAt.mockResolvedValueOnce(['20261104093012', null]);
 
             const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
 
             expect(res.status).toBe(200);
-            expect(door.getMany).toHaveBeenCalledTimes(1);
-            expect(door.getMany).toHaveBeenCalledWith([ROOM_ID, ROOM_ID_2]);
-            expect(res.body.list.map((item: {room_id: string; door_state: string; door_changed_at: string}) => [item.room_id, item.door_state, item.door_changed_at])).toEqual([
-                [ROOM_ID, 'open', '20261104093012'],
-                [ROOM_ID_2, 'close', '00000000000000'],
+            expect(door.getOpenedAt).toHaveBeenCalledTimes(1);
+            expect(door.getOpenedAt).toHaveBeenCalledWith([ROOM_ID, ROOM_ID_2]);
+            expect(res.body.list.map((item: {room_id: string; door_opened_at: string | null}) => [item.room_id, item.door_opened_at])).toEqual([
+                [ROOM_ID, '20261104093012'],
+                [ROOM_ID_2, null],
             ]);
+            expect(res.body.list[0]).not.toHaveProperty('door_state');
         });
 
-        it('빈 페이지면 빈 목록으로 문 상태를 묻는다(Redis 에는 묻지 않는 포트 규칙)', async () => {
+        it('빈 페이지면 빈 목록으로 연 시각을 묻는다(Redis 에는 묻지 않는 포트 규칙)', async () => {
             repo.findRoomRows.mockResolvedValueOnce([]);
 
             const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
 
             expect(res.status).toBe(200);
             expect(res.body.list).toEqual([]);
-            expect(door.getMany).toHaveBeenCalledWith([]);
+            expect(door.getOpenedAt).toHaveBeenCalledWith([]);
         });
     });
 
@@ -133,7 +144,7 @@ describe('GET /internal/v1/admin-service/room — 호실 목록 (업체 관리�
 
     describe('[FAIL:external]', () => {
         it('Redis 에 닿지 못하면 503 — 호실 목록도 실패한다(호실 목록에 합친 결정)', async () => {
-            door.getMany.mockRejectedValueOnce(new ServiceUnavailableException({message: '상태 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.'}));
+            door.getOpenedAt.mockRejectedValueOnce(new ServiceUnavailableException({message: '상태 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.'}));
 
             const res = await request(app.getHttpServer()).get(PATH).set(internalHeaders(MANAGER_ACTOR));
 

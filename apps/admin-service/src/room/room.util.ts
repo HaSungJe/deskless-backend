@@ -2,7 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {LessThanOrEqual, MoreThanOrEqual, Not} from 'typeorm';
 import type {FindOptionsWhere} from 'typeorm';
 import {dayjs} from '@app/common/utils/dayjs.js';
-import type {RoomGroupDetailImageResultDto, RoomGroupDetailPlanResultDto, RoomGroupDetailResultDto} from '@app/contracts/room/dto/room-group-detail.dto.js';
+import type {RoomGroupDetailImageResultDto, RoomGroupDetailPlanResultDto, RoomGroupDetailResultDto, RoomGroupDetailRoomResultDto} from '@app/contracts/room/dto/room-group-detail.dto.js';
 import type {RoomGroupListItemResultDto} from '@app/contracts/room/dto/room-group-list.dto.js';
 import type {RoomGroupPlanPriceItemResultDto} from '@app/contracts/room/dto/room-group-plan-price-list.dto.js';
 import type {RoomListItemResultDto} from '@app/contracts/room/dto/room-list.dto.js';
@@ -11,7 +11,7 @@ import type {RoomGroupImageEntity} from '@app/database/entities/room/room-group-
 import type {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
 import {ROOM_GROUP_DETAIL_DEFAULTS} from '@app/database/entities/room/room-group.entity.js';
 import type {RoomGroupDetail, RoomGroupEntity} from '@app/database/entities/room/room-group.entity.js';
-import type {DoorRecord} from '@app/integration/interfaces/integration.interface.js';
+import type {RoomEntity} from '@app/database/entities/room/room.entity.js';
 import type {RoomGroupPlanRow, RoomGroupRow, RoomPlanRow, RoomRow} from './interfaces/room.repository.interface.js';
 import {ROOM_DATE_FORMAT, ROOM_GROUP_DETAIL_KEYS, ROOM_IMAGE_EXTENSION, ROOM_PLAN_TYPE_ORDER, ROOM_STATE_TRANSITIONS} from './room.constants.js';
 
@@ -202,9 +202,15 @@ export function toRoomGroupListItem(row: RoomGroupRow, image_url: string | null)
  * @param group 객실 그룹
  * @param images 사진 항목 (정렬 순서 순)
  * @param plans 그룹 상품 항목 (상품 종류 순)
+ * @param rooms 그 그룹의 호실 (호실 수는 이 길이)
  * @returns 상세
  */
-export function toRoomGroupDetail(group: RoomGroupEntity, images: RoomGroupDetailImageResultDto[], plans: RoomGroupDetailPlanResultDto[]): RoomGroupDetailResultDto {
+export function toRoomGroupDetail(
+    group: RoomGroupEntity,
+    images: RoomGroupDetailImageResultDto[],
+    plans: RoomGroupDetailPlanResultDto[],
+    rooms: RoomGroupDetailRoomResultDto[],
+): RoomGroupDetailResultDto {
     return {
         room_group_id: group.room_group_id,
         room_group_name: group.room_group_name,
@@ -212,6 +218,8 @@ export function toRoomGroupDetail(group: RoomGroupEntity, images: RoomGroupDetai
         room_group_detail: buildRoomGroupDetail(group.room_group_detail),
         images,
         plans,
+        room_count: rooms.length,
+        rooms,
         created_at: group.created_at.toISOString(),
         updated_at: group.updated_at.toISOString(),
     };
@@ -235,7 +243,17 @@ export function toRoomGroupImageItem(image: RoomGroupImageEntity, image_url: str
  * @returns 항목
  */
 export function toRoomGroupPlanItem(row: RoomGroupPlanRow): RoomGroupDetailPlanResultDto {
-    return {room_plan_type_id: row.room_plan_type_id, room_plan_type_name: row.room_plan_type_name, is_used: Number(row.is_used), price: Number(row.price)};
+    return {room_plan_type_id: row.room_plan_type_id, room_plan_type_name: row.room_plan_type_name, is_used: Number(row.is_used), price: Number(row.price), price_count: Number(row.price_count)};
+}
+
+/**
+ * 객실 그룹 상세의 호실 항목.
+ *
+ * @param room 호실
+ * @returns 항목
+ */
+export function toRoomGroupRoomItem(room: RoomEntity): RoomGroupDetailRoomResultDto {
+    return {room_id: room.room_id, room_name: room.room_name, floor: Number(room.floor)};
 }
 
 /**
@@ -249,13 +267,13 @@ export function toRoomGroupPlanPriceItem(price: RoomGroupPlanPriceEntity): RoomG
 }
 
 /**
- * 호실 목록 항목 — 문 상태 · 시각은 Redis 문 정보.
+ * 호실 목록 항목 — 문은 마지막으로 연 시각만(Redis — 열림 · 닫힘 상태는 없다, 사용자 결정 2026-11-19).
  *
  * @param row 호실 목록 행
- * @param door 그 호실 문 상태
+ * @param door_opened_at 그 호실 문을 마지막으로 연 시각 (없으면 null)
  * @returns 항목
  */
-export function toRoomListItem(row: RoomRow, door: DoorRecord): RoomListItemResultDto {
+export function toRoomListItem(row: RoomRow, door_opened_at: string | null): RoomListItemResultDto {
     return {
         room_id: row.room_id,
         room_group_id: row.room_group_id,
@@ -265,7 +283,6 @@ export function toRoomListItem(row: RoomRow, door: DoorRecord): RoomListItemResu
         room_state_id: row.room_state_id,
         room_state_name: row.room_state_name,
         created_at: dayjs(row.created_at).toISOString(),
-        door_state: door.state,
-        door_changed_at: door.changed_at,
+        door_opened_at,
     };
 }

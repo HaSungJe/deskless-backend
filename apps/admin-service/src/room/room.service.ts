@@ -7,7 +7,6 @@ import {generateId} from '@app/common/utils/id.js';
 import {Pagination} from '@app/common/utils/pagination.js';
 import {toContainsPattern} from '@app/common/utils/search.js';
 import {createValidationError} from '@app/common/utils/validation.js';
-import type {RoomDoorOpenResultDto} from '@app/contracts/room/dto/room-door-open.dto.js';
 import type {RoomGroupDetailResultDto} from '@app/contracts/room/dto/room-group-detail.dto.js';
 import type {RoomGroupImageOrderDto} from '@app/contracts/room/dto/room-group-image-order.dto.js';
 import type {RoomGroupImageUploadUrlDto, RoomGroupImageUploadUrlResultDto} from '@app/contracts/room/dto/room-group-image-upload-url.dto.js';
@@ -19,19 +18,20 @@ import type {RoomGroupPlanPriceDto, RoomGroupPlanPriceResultDto} from '@app/cont
 import type {RoomGroupPlanUpdateDto} from '@app/contracts/room/dto/room-group-plan-update.dto.js';
 import type {RoomGroupUpdateDto} from '@app/contracts/room/dto/room-group-update.dto.js';
 import type {RoomGroupDto, RoomGroupResultDto} from '@app/contracts/room/dto/room-group.dto.js';
+import type {RoomDoorOpenResultDto} from '@app/contracts/room/dto/room-door-open.dto.js';
 import type {RoomListDto, RoomListResultDto} from '@app/contracts/room/dto/room-list.dto.js';
 import type {RoomPlanListResultDto} from '@app/contracts/room/dto/room-plan-list.dto.js';
 import type {RoomPlanUpdateDto} from '@app/contracts/room/dto/room-plan-update.dto.js';
 import type {RoomStateDto} from '@app/contracts/room/dto/room-state.dto.js';
 import type {RoomUpdateDto} from '@app/contracts/room/dto/room-update.dto.js';
 import type {RoomDto, RoomResultDto} from '@app/contracts/room/dto/room.dto.js';
+import {DOOR_OPEN_TYPE, DoorOpenLogEntity} from '@app/database/entities/door/door-open-log.entity.js';
 import {RoomGroupImageEntity} from '@app/database/entities/room/room-group-image.entity.js';
 import {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
 import {RoomGroupPlanEntity} from '@app/database/entities/room/room-group-plan.entity.js';
 import {RoomGroupEntity} from '@app/database/entities/room/room-group.entity.js';
 import {RoomPlanEntity} from '@app/database/entities/room/room-plan.entity.js';
 import {RoomEntity} from '@app/database/entities/room/room.entity.js';
-import {DOOR_STATE} from '@app/integration/integration.constants.js';
 import {DOOR_STORE, STORAGE_GATEWAY} from '@app/integration/integration.symbols.js';
 import {toDoorTime} from '@app/integration/integration.util.js';
 import type {DoorStoreInterface, StorageGatewayInterface} from '@app/integration/interfaces/integration.interface.js';
@@ -75,6 +75,7 @@ import {
     toRoomGroupImageItem,
     toRoomGroupListItem,
     toRoomGroupPlanItem,
+    toRoomGroupRoomItem,
     toRoomGroupPlanPriceItem,
     toRoomListItem,
     toRoomPlanItem,
@@ -92,7 +93,7 @@ export class RoomService {
     /**
      * @param roomRepository room repository 포트
      * @param storageGateway 파일 저장소 포트 (Amazon S3 · CloudFront 공개 주소)
-     * @param doorStore 문 정보 포트 (Redis — 호실 목록 문 상태 · 바로 열기)
+     * @param doorStore 문 정보 포트 (Redis — 호실 목록의 마지막으로 연 시각 · 바로 열기)
      */
     constructor(
         @Inject(ROOM_REPOSITORY)
@@ -223,7 +224,7 @@ export class RoomService {
     }
 
     /**
-     * 객실 그룹 상세 — 그룹 · 상세정보(항목 모두) · 사진(순서대로, CDN 공개 주소) · 그룹 상품 3행(시간 이용 · 1박 · 연박 순). (내부 HTTP: GET /internal/v1/admin-service/room/group/:room_group_id)
+     * 객실 그룹 상세 — 그룹 · 상세정보(항목 모두) · 사진(순서대로, CDN 공개 주소) · 그룹 상품 3행(시간 이용 · 1박 · 연박 순, 상품마다 기간 가격 수) · 호실(층 · 호실명 순)과 호실 수. (내부 HTTP: GET /internal/v1/admin-service/room/group/:room_group_id)
      *
      * @param user_id 로그인 매니저 ID
      * @param room_group_id 객실 그룹 ID
@@ -240,10 +241,12 @@ export class RoomService {
         }
         const images = await this.roomRepository.findRoomGroupImages(room_group_id);
         const plans = await this.roomRepository.findRoomGroupPlanRows(room_group_id);
+        const rooms = await this.roomRepository.findRoomGroupRooms(room_group_id);
         return toRoomGroupDetail(
             group,
             images.map((image) => toRoomGroupImageItem(image, this.storageGateway.getPublicUrl(image))),
             sortByPlanType(plans).map(toRoomGroupPlanItem),
+            rooms.map(toRoomGroupRoomItem),
         );
     }
 
@@ -752,7 +755,7 @@ export class RoomService {
     }
 
     /**
-     * 호실 목록 — 필터(층 · 그룹), 층 · 호실명 순. 그룹명 · 상태명 · 문 상태(Redis — 그 페이지 호실만 한 번에) 포함. Redis 에 닿지 못하면 503. (내부 HTTP: GET /internal/v1/admin-service/room)
+     * 호실 목록 — 필터(층 · 그룹), 층 · 호실명 순. 그룹명 · 상태명 · 문을 마지막으로 연 시각(Redis — 그 페이지 호실만 한 번에, 열림 · 닫힘 상태는 없다) 포함 + 내 업체 호실이 있는 층 전부(거르기 · 페이지와 상관없이). Redis 에 닿지 못하면 503. (내부 HTTP: GET /internal/v1/admin-service/room)
      *
      * @param user_id 로그인 매니저 ID
      * @param dto 페이지 · 층 · 그룹
@@ -778,20 +781,24 @@ export class RoomService {
         const pagination = new Pagination({...dto, total_count});
         const rows = await this.roomRepository.findRoomRows(filter, pagination.limit, pagination.offset);
 
-        // 4. 그 페이지 호실들의 문 상태 (MGET — 받은 순서대로)
-        const doors = await this.doorStore.getMany(rows.map((row) => row.room_id));
-        return {list: rows.map((row, index) => toRoomListItem(row, doors[index])), pagination: pagination.getPagination()};
+        // 4. 그 페이지 호실들의 마지막으로 연 시각 (MGET — 받은 순서대로)
+        const openedAt = await this.doorStore.getOpenedAt(rows.map((row) => row.room_id));
+
+        // 5. 내 업체 호실이 있는 층 전부 — 거르기 · 페이지와 상관없이(층 거르기 선택지)
+        const floors = await this.roomRepository.findRoomFloors(store.store_id);
+        return {list: rows.map((row, index) => toRoomListItem(row, openedAt[index])), pagination: pagination.getPagination(), floors};
     }
 
     /**
-     * 호실 문 바로 열기 (업체 관리자) — 내 업체의 지워지지 않은 호실 문을 open + 지금 시각으로 쓰고 그 업체 문 소켓에 열기 명령(door.open)을 보낸다(Redis 채널).
-     * 실제 문은 문 쪽 프로그램이 연다. 사용중지 · 예약 여부는 보지 않는다(관리자 판단). DB 쓰기가 없어 `@Transactional()` 이 없다. (내부 HTTP: POST /internal/v1/admin-service/room/:room_id/door-open)
+     * 호실 문 바로 열기 (업체 관리자) — 내 업체의 지워지지 않은 호실이면 문 열림 기록(누가 · 언제 · 바로 열기)을 남기고, 마지막으로 연 시각을 지금으로 쓰고 그 업체 문 소켓에 열기 명령(door.open)을 보낸다(Redis 채널 — 스크립트 1개, 마지막 단계).
+     * 실제 문은 문 쪽 프로그램이 연다 — 열림 · 닫힘 상태는 두지 않는다(사용자 결정 2026-11-19). 사용중지 · 예약 여부는 보지 않는다(관리자 판단 — 청소 · 정비). Redis 에 닿지 못하면 503 + 기록 롤백. (내부 HTTP: POST /internal/v1/admin-service/room/:room_id/door-open)
      *
      * @param user_id 로그인 매니저 ID
      * @param room_id 호실 ID
-     * @returns 연 문의 room_id · 상태 · 시각
+     * @returns 연 문의 room_id · 연 시각
      * @throws NotFoundException 소속 업체 · 호실이 없을 때
      */
+    @Transactional()
     async openMyRoomDoor(user_id: string, room_id: string): Promise<RoomDoorOpenResultDto> {
         // 1. 내 업체 · 그 호실
         const store = await this.roomRepository.findManagerStore(user_id, false);
@@ -803,10 +810,22 @@ export class RoomService {
             throw new NotFoundException({message: ROOM_NOT_FOUND_MESSAGE});
         }
 
-        // 2. open + 지금 시각 + 열기 명령 (포트가 스크립트 1개로)
-        const changed_at = toDoorTime(new Date());
-        await this.doorStore.open(room.room_id, store.store_id, changed_at);
-        return {room_id: room.room_id, door_state: DOOR_STATE.OPEN, door_changed_at: changed_at};
+        // 2. 문 열림 기록 — 누가(업체 관리자) · 언제 · 바로 열기
+        const opened_at = new Date();
+        const log = new DoorOpenLogEntity();
+        log.door_open_log_id = generateId();
+        log.room_id = room.room_id;
+        log.open_type = DOOR_OPEN_TYPE.MANAGER;
+        log.user_id = user_id;
+        log.reservation_id = null;
+        log.room_qr_id = null;
+        log.opened_at = opened_at;
+        await this.roomRepository.insertRoomDoorOpenLog(log);
+
+        // 3. 연 시각 + 열기 명령 (포트가 스크립트 1개로 — 마지막 단계, Redis 503 이면 기록도 롤백)
+        const door_opened_at = toDoorTime(opened_at);
+        await this.doorStore.open(room.room_id, store.store_id, door_opened_at);
+        return {room_id: room.room_id, door_opened_at};
     }
 
     /**

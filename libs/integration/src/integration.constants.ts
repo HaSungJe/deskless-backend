@@ -16,12 +16,6 @@ export const STORAGE_DOWNLOAD_URL_TTL_SECONDS = 600;
 /** Redis(상태 저장소)에 닿지 못했을 때 — 503 */
 export const REDIS_UNAVAILABLE_MESSAGE = '상태 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
 
-/** 문 상태 — open: 열림, close: 닫힘 (Redis 문 정보의 상태 칸) */
-export const DOOR_STATE = {OPEN: 'open', CLOSE: 'close'} as const;
-
-/** 한 번도 열거나 닫은 적 없는 문의 시각 */
-export const DOOR_TIME_NONE = '00000000000000';
-
 /** 문 명령(관리자 바로 열기 · 시크릿 변경 때 연결 끊기)을 보내는 Redis 채널 — gateway 문 소켓이 구독해 그 업체 연결에 적용한다 */
 export const DOOR_COMMAND_CHANNEL = 'door-commands';
 

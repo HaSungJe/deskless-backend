@@ -39,7 +39,7 @@ describe('POST /internal/v1/user-service/door/verify — 문 소켓 QR 확인 (g
     });
 
     describe('[SUCCESS]', () => {
-        it('그 업체 호실의 현재 QR 과 같으면 ok true(포트가 open + 지금 시각으로 기록) + QR 로 연 기록 한 줄(호실 · 예약 · QR · 시각)', async () => {
+        it('그 업체 호실의 현재 QR 과 같으면 ok true(포트가 마지막으로 연 시각을 지금으로 기록) + QR 로 연 기록 한 줄(호실 · 예약 · QR · 시각)', async () => {
             const res = await request(app.getHttpServer()).post(PATH).set(internalHeaders()).send(BODY);
 
             expect(res.status).toBe(200);
@@ -53,7 +53,14 @@ describe('POST /internal/v1/user-service/door/verify — 문 소켓 QR 확인 (g
             const [log] = repo.insertDoorOpenLog.mock.calls[0] as [DoorOpenLogEntity];
             expect(log).toBeInstanceOf(DoorOpenLogEntity);
             expect(log.door_open_log_id).toMatch(ID_PATTERN);
-            expect(log).toMatchObject({room_id: ROOM_ID, reservation_id: ROOM_QR.reservation_id, room_qr_id: ROOM_QR.room_qr_id, opened_at: new Date('2026-11-04T00:30:12Z')});
+            expect(log).toMatchObject({
+                room_id: ROOM_ID,
+                open_type: 'QR',
+                user_id: null,
+                reservation_id: ROOM_QR.reservation_id,
+                room_qr_id: ROOM_QR.room_qr_id,
+                opened_at: new Date('2026-11-04T00:30:12Z'),
+            });
             expect(repo.insertDoorOpenLog.mock.invocationCallOrder[0]).toBeGreaterThan(door.verify.mock.invocationCallOrder[0]);
         });
 

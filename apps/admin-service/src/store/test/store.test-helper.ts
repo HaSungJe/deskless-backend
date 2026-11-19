@@ -134,12 +134,11 @@ export function createSmsSenderMock(): SmsSenderMock {
  */
 export function createDoorStoreMock(): DoorStoreMock {
     return {
-        getMany: vi.fn().mockResolvedValue([]),
+        getOpenedAt: vi.fn().mockResolvedValue([]),
         setQr: vi.fn().mockResolvedValue(undefined),
         revokeQr: vi.fn().mockResolvedValue(undefined),
         verify: vi.fn().mockResolvedValue(false),
         open: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn().mockResolvedValue(undefined),
         subscribe: vi.fn(),
     };

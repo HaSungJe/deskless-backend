@@ -105,3 +105,10 @@ ship 리뷰([main-review-261105.md](../../review/main-review-261105.md)) Finding
 
 ### Remaining issues
 - 없음(Info 3건은 리뷰 문서대로 지금 구조 유지).
+
+## Modification - 261119-1
+
+문 열림 · 닫힘 상태를 없애고 마지막으로 연 시각만 두는 수정 — door-state 와 같은 회차로 고쳤다. 상세(호실 목록 `door_opened_at` · 바로 열기 `{room_id, door_opened_at}` · 파일 · 테스트 · 검증)는 `door-state-report.md` 의 `## Modification - 261119-1` 과 revision `.beaver/output/revision/door/door-state-revision-261119-1.md`.
+
+### Modification - 261119-1 추가 결정 2
+업체 관리자 바로 열기도 문 열림 기록(`t_door_open_log` — `open_type: MANAGER` · 연 사람 `user_id` · 시각)에 남긴다. 상세는 `door-state-report.md` 같은 절.

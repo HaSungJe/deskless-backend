@@ -2,11 +2,11 @@ import {dayjs, KST_TIMEZONE} from '@app/common/utils/dayjs.js';
 import {SAMPLE_FILE_KEY_PREFIX, TOSS_PAYMENT_STATUS_DONE} from './integration.constants.js';
 import type {PaymentLookupResult} from './interfaces/integration.interface.js';
 
-/** 문 시각 형식 — 한국 시각 yyyyMMddHHmmss (Redis 문 정보의 시각 칸) */
+/** 문 시각 형식 — 한국 시각 yyyyMMddHHmmss (Redis 문을 마지막으로 연 시각) */
 const DOOR_TIME_FORMAT = 'YYYYMMDDHHmmss';
 
 /**
- * 문을 열거나 닫은 시각 — 한국 시각 `yyyyMMddHHmmss`(밀리초는 버린다). admin-service(바로 열기) · user-service(문 소켓 QR 확인 · 잠금)가 쓴다.
+ * 문을 연 시각 — 한국 시각 `yyyyMMddHHmmss`(밀리초는 버린다). admin-service(바로 열기) · user-service(문 소켓 QR 확인)가 쓴다.
  *
  * @param at 시각
  * @returns 예: 20261101022459

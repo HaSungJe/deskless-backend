@@ -6,6 +6,7 @@ import type {RoomGroupEntity} from '@app/database/entities/room/room-group.entit
 import type {RoomPlanEntity} from '@app/database/entities/room/room-plan.entity.js';
 import type {RoomEntity} from '@app/database/entities/room/room.entity.js';
 import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
+import type {DoorOpenLogEntity} from '@app/database/entities/door/door-open-log.entity.js';
 
 /** 업체 상품 설정 조회 행 — 업체 상품 설정 컬럼 + 상품 종류명 (QueryBuilder raw — t_room_plan_type 조인). 시각은 time 컬럼 값 그대로('HH:mm:ss') */
 export interface RoomPlanRow {
@@ -42,6 +43,8 @@ export interface RoomGroupPlanRow {
     room_plan_type_name: string;
     is_used: number;
     price: number;
+    /** 그 그룹 상품의 지워지지 않은 기간 가격 수 (COUNT 서브쿼리) */
+    price_count: number;
 }
 
 /** 호실 목록 행 — 호실 컬럼 + 그룹명 · 상태명 (QueryBuilder raw — t_room_group · t_room_state 조인) */
@@ -125,10 +128,16 @@ export interface RoomRepositoryInterface {
     countRooms(where: FindOptionsWhere<RoomEntity>): Promise<number>;
     /** 호실 목록 행 — 그룹명 · 상태명 포함, 층 · 호실명 순 */
     findRoomRows(filter: RoomListFilter, limit: number, offset: number): Promise<RoomRow[]>;
+    /** 업체 호실이 있는 층 전부 — 지워지지 않은 호실, 오름차순 */
+    findRoomFloors(store_id: string): Promise<number[]>;
+    /** 그 그룹의 호실 — 지워지지 않은 호실, 층 · 호실명 순 */
+    findRoomGroupRooms(room_group_id: string): Promise<RoomEntity[]>;
     /** 호실 단건 */
     findRoom(where: FindOptionsWhere<RoomEntity>): Promise<RoomEntity | null>;
     /** 호실 등록 — 호실명 UK → 400 */
     insertRoom(entity: RoomEntity): Promise<void>;
+    /** 호실 문 열림 기록 (t_door_open_log — 업체 관리자 바로 열기 MANAGER) */
+    insertRoomDoorOpenLog(entity: DoorOpenLogEntity): Promise<void>;
     /** 호실 수정 (호실명 · 층 · 그룹 · 상태) — 호실명 UK → 400 */
     updateRoom(where: FindOptionsWhere<RoomEntity>, entity: RoomEntity): Promise<void>;
     /** 호실 삭제 — 삭제 표시(소프트 삭제) */

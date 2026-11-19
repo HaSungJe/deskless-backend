@@ -106,8 +106,11 @@ export function createRoomRepositoryMock(): RoomRepositoryMock {
         deleteRoomGroupPlanPrice: vi.fn().mockResolvedValue(true),
         countRooms: vi.fn(),
         findRoomRows: vi.fn().mockResolvedValue([]),
+        findRoomFloors: vi.fn().mockResolvedValue([]),
+        findRoomGroupRooms: vi.fn().mockResolvedValue([]),
         findRoom: vi.fn(),
         insertRoom: vi.fn(),
+        insertRoomDoorOpenLog: vi.fn().mockResolvedValue(undefined),
         updateRoom: vi.fn(),
         deleteRoom: vi.fn(),
         deleteRooms: vi.fn(),
@@ -123,12 +126,11 @@ export function createRoomRepositoryMock(): RoomRepositoryMock {
  */
 export function createDoorStoreMock(): DoorStoreMock {
     return {
-        getMany: vi.fn((room_ids: string[]) => Promise.resolve(room_ids.map(() => ({state: 'close', changed_at: '00000000000000'})))),
+        getOpenedAt: vi.fn((room_ids: string[]) => Promise.resolve(room_ids.map(() => null))),
         setQr: vi.fn().mockResolvedValue(undefined),
         revokeQr: vi.fn().mockResolvedValue(undefined),
         verify: vi.fn().mockResolvedValue(true),
         open: vi.fn().mockResolvedValue(undefined),
-        close: vi.fn().mockResolvedValue(undefined),
         disconnect: vi.fn().mockResolvedValue(undefined),
         subscribe: vi.fn(),
     };
@@ -376,7 +378,7 @@ export function imageRow(override: Record<string, unknown> = {}): Record<string,
  * @returns 그룹 상품 행
  */
 export function groupPlanRow(override: Partial<RoomGroupPlanRow> = {}): RoomGroupPlanRow {
-    return {room_group_plan_id: ROOM_GROUP_PLAN_ID, room_group_id: ROOM_GROUP_ID, room_plan_type_id: 'NIGHT', room_plan_type_name: '1박', is_used: 0, price: 0, ...override};
+    return {room_group_plan_id: ROOM_GROUP_PLAN_ID, room_group_id: ROOM_GROUP_ID, room_plan_type_id: 'NIGHT', room_plan_type_name: '1박', is_used: 0, price: 0, price_count: 0, ...override};
 }
 
 /**
@@ -442,7 +444,7 @@ export function roomEntity(override: Record<string, unknown> = {}): Record<strin
 }
 
 /**
- * [CASES:toDoorTime] — 지금(UTC) → 저장되는 문 시각(한국 시각 yyyyMMddHHmmss). 사용자 결정 2026-11-01
+ * [CASES:toDoorTime] — 지금(UTC) → 저장되는 문을 연 시각(한국 시각 yyyyMMddHHmmss). 사용자 결정 2026-11-01
  * [이름, 지금, 문 시각]
  */
 export const DOOR_TIME_CASES: [string, string, string][] = [

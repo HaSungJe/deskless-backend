@@ -22,7 +22,7 @@ export class DoorVerifyDto {
 }
 
 /**
- * QR 확인 결과 — 소켓의 `door.verified` data 로 그대로 보낸다. ok 면 서버가 이미 열림 + 시각으로 기록했다
+ * QR 확인 결과 — 소켓의 `door.verified` data 로 그대로 보낸다. ok 면 문을 연다(서버는 QR 로 연 기록을 DB 에 남긴다)
  */
 export class DoorVerifyResultDto {
     @ApiProperty({description: '호실 ID'})

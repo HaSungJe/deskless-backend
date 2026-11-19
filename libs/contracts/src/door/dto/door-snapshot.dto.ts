@@ -18,7 +18,7 @@ export class DoorSnapshotDto {
 }
 
 /**
- * 업체 호실 문 1개 — 지워지지 않은 호실 · 그룹
+ * 업체 호실 1개 — 지워지지 않은 호실 · 그룹(문 상태는 두지 않는다 — 사용자 결정 2026-11-19)
  */
 export class DoorSnapshotItemResultDto {
     @ApiProperty({description: '호실 ID'})
@@ -29,12 +29,6 @@ export class DoorSnapshotItemResultDto {
 
     @ApiProperty({description: '층 (지하는 음수, B1 = -1)'})
     floor: number;
-
-    @ApiProperty({description: '문 상태 (open: 열림, close: 닫힘 — 기록이 없으면 close)', enum: ['open', 'close']})
-    door_state: string;
-
-    @ApiProperty({description: '문을 마지막으로 열거나 닫은 시각 — 한국 시각 yyyyMMddHHmmss, 기록이 없으면 00000000000000'})
-    door_changed_at: string;
 }
 
 /**
@@ -44,6 +38,6 @@ export class DoorSnapshotResultDto {
     @ApiProperty({description: '업체 ID'})
     store_id: string;
 
-    @ApiProperty({description: '호실 문 (층 · 호실명 순)', type: () => [DoorSnapshotItemResultDto]})
+    @ApiProperty({description: '호실 (층 · 호실명 순)', type: () => [DoorSnapshotItemResultDto]})
     list: DoorSnapshotItemResultDto[];
 }
