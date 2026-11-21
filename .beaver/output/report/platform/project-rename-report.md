@@ -9,7 +9,7 @@
 ## Created/Modified/Deleted Files
 | File | Change Type | Description |
 |------|-----------|------|
-| `.beaver/output/roadmap/roomless-roadmap.{md,html,publish.html}` → `deskless-roadmap.*` | moved (git mv) + modified | 로드맵 파일 이름 · 본문, 뷰 다시 만듦(`roadmap-html.js` — 117/119 · 25/26 그대로) |
+| `.beaver/output/roadmap/deskless-roadmap.{md,html,publish.html}` → `deskless-roadmap.*` | moved (git mv) + modified | 로드맵 파일 이름 · 본문, 뷰 다시 만듦(`roadmap-html.js` — 117/119 · 25/26 그대로) |
 | `libs/messaging/src/messaging.constants.ts` · `docker/rabbitmq/init.sh` · `scripts/check-broker-acl.mjs` | modified | exchange `deskless.cmd` · `deskless.event` · `deskless.dlx`, 앱 계정 권한 정규식 · ACL 검사 상수(관리자 기본 계정 `deskless`) |
 | `libs/account/src/utils/{sms-verification,password}.ts` · `apps/admin-service/src/{manager/manager.util,reservation/reservation.util,store/store.util}.ts` · `apps/scheduler/src/reservation/reservation.util.ts` | modified | SMS 머리말 `[바로방]` 8종 |
 | `libs/messaging/src/on-command.decorator.ts` · `libs/integration/src/storage/local-storage.util.ts` | modified | 메타데이터 키 `deskless:on-command` · 내부 파일 서명 구분값 `deskless-local-file` |
@@ -31,7 +31,7 @@
 없음 — spec 결과 표에 ✓ 행이 없다. 기존 테스트의 기대 문구가 스크립트로 함께 바뀌었다.
 
 ## Verification
-- 남은 이름: `git grep -n -i -e roomless -e 룸리스` → 이번 변경을 설명하는 문서(프론트 수정 요청 목록 줄 · spec 보드의 이번 카드)만 남는다.
+- 남은 이름: `git grep -n -i -e deskless -e 룸리스` → 이번 변경을 설명하는 문서(프론트 수정 요청 목록 줄 · spec 보드의 이번 카드)만 남는다.
 - `docker compose -f compose.<묶음>.yml config -q` 7개 OK — gateway 묶음 이름 `deskless-gateway`, 네트워크 `deskless-*`, 볼륨 `deskless-files`, 이미지 `deskless/gateway` 확인(컨테이너는 띄우지 않음).
 - `npm run typecheck` 0 · `npm run lint` 0 · `npm run db:check` 일치 · `npm test` 123 파일 1,361건 통과 · `npm run build`(네 앱) 성공 · 바뀐 `.ts` · `.mjs` prettier 통과.
 - 샘플 사진: `store-01-1.png` 를 열어 간판 `DESKLESS` 확인.

@@ -9,7 +9,7 @@
 
 | 파일 | 작업 | 역할 | 코드 |
 |---|---|---|---|
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` · `.publish.html` → `deskless-roadmap.*` | 이동(git mv) + 수정 | 로드맵 파일 이름 · 본문 | 아래 1 (스크립트) |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` · `.publish.html` → `deskless-roadmap.*` | 이동(git mv) + 수정 | 로드맵 파일 이름 · 본문 | 아래 1 (스크립트) |
 | `libs/messaging/src/messaging.constants.ts` | 수정 | exchange 세 개 이름 | 아래 3-1 |
 | `docker/rabbitmq/init.sh` · `scripts/check-broker-acl.mjs` | 수정 | 브로커 계정 권한 정규식 · ACL 검사 상수 | 아래 3-1 |
 | `libs/account/src/utils/password.ts` · `sms-verification.ts` · `apps/admin-service/src/{manager/manager.util.ts, reservation/reservation.util.ts, store/store.util.ts}` · `apps/scheduler/src/reservation/reservation.util.ts` | 수정 | SMS 머리말 `[바로방]` (8종) | 아래 3-2 |
@@ -31,7 +31,7 @@
 ## 1. 비즈니스 로직 — 글자 바꾸기 스크립트
 
 이번 변경의 본체다. 추적 파일 전부에 같은 규칙을 한 번에 적용해 빠뜨리는 곳이 없게 한다. 스크립트는 scratchpad 에 두고 커밋하지 않는다.
-**순서가 중요하다** — SMS 머리말 `[roomless]` 를 먼저 한글 브랜드로 바꾼 뒤 나머지 영어를 바꾼다(거꾸로면 `[deskless]` 가 된다). 줄 끝(CRLF/LF)은 건드리지 않는다.
+**순서가 중요하다** — SMS 머리말 `[deskless]` 를 먼저 한글 브랜드로 바꾼 뒤 나머지 영어를 바꾼다(거꾸로면 `[deskless]` 가 된다). 줄 끝(CRLF/LF)은 건드리지 않는다.
 
 ```js
 // <scratchpad>/rename-project.cjs — 사용: node rename-project.cjs <저장소 경로>
@@ -42,10 +42,10 @@ const {execFileSync} = require('child_process');
 const repo = process.argv[2];
 // ① 바꾸는 규칙 — 위에서부터 차례로(SMS 머리말이 먼저)
 const RULES = [
-    ['[roomless]', '[바로방]'],
-    ['Roomless', 'Deskless'],
-    ['ROOMLESS', 'DESKLESS'],
-    ['roomless', 'deskless'],
+    ['[deskless]', '[바로방]'],
+    ['deskless', 'Deskless'],
+    ['deskless', 'DESKLESS'],
+    ['deskless', 'deskless'],
     ['룸리스', '바로방'],
 ];
 // ② 대상 — git 이 추적하는 파일만(.env · .back/ · node_modules · dist 는 추적되지 않아 빠진다), 그림 파일 제외
@@ -71,16 +71,16 @@ console.log(`바꾼 파일 ${changed}개`);
 로드맵 파일 이름은 스크립트 전에 옮긴다(스크립트가 새 이름의 파일 본문을 바꾸게).
 
 ```bash
-git mv .beaver/output/roadmap/roomless-roadmap.md .beaver/output/roadmap/deskless-roadmap.md
-git mv .beaver/output/roadmap/roomless-roadmap.html .beaver/output/roadmap/deskless-roadmap.html
-git mv .beaver/output/roadmap/roomless-roadmap.publish.html .beaver/output/roadmap/deskless-roadmap.publish.html
+git mv .beaver/output/roadmap/deskless-roadmap.md .beaver/output/roadmap/deskless-roadmap.md
+git mv .beaver/output/roadmap/deskless-roadmap.html .beaver/output/roadmap/deskless-roadmap.html
+git mv .beaver/output/roadmap/deskless-roadmap.publish.html .beaver/output/roadmap/deskless-roadmap.publish.html
 ```
 
 ---
 
 ## 2. 샘플 사진 간판 글자 — `scripts/sample-images.mjs`
 
-5×7 글꼴에는 라벨에 쓰는 글자만 있다(`0-9 E L M O R S T -`). `DESKLESS` 에 필요한 **D · K** 를 더한다 — 없는 글자는 빈칸으로 그려지므로 더하지 않으면 간판이 `ES LESS` 가 된다. 글자 수(8)가 같아 간판 크기 · 위치는 그대로다. 스크립트가 `ROOMLESS` 를 `DESKLESS` 로 바꾼 뒤 `npm run sample:images` 로 70장을 다시 그린다.
+5×7 글꼴에는 라벨에 쓰는 글자만 있다(`0-9 E L M O R S T -`). `DESKLESS` 에 필요한 **D · K** 를 더한다 — 없는 글자는 빈칸으로 그려지므로 더하지 않으면 간판이 `ES LESS` 가 된다. 글자 수(8)가 같아 간판 크기 · 위치는 그대로다. 스크립트가 `deskless` 를 `DESKLESS` 로 바꾼 뒤 `npm run sample:images` 로 70장을 다시 그린다.
 
 ```js
 // scripts/sample-images.mjs — FONT 에 더한다
@@ -137,7 +137,7 @@ spec 의 "결과" 표에 ✓ 행이 없고 계산 규칙도 없다 — 새 테�
 
 | 종류 | 대상 | 이유 |
 |---|---|---|
-| 남은 이름 검사 | `git grep -n -i -e roomless -e 룸리스` | 0건이어야 한다 — 빠뜨린 곳 찾기 |
+| 남은 이름 검사 | `git grep -n -i -e deskless -e 룸리스` | 0건이어야 한다 — 빠뜨린 곳 찾기 |
 | 형식 검사 | `docker compose -f compose.<묶음>.yml config -q` 7개 | 컨테이너를 띄우지 않고 compose 형식만 확인(허용) |
 | 회귀 | `npm run typecheck` · `npm run lint` · `npm test` · `npm run build` · `npm run db:check` | 문구 · 상수만 바뀌어 모두 그대로 통과해야 한다 |
 
@@ -147,9 +147,9 @@ spec 의 "결과" 표에 ✓ 행이 없고 계산 규칙도 없다 — 새 테�
 
 ## ship 뒤 사용자 단계 (리포트 · ship 보고에 싣는다)
 
-1. 옛 묶음 내리기 — 바꾸기 전 코드로 `npm run docker:down`. 이미 바꾼 뒤면 묶음마다 `docker compose -p roomless-<gateway|scheduler|admin-service|user-service|redis|rabbitmq|postgres> down`.
-2. `.env` — 값에 roomless 가 있으면 새 값으로(`POSTGRES_USER` · `POSTGRES_PASSWORD` · `POSTGRES_DB` · `DATABASE_URL` · `RABBITMQ_USER` · `RABBITMQ_PASSWORD` · `REDIS_PASSWORD` · `REDIS_URL` · `SWAGGER_TITLE` · `CORS_ORIGINS` · `USER_WEB_URL` 등). 빈 새 볼륨이라 새 값이 그대로 적용된다.
+1. 옛 묶음 내리기 — 바꾸기 전 코드로 `npm run docker:down`. 이미 바꾼 뒤면 묶음마다 `docker compose -p deskless-<gateway|scheduler|admin-service|user-service|redis|rabbitmq|postgres> down`.
+2. `.env` — 값에 deskless 가 있으면 새 값으로(`POSTGRES_USER` · `POSTGRES_PASSWORD` · `POSTGRES_DB` · `DATABASE_URL` · `RABBITMQ_USER` · `RABBITMQ_PASSWORD` · `REDIS_PASSWORD` · `REDIS_URL` · `SWAGGER_TITLE` · `CORS_ORIGINS` · `USER_WEB_URL` 등). 빈 새 볼륨이라 새 값이 그대로 적용된다.
 3. `npm run docker:up` — 새 네트워크 · 볼륨 · 빈 DB(마이그레이션 + 시드).
-4. 정리(선택) — 옛 `roomless-*` 볼륨 · 네트워크 · `roomless/*` 이미지 지우기.
+4. 정리(선택) — 옛 `deskless-*` 볼륨 · 네트워크 · `deskless/*` 이미지 지우기.
 5. ~~GitHub 저장소 이름 `deskless-backend` 로 바꾸기 → 원격 주소 바꾸기~~ — 완료(2026-11-22 사용자가 GitHub 이름 변경, 원격 주소 `https://github.com/HaSungJe/deskless-backend.git` 로 바꾸고 `main` = `fd81cd1` 확인).
 6. ~~세션을 닫고 로컬 폴더 이름 바꾸기 — Claude 메모리 폴더도 새 경로 이름으로 옮긴다~~ — 완료(2026-11-22 사용자가 `C:\workspace\deskless-backend` 로 바꿈, 메모리 10개를 `~/.claude/projects/C--workspace-deskless-backend/memory` 로 복사 — 옛 폴더는 그대로 둠).
