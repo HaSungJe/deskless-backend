@@ -76,7 +76,7 @@ describe('admin.manager.staff — 업체 관리자 등록 (큐 경로)', () => {
 
             const temporaryPassword = vi.mocked(getBcrypt).mock.calls[0][0];
             expect(temporaryPassword).toMatch(/^[a-zA-Z0-9]{10}$/);
-            expect(sms.send).toHaveBeenCalledWith({to: '01022223333', text: staffRegisteredText('룸리스 강남점', STORE_CODE, 'staff01', temporaryPassword)});
+            expect(sms.send).toHaveBeenCalledWith({to: '01022223333', text: staffRegisteredText('바로방 강남점', STORE_CODE, 'staff01', temporaryPassword)});
             expect(repo.insertStaff.mock.invocationCallOrder[0]).toBeLessThan(sms.send.mock.invocationCallOrder[0]);
             expect(result).toEqual({result: {user_id: staff.user_id}, error: null});
         });

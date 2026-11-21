@@ -3,7 +3,7 @@
 > 원래 spec · plan(`.beaver/output/spec/seed/sample-data-spec.md` · `plan/seed/sample-data-plan.md`)은 고치지 않고 참고만 한다.
 
 ## Reason for Change Request
-지금 저장소는 "둘 중 하나" 라 `AWS_S3_BUCKET` 을 채워 S3 로 바꾸는 순간 내부 파일 저장소(`roomless-files` 볼륨)에 올려 둔 사진 주소가 모두 CloudFront 로 만들어져 깨진다(게이트웨이 `/files` 도 꺼진다). 사용자 결정(2026-11-18): S3 로 바꾼 뒤에도 내부 저장소에 남은 파일은 계속 내부에서 연다 — **어느 저장소의 파일인지는 파일 행에 구분값(`file_storage`)으로 적는다**(폴더에 있는지 매번 확인하는 안 대신 — 판단이 명시적이고, 볼륨이 빠졌을 때 조용히 S3 로 넘어가지 않는다).
+지금 저장소는 "둘 중 하나" 라 `AWS_S3_BUCKET` 을 채워 S3 로 바꾸는 순간 내부 파일 저장소(`deskless-files` 볼륨)에 올려 둔 사진 주소가 모두 CloudFront 로 만들어져 깨진다(게이트웨이 `/files` 도 꺼진다). 사용자 결정(2026-11-18): S3 로 바꾼 뒤에도 내부 저장소에 남은 파일은 계속 내부에서 연다 — **어느 저장소의 파일인지는 파일 행에 구분값(`file_storage`)으로 적는다**(폴더에 있는지 매번 확인하는 안 대신 — 판단이 명시적이고, 볼륨이 빠졌을 때 조용히 S3 로 넘어가지 않는다).
 
 ## Spec Before → After
 
@@ -406,7 +406,7 @@ await this.storageGateway.remove(row.file_key);    →   await this.storageGatew
 
 ```md
 <!-- docs/guides/aws-setup.md — "AWS 없이 돌리기" 의 "나중에 S3 를 켜면 …" 줄 → 교체 -->
-- 나중에 S3 를 켜도 **이미 내부 저장소에 올린 사진은 그대로 열린다** — 파일 행마다 올릴 때의 저장소(`file_storage` — `LOCAL` · `S3`)가 적혀 있어, `LOCAL` 행은 계속 게이트웨이(`/files/…`)로, 새로 올린 `S3` 행은 CloudFront 로 나간다. 삭제도 그 행의 저장소에서 한다. 그래서 S3 로 바꾼 뒤에도 볼륨(`roomless-files`)을 지우지 않는다.
+- 나중에 S3 를 켜도 **이미 내부 저장소에 올린 사진은 그대로 열린다** — 파일 행마다 올릴 때의 저장소(`file_storage` — `LOCAL` · `S3`)가 적혀 있어, `LOCAL` 행은 계속 게이트웨이(`/files/…`)로, 새로 올린 `S3` 행은 CloudFront 로 나간다. 삭제도 그 행의 저장소에서 한다. 그래서 S3 로 바꾼 뒤에도 볼륨(`deskless-files`)을 지우지 않는다.
 - 옛 사진까지 S3 로 옮기고 싶으면 볼륨 내용을 같은 키(경로)로 버킷에 올리고, 그 행의 `file_storage` 를 `S3` 로 바꾼다(`UPDATE t_store_file SET file_storage = 'S3' WHERE file_storage = 'LOCAL' AND file_key NOT LIKE 'sample/%'` — `t_room_group_image` 도 같이). 그 뒤 볼륨에서 지운다.
 ```
 

@@ -24,7 +24,7 @@
 | `apps/scheduler/src/user/test/user.repository.spec.ts` | new — `[SMOKE:data-access]` 탈퇴 대상 조회 SQL |
 | `nest-cli.json` | modified — `scheduler` 프로젝트 (#88) |
 | `package.json` | modified — `build:scheduler` · `start:scheduler` · `start:prod:scheduler` · `docker:scheduler` · `docker:logs:scheduler`, `build` · `docker:up` · `docker:down` 에 scheduler (#88 · #90) |
-| `compose.scheduler.yml` | new — scheduler × `SCHEDULER_REPLICAS`(기본 1), `roomless-data` 만 (#90) |
+| `compose.scheduler.yml` | new — scheduler × `SCHEDULER_REPLICAS`(기본 1), `deskless-data` 만 (#90) |
 | `Dockerfile` | modified — 주석의 앱 목록에 scheduler (구조 변경 없음) |
 | `.env.example` | modified — `SCHEDULER_REPLICAS=1` · `DATABASE_CONNECTION_TIMEOUT_MS=30000` (#90 · #91) |
 | `apps/user-service/src/user-service.module.ts` | modified — `ScheduleModule` 제거, `APP_INTERCEPTOR` `ReturnedExceptionInterceptor` 등록 (#89 · #91) |
@@ -48,9 +48,9 @@
 | `README.md` | modified — scheduler 서버 · 실행 · 명령 · 구조 · 연결 대기 env |
 | `AGENTS.md` | modified — 구조 트리 · Transaction(RequiresNew 예외 → 실패 return) · Error & Response · 스케줄러(scheduler 앱에만) · Docker 묶음 5개 · Data-Access Smoke 적용처 · Checklist |
 | `docs/architecture.md` · `docs/messaging.md` · `docs/error-handling.md` · `docs/data-layer.md` · `docs/testing.md` · `docs/conventions.md` | modified — 같은 내용 상세 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified — Phase 5 진행 상태 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified — Phase 5 진행 상태 |
 | `apps/user-service/src/user/test/user-{phone-verification,find-login-id,password-reset}.spec.ts` | 변경 없음 — 디스패처까지 부팅해 결과(failed 400 · ack · update 미호출)를 단언하므로, throw → return 이어도 단언이 그대로 맞다 |
-| `apps/gateway/**`(transport 외) · `libs/database/src/job-lock/*` · `scripts/docker-network.mjs` | 변경 없음 — scheduler 는 기존 `roomless-data` 네트워크 · `JobLockService` 를 그대로 쓴다 |
+| `apps/gateway/**`(transport 외) · `libs/database/src/job-lock/*` · `scripts/docker-network.mjs` | 변경 없음 — scheduler 는 기존 `deskless-data` 네트워크 · `JobLockService` 를 그대로 쓴다 |
 
 정리할 기존 코드(§1.7)
 - user-service: `ScheduleModule.forRoot()`, `crontabs/`(→ scheduler), `UserLeaveCleanupCrontab` provider
@@ -658,8 +658,8 @@ compose.user-service.yml 의 설정 원칙을 그대로 따른다. env 는 .env 
 #   - 서버 구성(TZ)만 아래에 고정한다.
 #   - 쓰지 않는 비밀값(브로커 · JWT · 토큰 암호화 · 내부 토큰 · 비밀번호 해시 · AWS · DB 관리자)은 빈 값으로 덮어 전달하지 않는다.
 #
-# 네트워크 — DB 로 나가는 roomless-data 하나뿐이다(서비스 · 브로커 · 외부 진입 네트워크에 붙지 않는다)
-name: roomless-scheduler
+# 네트워크 — DB 로 나가는 deskless-data 하나뿐이다(서비스 · 브로커 · 외부 진입 네트워크에 붙지 않는다)
+name: deskless-scheduler
 
 x-logging: &logging
     driver: json-file
@@ -669,7 +669,7 @@ x-logging: &logging
 
 services:
     scheduler:
-        image: roomless/scheduler
+        image: deskless/scheduler
         build:
             context: .
             args:
@@ -702,7 +702,7 @@ services:
 
 networks:
     data:
-        name: roomless-data
+        name: deskless-data
         external: true
 ```
 
@@ -745,7 +745,7 @@ RUN test -n "$APP" || (echo "APP build-arg 가 필요합니다 (gateway | user-s
  - 스케줄러: crontab 은 scheduler 앱(apps/scheduler)의 도메인 crontabs/ 에만, 서비스 앱에는 ScheduleModule · crontab 을 두지 않는다, ScheduleModule.forRoot() 는 scheduler 루트 모듈에 1회, scheduler 도 여러 대일 수 있어 JobLockService
  - Transaction: RequiresNew 예외 문장 삭제 → "커밋해야 하는 실패는 return" 으로
  - 서비스는 게이트웨이를 거친 요청만: 서비스 루트 모듈의 APP_INTERCEPTOR(ReturnedExceptionInterceptor) 한 줄
- - Docker: 묶음 4개 → 5개(compose.scheduler.yml — scheduler × SCHEDULER_REPLICAS, roomless-data 만), 연결 대기 DATABASE_CONNECTION_TIMEOUT_MS
+ - Docker: 묶음 4개 → 5개(compose.scheduler.yml — scheduler × SCHEDULER_REPLICAS, deskless-data 만), 연결 대기 DATABASE_CONNECTION_TIMEOUT_MS
  - Data-Access Smoke 적용처에 scheduler user.repository.spec.ts buildUsersQuery
  - Checklist: crontab 은 scheduler 앱에만
 

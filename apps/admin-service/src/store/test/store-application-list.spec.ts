@@ -34,7 +34,7 @@ describe('GET /internal/v1/admin-service/store/application — 입점 신청 목
                         store_application_id: 'a'.repeat(32),
                         user_id: USER_ACTOR.user_id,
                         store_application_state_id: 'APPROVED',
-                        store_name: '룸리스 강남점',
+                        store_name: '바로방 강남점',
                         business_number: '1234567890',
                         owner_name: '홍길동',
                         store_id: 'b'.repeat(32),

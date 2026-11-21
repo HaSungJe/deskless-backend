@@ -141,7 +141,7 @@ crontab(scheduler — 운영 전용 · `JobLockService`):
 
 - **로드맵 구조 변경** — 이번 Phase 에 소켓(#115) · 시크릿(#114)과 QR 테이블이 더해지고, Phase 14 #109(문 열기 · 닫기 API)가 소켓으로 바뀐다. 유닛 추가는 `/beaver:roadmap` 몫이라 이 기획 승인 뒤에 반영한다(plan Prerequisites).
 - **Phase 14 대비 바뀌는 것** — HTTP 문 열기 · 닫기 API 와 user-service 문 도메인 · gateway 문 라우트 삭제(문 쪽 프로그램 연동 규격 변경 — 사용자 안내 필요), Redis 값 모양(`QR:상태:시각` → `상태:시각` + `door-qr:<room_id>`), 포트 `issueQr` · `get` 없앰, 문 시각 util(`toDoorTime`)은 `libs/integration` 으로.
-- **Redis 를 쓰는 앱** — user-service(QR 발급 · 업체 취소) · admin-service(호실 목록 · 바로 열기 · 소켓 접속 · QR 확인 · 잠금 — 새로 연결) · scheduler(QR 맞추기 — 새로 연결) · gateway(명령 구독 — 새로 연결, `roomless-data` 네트워크 추가).
+- **Redis 를 쓰는 앱** — user-service(QR 발급 · 업체 취소) · admin-service(호실 목록 · 바로 열기 · 소켓 접속 · QR 확인 · 잠금 — 새로 연결) · scheduler(QR 맞추기 — 새로 연결) · gateway(명령 구독 — 새로 연결, `deskless-data` 네트워크 추가).
 - **Phase 19 와 맞물림** — #78(이용 시작 5분 전 QR 링크 SMS)은 QR 이 시작 시각부터 나오므로 링크 화면이 시작 전에는 "이용 시간에만" 을 보인다. #79(체크인 = 이용 시간 안 첫 문 열기)는 `door.verify` 가 맞았을 때 그 QR 의 예약(`t_room_qr`)으로 체크인할 수 있다. 체크아웃(#82)도 유효 종료를 지금으로 + Redis 에서 지우는 방식을 쓸 수 있다.
 - **소켓이 끊기면 문은 QR 로 열 수 없다** — 서버가 비교하는 구조라서다(QR 값을 문에 내려 두지 않는 대가). 문 프로그램의 재연결 · 기계식 비상 열쇠는 문 업체 몫.
 - **시크릿 대입 공격** — 소켓 접속 시도 횟수 제한은 두지 않는다(bcrypt 비교라 느리다). 남용이 보이면 접속 제한을 붙인다.

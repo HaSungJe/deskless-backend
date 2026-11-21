@@ -63,7 +63,7 @@ describe('admin.reservation.room-change — 호실 이동 (큐 경로)', () => {
         expect(where).toEqual({reservation_id: RESERVATION_ID, reservation_state_id: 'CONFIRMED'});
         expect(entity).toBeInstanceOf(ReservationEntity);
         expect(entity).toEqual(Object.assign(new ReservationEntity(), {room_id: ROOM_ID_2}));
-        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[roomless] 루미 강남점 11/10 13:00 예약 호실이 101호에서 102호로 변경되었습니다.'});
+        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[바로방] 루미 강남점 11/10 13:00 예약 호실이 101호에서 102호로 변경되었습니다.'});
     });
 
     it.each([

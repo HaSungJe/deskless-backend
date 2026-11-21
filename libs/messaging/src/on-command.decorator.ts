@@ -1,7 +1,7 @@
 import {SetMetadata} from '@nestjs/common';
 
 /** `@OnCommand` 메타데이터 키 */
-export const ON_COMMAND_METADATA = 'roomless:on-command';
+export const ON_COMMAND_METADATA = 'deskless:on-command';
 
 /**
  * 서비스의 RabbitMQ 인바운드 어댑터 메서드를 명령 type 에 연결한다.

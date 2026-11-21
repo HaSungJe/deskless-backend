@@ -37,7 +37,7 @@
 | `AGENTS.md` · `docs/{architecture,conventions,data-layer,integration,testing,api}.md` · `docs/guides/aws-setup.md` | modified — store 도메인 · 목록 규약 적용 · 검증 데코레이터 · 경로 함수 · 파일 규칙(용도 룩업 `is_private` · 새 키) · CloudFront 기본 구성 |
 | `README.md` | modified — admin-service 설명에 업체 입점 · 관리 |
 | `.beaver/output/spec/platform/cache-spec.md` | 반영됨(기획 때) — 무효화 지점 표 |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified — `roadmap-status.js` 로 상태 |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified — `roadmap-status.js` 로 상태 |
 
 삭제할 코드:
 - `t_store_application.business_license_image_key`(Phase 8)
@@ -373,7 +373,7 @@ import {IsLatitude, IsLongitude, IsNotEmpty, IsOptional, Matches, MaxLength} fro
  * 입점 신청 — 업체 정보 (이용자). 업체 정보 파일은 신청 뒤 따로 붙인다. 위경도는 클라이언트가 주소 검색으로 구해 보낸다.
  */
 export class StoreApplicationDto {
-    @ApiProperty({description: '상호명', example: '룸리스 강남점'})
+    @ApiProperty({description: '상호명', example: '바로방 강남점'})
     @MaxLength(100, {message: '상호명은 100자 이내로 입력해주세요.'})
     @IsNotEmpty({message: '상호명을 입력해주세요.'})
     store_name: string;
@@ -1923,7 +1923,7 @@ export function generateHeadManagerLoginId(): string {
  * @returns 본문
  */
 export function storeApprovedText(store_name: string, login_id: string, password: string): string {
-    return `[roomless] ${store_name} 입점이 승인되었습니다. 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
+    return `[바로방] ${store_name} 입점이 승인되었습니다. 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
 }
 
 /**
@@ -3330,7 +3330,7 @@ import {StoreModule} from './api/v1/admin-service/store/store.module.js';
 - `docs/guides/aws-setup.md` — **CloudFront 를 기본 구성으로** 바꾼다(지금 5단계 "선택" → 필수).
   - 퍼블릭 액세스 차단 4개를 모두 켠다. 버킷 공개 정책은 없앤다.
   - CloudFront 배포의 원본은 이 버킷(OAC)이다. 버킷 정책은 CloudFront 서비스 주체에게 공개 접두사만 `s3:GetObject` 를 준다.
-    - Resource `arn:aws:s3:::roomless-<dev|prod>-files/store/*` (객실 사진이 생기면 Phase 13 에서 `room-group/*` 추가)
+    - Resource `arn:aws:s3:::deskless-<dev|prod>-files/store/*` (객실 사진이 생기면 Phase 13 에서 `room-group/*` 추가)
     - Condition `AWS:SourceArn` = 배포 ARN
   - 그래서 CloudFront 주소로 `private/*` 를 요청하면 S3 가 403 이다. 비공개 파일은 앱의 presigned GET 으로만 연다(앱 IAM 의 `s3:GetObject` 는 이미 있다).
   - 캐시 정책은 관리형 `CachingOptimized`(키가 바뀌지 않아 길게)이고, 응답 헤더 정책으로 `Cache-Control: public, max-age=31536000, immutable` 을 붙인다.

@@ -26,7 +26,7 @@
 | `docs/data-layer.md` | modified — 엔티티 트리 · 타입(`time` · `double precision`) · 룩업 목록 · 서비스 간 FK 예 |
 | `AGENTS.md` | modified — Data Layer 타입 한 줄 |
 | `README.md` | 변경 없음(확인) — 테이블 목록을 두지 않는다(README.md:69 은 `entities/<domain>/` 경로만) |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified — Phase 8 유닛 상태 |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified — Phase 8 유닛 상태 |
 
 삭제할 코드: 없음. `t_store` 를 읽거나 쓰는 앱 코드가 아직 없다(`StoreEntity` 사용처는 user.entity.ts:39 의 FK · entities.ts 뿐).
 

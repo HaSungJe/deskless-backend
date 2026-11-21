@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # 앱 하나를 이미지 하나로 — APP 인자로 고른다 (gateway | user-service | admin-service | scheduler)
-#   docker build --build-arg APP=gateway -t roomless/gateway .
+#   docker build --build-arg APP=gateway -t deskless/gateway .
 # 베이스는 Debian slim: bcrypt 가 glibc 용 prebuild 만 제공한다(Alpine/musl 이면 소스 빌드가 필요).
 
 # Node 24 LTS(Krypton) — 패치 버전까지 고정한다(PC 에 받아 둔 옛 이미지가 쓰이지 않게). 보안 패치가 나오면 이 줄을 올린다.
@@ -38,7 +38,7 @@ WORKDIR /app
 COPY package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist/apps/${APP} ./dist/apps/${APP}
-# 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 빈 공용 볼륨(roomless-files)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
+# 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 빈 공용 볼륨(deskless-files)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
 RUN mkdir -p /app/storage/files && chown -R node:node /app/storage
 USER node
 CMD ["sh", "-c", "exec node dist/apps/${APP}/apps/${APP}/src/main.js"]

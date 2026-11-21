@@ -27,7 +27,7 @@
 | `apps/user-service/src/user/controllers/user.controller.ts` · `apps/admin-service/src/{manager,admin}/controllers/*.controller.ts` | modify | `@Controller('/internal/v1/<service>/<domain>')` |
 | 서비스 JSDoc · spec(경로 문자열) · `apps/gateway/src/guards/test/guards.spec.ts` | modify | 새 경로 |
 | `AGENTS.md` · `README.md` · `docs/*.md` | modify | 경로 규칙 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modify | 이후 Phase 경로 · 파일 집합, 서버 분할 · 관리자 계정 관리 · 통계 위치, 결정 기록 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modify | 이후 Phase 경로 · 파일 집합, 서버 분할 · 관리자 계정 관리 · 통계 위치, 결정 기록 |
 
 ## Code Changes
 

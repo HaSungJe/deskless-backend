@@ -34,7 +34,7 @@
 | # | Severity | Location (path:line) | Description | Recommendation |
 |---|--------|-----------------|------|------|
 | 1 | Low | apps/user-service/src/user/controllers/user.controller.ts `getMe` | `@InternalActor('user_id')` 는 헤더가 없으면 null 이다 — 게이트웨이 가드 뒤에서만 불리고 내부 토큰이 필요해 실제로 빈 값이 오지 않으며, 기존 내부 라우트(내 예약 등)와 같은 패턴이다 | 그대로 둔다(패턴 공통 — 고치려면 데코레이터 단위로 따로) |
-| 2 | Low | `.beaver/output/frontend/design/*.html` | 시안 예시 업체 로그인 주소 앞부분(`https://roomless.example`) · 매니저 · 관리자 이름 대신 로그인 아이디 — API 가 이름을 주지 않아서 | 보고서 Remaining 에 적음 |
+| 2 | Low | `.beaver/output/frontend/design/*.html` | 시안 예시 업체 로그인 주소 앞부분(`https://deskless.example`) · 매니저 · 관리자 이름 대신 로그인 아이디 — API 가 이름을 주지 않아서 | 보고서 Remaining 에 적음 |
 
 ## Verdict
 Pass — 막는 문제 없음. 테스트 실행은 ship 뒤 `/beaver:test`.

@@ -75,7 +75,7 @@ affected_data: ["Redis door:<room_id> (문 정보 'QR:상태:시각' — 열기 
 
 - [x] 포트는 `libs/integration` 에 — 문 정보는 user-service(문 열기 · 닫기, Phase 15 QR 발급)와 나중의 관리 화면이 함께 쓰므로 외부 연동 포트와 같은 자리(`integration.symbols.ts` 의 `SMS_SENDER` · `STORAGE_GATEWAY` 옆 — libs/integration/src/integration.symbols.ts:1-5).
 - [x] Redis 연결은 `RabbitMqConnection` 과 같은 수명주기 — `onApplicationBootstrap` 에서 열고 부팅을 막지 않으며 준비 전 요청은 503(libs/messaging/src/rabbitmq.connection.ts:26-62). 형제 어댑터처럼 외부 실패를 503 으로 바꾼다(libs/integration/src/sms/sns-sms.sender.ts:31-45).
-- [x] Docker 묶음은 postgres 묶음과 같은 모양 — `roomless-data` 네트워크 · 127.0.0.1 포트 · 이름 있는 볼륨 · healthcheck · 필수값 `${VAR:?}`(compose.postgres.yml:1-48).
+- [x] Docker 묶음은 postgres 묶음과 같은 모양 — `deskless-data` 네트워크 · 127.0.0.1 포트 · 이름 있는 볼륨 · healthcheck · 필수값 `${VAR:?}`(compose.postgres.yml:1-48).
 - [x] 닫기의 호실 확인은 door 도메인 repository 가 `t_room` 을 door 어휘로 읽는다(`findDoorRoom` — 도메인 간 데이터 접근 규칙, 형제 room.repository.ts:652 `findRoom` 의 `notDeleted`).
 
 ## Decisions

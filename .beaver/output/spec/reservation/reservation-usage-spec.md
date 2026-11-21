@@ -67,7 +67,7 @@ affected_data:
 - **대상**: 확정 · 이용 중이고 `start_at ≤ 지금 + 5분` · `end_at > 지금` · `qr_link_sent_at` 없음 · 예약자 휴대폰 번호가 있는 예약
   - 지금 바로 예약은 결제 확인 다음 회차에 나간다.
 - 링크는 5분 전에 가지만, 화면의 QR 은 시작 시각부터 열린다(위 2).
-- **문구**: `[roomless] <업체명> <M/D HH:mm> 예약 — QR 확인: <USER_WEB_URL>/reservation/<reservation_id>`
+- **문구**: `[바로방] <업체명> <M/D HH:mm> 예약 — QR 확인: <USER_WEB_URL>/reservation/<reservation_id>`
   - `USER_WEB_URL` 은 새 `.env` 값이다(scheduler · admin-service). 비어 있으면 보내지 않는다.
 - **예약당 1번** — 순서는 아래와 같다.
   1. `qr_link_sent_at` 을 먼저 지금으로 표시한다(비어 있을 때만 — 겹쳐 돌아도 1번).

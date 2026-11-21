@@ -30,7 +30,7 @@
 - **QR 겹침 방지**: 발급은 새 색인을 `SET NX` 로 잡아야만 바꾸고 이전 색인을 지운다(Lua 1개 — 원자적). 32자 무작위 + 최대 3번 시도. 열기 · 닫기도 Lua 1개씩.
 - **기록 없음**: 키가 없으면 `get` 이 `close` · `00000000000000`. 발급 때 기록 없는 문은 `close` · `00000000000000` 으로 시작.
 - **Redis 장애**: 부팅을 막지 않고(연결을 기다리지 않음 · 기본 재연결), 준비 전 · 실패는 503. 끊긴 동안 명령을 쌓지 않는다. 재연결 중에도 소켓 `isOpen` 은 true 라 종료 때 `close()` 가 재연결을 멈춘다(node-redis 6 소스 확인).
-- **Docker · 가이드**: `compose.redis.yml`(AOF · 비밀번호 · `roomless-data`), `docker:redis` · `docker:infra` · `docker:down`, user-service 만 `REDIS_URL` 필수 · 다른 앱은 Redis 비밀값을 빈 값으로. README 실행 절 4단계 · `docs/guides/redis-setup.md`(로컬 · ElastiCache · 확인 · 문제 해결) — 사용자 요청대로.
+- **Docker · 가이드**: `compose.redis.yml`(AOF · 비밀번호 · `deskless-data`), `docker:redis` · `docker:infra` · `docker:down`, user-service 만 `REDIS_URL` 필수 · 다른 앱은 Redis 비밀값을 빈 값으로. README 실행 절 4단계 · `docs/guides/redis-setup.md`(로컬 · ElastiCache · 확인 · 문제 해결) — 사용자 요청대로.
 - **검증**: typecheck · lint · build(4개 앱) · db:check 통과, 테스트(AGENTS 허용 확인 실행) door 28 · 전체 746 통과, compose 5개 문법 통과(`.env` 값 미출력), Lua 3개를 Lua VM 에서 16/16(색인 없음 · 발급 · 열기 · 닫기 · 재발급 · 충돌 · QR 없는 기록).
 - **plan 과 다른 점**: `RedisClient` 타입을 클라이언트 생성 함수에서 얻는다(node-redis 6 기본 RESP3 제네릭 — 동작 같음). 로드맵 변경으로 QR 발급의 첫 사용처를 Phase 15 #112 로 문서들을 고쳤다.
 

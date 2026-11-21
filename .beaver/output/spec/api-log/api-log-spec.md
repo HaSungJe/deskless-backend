@@ -66,7 +66,7 @@ t_api_log 는 한국 달 기준 월 파티션으로 바꾸고, scheduler 가 앞
 ## Notes
 - 엔티티는 이미 있다 — `libs/database/src/entities/api-log/api-log.entity.ts:12`(PK `(api_log_id, created_at)` — 파티션 키를 PK 에 넣으려고 처음부터 복합). 컬럼은 바꾸지 않고 `path` 의 COMMENT 와 클래스 JSDoc 만 고친다. 예전 사용처에서 쓰던 엔티티(MySQL — `id` · `create_at`)와 같은 컬럼이다(1792477492198-RenameColumns 로 이름을 맞춤).
 - 예전 코드(`.back/src/modules/api-log/` — 참고만): 인터셉터 + `res.send` 가로채기 + `finish` · `close` 1번 저장, 로그 전용 DataSource(`API_LOG_DATASOURCE_NAME` · 풀 5)로 비즈니스 풀과 분리. 지금은 가드 실패 · 없는 경로도 남겨야 해 인터셉터 대신 미들웨어(가드보다 먼저 돈다), SSE 는 `res.write` 도 가로챈다. `TypeOrmModule` 은 DB 가 없으면 부팅을 막으므로 DataSource 를 직접 두고 처음 쓸 때 연다.
-- 게이트웨이는 지금 DB 를 쓰지 않는다(`apps/gateway/src/gateway.module.ts:21` · `docs/architecture.md:31` · `compose.gateway.yml:21` — `DATABASE_URL: ''` 로 막아 둠) — 이 규칙을 "API 로그 적재만 예외" 로 바꾼다. 게이트웨이는 이미 `roomless-data` 네트워크에 있어(Redis) postgres 에 닿는다.
+- 게이트웨이는 지금 DB 를 쓰지 않는다(`apps/gateway/src/gateway.module.ts:21` · `docs/architecture.md:31` · `compose.gateway.yml:21` — `DATABASE_URL: ''` 로 막아 둠) — 이 규칙을 "API 로그 적재만 예외" 로 바꾼다. 게이트웨이는 이미 `deskless-data` 네트워크에 있어(Redis) postgres 에 닿는다.
 - 파티션 테이블 읽기 — TypeORM 이 파티션 부모(`relkind 'p'`)를 테이블로 읽고 자식 파티션은 뺀다(`node_modules/typeorm/driver/postgres/PostgresQueryRunner.js:2070` · `:2090` — `relkind IN ('r', 'p')` · 인덱스는 `relispartition = 'f'`) — `db:check` 로 build 때 확인한다.
 - 연결 수 — 게이트웨이 인스턴스마다 로그 전용 연결 최대 5개(`GATEWAY_REPLICAS` × 5)가 비즈니스 풀에 더해진다.
 

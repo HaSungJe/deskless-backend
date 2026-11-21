@@ -24,7 +24,7 @@
 | `apps/user-service/src/user/test/user-me.spec.ts` | created | 내 정보 service 기능 spec |
 | `AGENTS.md` | modified | "프론트 연계" 절 · Checklist 한 줄 |
 | `.beaver/memory/frontend.md` · `MEMORY.md` | created · modified | 수정 요청 문서 규칙 |
-| `.beaver/output/roadmap/roomless-roadmap.md` | modified | Phase 28 을 27 로 합침 · #131 추가 · 사용자 할 일 '프론트' 줄을 한 줄로(내용은 screens.md 화면 주의로) |
+| `.beaver/output/roadmap/deskless-roadmap.md` | modified | Phase 28 을 27 로 합침 · #131 추가 · 사용자 할 일 '프론트' 줄을 한 줄로(내용은 screens.md 화면 주의로) |
 | `README.md` · `docs/api.md` | modified | 프론트 인계 줄 · 구조 줄 · user-service 내 정보 / 이용자 그룹 동기 경로에 `GET /me` |
 
 ## Tests Written
@@ -47,6 +47,6 @@
 
 ## Remaining Issues
 - 아티팩트는 정적 시안이다(눌러 보는 동작 없음 — 페이지 안 링크는 그 화면 위치로 이동) — 화면 이동은 screens.md 가 설명한다.
-- 시안에서 정해 둔 것: 매니저 · 관리자 이름을 주는 API 가 없어 상단 바는 로그인 아이디 + 권한 배지, 업체 로그인 주소 앞부분은 예시(`https://roomless.example`). 예약 취소 사유 입력 시트 · U10 휴대폰 미인증 화면은 따로 그리지 않음(컴포넌트 견본에만).
+- 시안에서 정해 둔 것: 매니저 · 관리자 이름을 주는 API 가 없어 상단 바는 로그인 아이디 + 권한 배지, 업체 로그인 주소 앞부분은 예시(`https://deskless.example`). 예약 취소 사유 입력 시트 · U10 휴대폰 미인증 화면은 따로 그리지 않음(컴포넌트 견본에만).
 - 후보: 업체 관리자 등록 SMS 에 로그인 주소를 넣으려면 매니저 화면 주소 설정값(예: `MANAGER_WEB_URL`)이 필요하다 — 지금은 업체코드만 글자로 간다.
 - 아티팩트는 비공개다 — 프론트 세션이 같은 계정이 아니면 아티팩트 공유(Share)가 필요하다.

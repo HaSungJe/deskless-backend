@@ -25,5 +25,5 @@ export function generateTemporaryPassword(): string {
  * @returns 본문
  */
 export function temporaryPasswordText(password: string): string {
-    return `[roomless] 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
+    return `[바로방] 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
 }

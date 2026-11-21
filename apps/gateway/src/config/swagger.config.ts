@@ -34,7 +34,7 @@ export function buildSwaggerCustomOptions(): SwaggerCustomOptions {
         swaggerOptions: {plugins: [swaggerDownloadUrlPlugin, swaggerTagSelectPlugin]},
         // ④ 도메인을 고르면 swagger-ui 가 기본 글자 필터 칸(부분 일치)을 띄운다 — 선택 상자만 쓰므로 숨긴다.
         // 선택 상자는 margin-right:auto 로 줄 왼쪽 끝 — 그 줄(.schemes)은 오른쪽 정렬(flex-end)이라 그대로면 Authorize 옆에 붙는다
-        customCss: '.swagger-ui .filter-container{display:none}.swagger-ui .roomless-tag-select{min-width:180px;margin-right:auto}',
+        customCss: '.swagger-ui .filter-container{display:none}.swagger-ui .deskless-tag-select{min-width:180px;margin-right:auto}',
     };
 }
 
@@ -90,7 +90,7 @@ function swaggerTagSelectPlugin(system: SwaggerUiSystem): object {
                         null,
                         React.createElement(
                             'select',
-                            {className: 'roomless-tag-select', value, onChange, 'aria-label': '도메인'},
+                            {className: 'deskless-tag-select', value, onChange, 'aria-label': '도메인'},
                             React.createElement('option', {value: ''}, '전체'),
                             ...tags.map((tag) => React.createElement('option', {key: tag, value: tag}, tag)),
                         ),

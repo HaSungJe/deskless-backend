@@ -30,7 +30,9 @@ const FONT = {
     7: ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
     8: ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
     9: ['01110', '10001', '10001', '01111', '00001', '00010', '01100'],
+    D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
     E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+    K: ['10001', '10010', '10100', '11000', '10100', '10010', '10001'],
     L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
     M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
     O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
@@ -257,7 +259,7 @@ function drawStoreDay(canvas, hue, rand) {
     }
     const sy = by + 240;
     fillRect(canvas, bx, sy, bw, 60, hsl(hue, 55, 36));
-    drawText(canvas, 'ROOMLESS', bx + (bw - textWidth('ROOMLESS', 6)) / 2, sy + 9, 6, WHITE);
+    drawText(canvas, 'DESKLESS', bx + (bw - textWidth('DESKLESS', 6)) / 2, sy + 9, 6, WHITE);
     fillRect(canvas, bx + 40, sy + 76, bw - 80, ground - sy - 76, hsl(hue, 15, 55));
     fillGradient(canvas, bx + 48, sy + 84, bw - 96, ground - sy - 84, hsl(200, 35, 72), hsl(200, 30, 52));
     fillRect(canvas, bx + bw / 2 - 50, sy + 84, 100, ground - sy - 84, hsl(200, 25, 40));
@@ -295,7 +297,7 @@ function drawStoreNight(canvas, hue, rand) {
     const sy = by + 240;
     fillRect(canvas, bx - 6, sy - 6, bw + 12, 72, hsl(hue, 70, 55), 0.35);
     fillRect(canvas, bx, sy, bw, 60, hsl(hue, 70, 50));
-    drawText(canvas, 'ROOMLESS', bx + (bw - textWidth('ROOMLESS', 6)) / 2, sy + 9, 6, WHITE);
+    drawText(canvas, 'DESKLESS', bx + (bw - textWidth('DESKLESS', 6)) / 2, sy + 9, 6, WHITE);
     fillGradient(canvas, bx + 48, sy + 84, bw - 96, ground - sy - 84, hsl(40, 80, 72), hsl(35, 70, 55));
     fillRect(canvas, bx + bw / 2 - 2, sy + 84, 4, ground - sy - 84, hsl(hue, 15, 30));
     fillRect(canvas, 70, 240, 10, ground - 240, hsl(220, 8, 40));

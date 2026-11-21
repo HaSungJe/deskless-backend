@@ -9,12 +9,12 @@ Client          Gateway                       RabbitMQ                      user
   │ POST /sign    │                              │                              │
   │──────────────▶│ ValidationPipe · JWT         │                              │
   │               │ request_id 발급, 스트림 등록    │                              │
-  │               │── publish(confirm) ─────────▶│ roomless.cmd                 │
+  │               │── publish(confirm) ─────────▶│ deskless.cmd                 │
   │               │   rk=user.member.sign        │  └▶ q.user.cmd (quorum) ────▶│ CommandDispatcher
   │◀─ 200 event-stream                           │                              │  → @OnCommand (큐 컨트롤러)
   │◀─ event: accepted {request_id}               │                              │  → UserService
   │               │                              │◀── publish ──────────────────│ result.<gw>.user.member.sign.done
-  │               │◀── q.gw.result.<gw> ─────────│ roomless.event               │ ack
+  │               │◀── q.gw.result.<gw> ─────────│ deskless.event               │ ack
   │◀─ event: done {토큰 4종} · 스트림 종료           │                              │
 ```
 
@@ -42,11 +42,11 @@ POST 는 `EventSource` 로 열 수 없으므로 클라이언트는 `fetch` 응�
 
 | 이름 | 종류 | 선언 | 비고 |
 |---|---|---|---|
-| `roomless.cmd` | topic exchange | 모든 앱(연결 시 멱등) | 명령 |
-| `roomless.event` | topic exchange | 모든 앱 | 결과 회신 (도메인 이벤트는 아직 발행하지 않는다) |
-| `roomless.dlx` | topic exchange | 모든 앱 | dead-letter |
-| `q.dead` | queue | 모든 앱 | `roomless.dlx` 에 `#` 바인딩 |
-| `q.user.cmd` | quorum queue | user-service | `user.#`, `x-dead-letter-exchange: roomless.dlx`, `x-delivery-limit: 3` |
+| `deskless.cmd` | topic exchange | 모든 앱(연결 시 멱등) | 명령 |
+| `deskless.event` | topic exchange | 모든 앱 | 결과 회신 (도메인 이벤트는 아직 발행하지 않는다) |
+| `deskless.dlx` | topic exchange | 모든 앱 | dead-letter |
+| `q.dead` | queue | 모든 앱 | `deskless.dlx` 에 `#` 바인딩 |
+| `q.user.cmd` | quorum queue | user-service | `user.#`, `x-dead-letter-exchange: deskless.dlx`, `x-delivery-limit: 3` |
 | `q.gw.result.<인스턴스>` | exclusive · auto-delete | 게이트웨이 인스턴스마다 | `result.<인스턴스>.#` |
 
 - 라우팅 키: 명령 `<server>.<resource>.<action>`(예: `user.member.sign`), 결과 `result.<게이트웨이 인스턴스>.<명령 type>.<done|failed>`.
@@ -56,7 +56,7 @@ POST 는 `EventSource` 로 열 수 없으므로 클라이언트는 `fetch` 응�
 - 연결: `RabbitMqConnection` 1개를 앱이 공유한다. 접속 정보는 `RABBITMQ_HOST` · `RABBITMQ_PORT` + 앱 계정(`BROKER_ACCOUNT`)의 비밀번호다. 연결 이름(`connection_name`)으로 계정 = 서비스 이름을 보내, 관리 화면 Connections 탭의 Name 칸에 브로커가 보는 `IP:포트` 와 그 아래 서비스 이름(gateway · user-service · admin-service)이 함께 표시된다. 포트는 접속 후에야 정해지므로 앱이 이름에 넣지 않고 브로커 표시에 맡긴다. amqplib 2 의 `recovery` 로 끊기면 자동 재연결하고, 재연결마다 공통 토폴로지 → 발행 confirm 채널 → 등록된 준비 작업(결과 큐 · 명령 큐 소비)을 다시 세운다. 브로커가 내려가 있어도 앱 부팅은 막지 않는다(`waitForConnect: false`). 그동안 발행은 503 `BROKER_UNAVAILABLE_MESSAGE`.
 - 준비 작업 등록 규약: 결과 수신기 · 명령 소비자 같은 provider 는 `onModuleInit` 에서 `connection.register(setup)` 만 하고, 연결은 모든 등록이 끝난 `onApplicationBootstrap` 에서 연다.
 - 명령 소비자 옵션(`CommandConsumerOptions`): `queue` · `binding_keys` · `broker_user`(필수), `prefetch`(기본 10) · `trusted_publisher`(기본 `'gateway'`, 운영 설정 0건 — 테스트에서만 바꾼다).
-- `@OnCommand(type)` 은 `SetMetadata('roomless:on-command', type)` 이다. `CommandHandlerRegistry` 가 부팅 때 앱 전체 provider 를 스캔해 등록하고, **같은 type 이 두 번 등록되면 부팅이 실패한다**.
+- `@OnCommand(type)` 은 `SetMetadata('deskless:on-command', type)` 이다. `CommandHandlerRegistry` 가 부팅 때 앱 전체 provider 를 스캔해 등록하고, **같은 type 이 두 번 등록되면 부팅이 실패한다**.
 
 ## 브로커 계정과 권한 — 명령은 게이트웨이만 넣을 수 있다
 
@@ -64,15 +64,15 @@ POST 는 `EventSource` 로 열 수 없으므로 클라이언트는 `fetch` 응�
 
 | 계정 | configure | write (발행 · 바인딩) | read (바인딩 · 소비) |
 |---|---|---|---|
-| `gateway` | 공통 exchange · `q.dead` · `q.gw.result.*` | **`roomless.cmd`** · `q.dead` · `q.gw.result.*` | `roomless.event` · `roomless.dlx` · `q.gw.result.*` |
-| `user-service` | 공통 exchange · `q.dead` · `q.user.cmd` | **`roomless.event`** · `roomless.dlx` · `q.dead` · `q.user.cmd` | `roomless.cmd` · `roomless.dlx` · `q.user.cmd` |
-| `admin-service` | 공통 exchange · `q.dead` · `q.admin.cmd` | **`roomless.event`** · `roomless.dlx` · `q.dead` · `q.admin.cmd` | `roomless.cmd` · `roomless.dlx` · `q.admin.cmd` |
+| `gateway` | 공통 exchange · `q.dead` · `q.gw.result.*` | **`deskless.cmd`** · `q.dead` · `q.gw.result.*` | `deskless.event` · `deskless.dlx` · `q.gw.result.*` |
+| `user-service` | 공통 exchange · `q.dead` · `q.user.cmd` | **`deskless.event`** · `deskless.dlx` · `q.dead` · `q.user.cmd` | `deskless.cmd` · `deskless.dlx` · `q.user.cmd` |
+| `admin-service` | 공통 exchange · `q.dead` · `q.admin.cmd` | **`deskless.event`** · `deskless.dlx` · `q.dead` · `q.admin.cmd` | `deskless.cmd` · `deskless.dlx` · `q.admin.cmd` |
 
-- user-service · admin-service 는 `roomless.cmd` 에 쓸 수 없고, gateway 는 `roomless.event` 에 쓸 수 없다 — 서로 명령 · 결과를 위조할 수 없다.
+- user-service · admin-service 는 `deskless.cmd` 에 쓸 수 없고, gateway 는 `deskless.event` 에 쓸 수 없다 — 서로 명령 · 결과를 위조할 수 없다.
 - `RabbitMqConnection.publish()` 는 모든 메시지의 `user_id` 를 자기 계정으로 덮어쓴다. 브로커는 `user_id` 가 접속 계정과 다르면 거절한다([Validated User-ID](https://www.rabbitmq.com/docs/validated-user-id)).
 - 서비스 소비자는 `user_id` 가 `COMMAND_PUBLISHER_USER`(gateway)가 아닌 명령을 처리 · 회신 없이 DLQ 로 보낸다. 권한이 잘못 설정돼도 이 검사가 남는다.
 - **점검**: `npm run broker:check`([check-broker-acl.mjs](../scripts/check-broker-acl.mjs)) — 계정마다 허용 · 거부돼야 할 발행(쓰기 권한 403, user_id 위조 406)을 실제 브로커에 시도해 대조한다. 바인딩 없는 라우팅 키로 보내므로 명령이 처리되지 않는다.
-- 새 서비스를 추가하면 `BROKER_USER` 에 계정을 더하고, init.sh 에 그 계정의 권한(자기 명령 큐 · `roomless.event` 쓰기)을 추가한다.
+- 새 서비스를 추가하면 `BROKER_USER` 에 계정을 더하고, init.sh 에 그 계정의 권한(자기 명령 큐 · `deskless.event` 쓰기)을 추가한다.
 
 ## 메시지 봉투 (`MessageEnvelope<T>`)
 
@@ -127,4 +127,4 @@ AMQP 속성에도 `messageId` · `correlationId`(=request_id) · `replyTo` · `t
 
 - 처리량: durable + publisher confirm + quorum 기준 단일 노드 수천 msg/s. 병목은 대개 DB 쪽이 먼저 온다.
 - `q.dead` 에 쌓인 메시지는 원래 라우팅 키를 유지한다 — 관리 화면(:15672)에서 확인 · 재발행.
-- 도메인 이벤트(알림 서버용 `user.member.signed` 등)는 알림 서버를 만들 때 `roomless.event` 에 함께 발행한다(아직 소비자 없음).
+- 도메인 이벤트(알림 서버용 `user.member.signed` 등)는 알림 서버를 만들 때 `deskless.event` 에 함께 발행한다(아직 소비자 없음).

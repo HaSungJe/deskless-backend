@@ -27,7 +27,7 @@
 | `apps/gateway/src/api/v1/manager/{manager.module.ts, controllers/manager.controller.ts, controllers/manager.controller.queue.ts}` | created | 매니저 그룹 — 로그인 · 재발급(동기), 비밀번호 변경(`@Roles(HEAD_MANAGER, MANAGER)`) · 아이디 찾기 · 비밀번호 초기화(비로그인) |
 | `apps/gateway/src/gateway.module.ts` | modified | `ManagerModule` · `AdminModule` |
 | `README.md` · `AGENTS.md` · `docs/{api,architecture,conventions,data-layer,testing,error-handling,messaging}.md` | modified | 로그인 그룹 표 · 경로 접두 · RolesGuard 적용(큐 핸들러 데코레이터 순서) · service 예외(로그인 그룹 인자) · `user.roles.ts` · 성인 기준 · 그룹 UK · jsonb · NOT NULL 컬럼 추가 마이그레이션 · RolesGuard 403 단언 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | #24 · #25 문구, #92 · #93 추가, 결정 2개 닫기, 공통 규칙 · 행위자 표 · Phase 8 #34 메모, build 완료 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | #24 · #25 문구, #92 · #93 추가, 결정 2개 닫기, 공통 규칙 · 행위자 표 · Phase 8 #34 메모, build 완료 |
 
 ## Tests Written
 build 규약상 실행하지 않았다 — `/beaver:test` 에서 실행한다.
@@ -158,7 +158,7 @@ build 규약상 실행하지 않았다 — `/beaver:test` 에서 실행한다.
 | `compose.admin-service.yml` · `docker/nginx/admin-service.conf` | created | admin-service × N + LB |
 | `compose.{gateway,user-service,scheduler,rabbitmq}.yml` · `docker/rabbitmq/init.sh` · `scripts/check-broker-acl.mjs` · `Dockerfile` · `nest-cli.json` · `package.json` · `.env.example` | modified | admin-service 연결 · 계정 · 스크립트 |
 | `README.md` · `AGENTS.md` · `docs/{api,architecture,conventions,data-layer,testing,messaging,error-handling,integration}.md` | modified | 도메인 분리 · admin-service · libs/account · 그룹별 인증 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | Phase 7 진행 중(Phase 6 과 한 기획) · 결정 2개 추가 · 미결 "업체 계정 생성 위치" 닫음 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | Phase 7 진행 중(Phase 6 과 한 기획) · 결정 2개 추가 · 미결 "업체 계정 생성 위치" 닫음 |
 
 ### Tests written
 build 규약상 실행하지 않았다.
@@ -234,7 +234,7 @@ build 규약상 실행하지 않았다.
 | `apps/user-service/src/user/{controllers/user.controller,user.service}.ts` · `test/*` | modified | 내부 경로 · JSDoc · spec |
 | `apps/admin-service/src/{manager,admin}/{controllers/*.controller,*.service}.ts` · `test/*` | modified | 내부 경로 · JSDoc · spec |
 | `AGENTS.md` · `README.md` · `docs/{api,architecture,conventions,testing}.md` | modified | 경로 규칙 · 게이트웨이 폴더 · 예시 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | 경로 · 파일 집합 · 규칙 · 결정 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | 경로 · 파일 집합 · 규칙 · 결정 |
 
 ### Tests written
 build 규약상 실행하지 않았다.

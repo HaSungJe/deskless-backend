@@ -70,7 +70,7 @@ describe('admin.reservation.store-cancel — 업체 취소 (큐 경로)', () => 
         expect(where).toEqual({payment_id: PAYMENT_ID, payment_state_id: 'DONE'});
         expect(refund).toMatchObject({payment_state_id: 'REFUND_REQUESTED', refund_amount: 30000, refund_reason: '업체 예약 취소', refund_requested_at: new Date('2026-11-09T00:00:00Z')});
         expect(sms.send).toHaveBeenCalledTimes(1);
-        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[roomless] 루미 강남점 11/10 13:00 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: 설비 고장'});
+        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[바로방] 루미 강남점 11/10 13:00 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: 설비 고장'});
         expect(sms.send.mock.invocationCallOrder[0]).toBeGreaterThan(repo.updatePayment.mock.invocationCallOrder[0]);
     });
 

@@ -17,7 +17,7 @@
 | Shared logic extraction | pass | 게이트웨이 전용이던 `readPositiveInt` 를 `libs/common/src/utils/env.ts` 로 옮겨 database 와 같이 쓴다(복제 없음). 반환된 예외 처리는 큐(`CommandDispatcher`) · HTTP(인터셉터) 한 곳씩이고, 컨트롤러는 위임 한 줄이다 |
 | Errors & responses | pass | 반환된 예외도 `toFailResult()` 를 거쳐 실패 본문이 하나다. 불일치만 return(커밋 필요), 한도 초과 · 사용함 · 만료 · SMS 503 은 throw 그대로다. 반환된 실패는 재시도 없이 ack |
 | Transaction | pass | `consumeSmsVerificationAttempt` 의 RequiresNew 를 제거해 확인 1건 = 연결 1개다. 풀 연결 대기 `DATABASE_CONNECTION_TIMEOUT_MS`(기본 30초) |
-| Docker · `.env` | pass | `compose.scheduler.yml` 은 user-service 묶음과 같은 원칙이다 — 필수값 `${VAR:?}`, 쓰지 않는 비밀값 빈 값, `roomless-data` 만, 포트 · LB 없음. `docker compose config --quiet` 종료 코드 0. 사용자 `.env` 는 보지 않았다 |
+| Docker · `.env` | pass | `compose.scheduler.yml` 은 user-service 묶음과 같은 원칙이다 — 필수값 `${VAR:?}`, 쓰지 않는 비밀값 빈 값, `deskless-data` 만, 포트 · LB 없음. `docker compose config --quiet` 종료 코드 0. 사용자 `.env` 는 보지 않았다 |
 | Test strength | pass | `[CASES:returned-exception]` 6개는 봉투 request_id · actor · attempt, 실패 본문 전체, 판정(ack)까지 단언한다. 인터셉터는 실제 HTTP(supertest)로 확인한다. 테스트는 build 규약상 실행하지 않았다 |
 | README 갱신 | pass | scheduler 서버 · 실행 순서 · 인스턴스 수 · 연결 대기 env · 명령 표 · 구조 |
 | memory(git · api-log) | pass | `.beaver/output` 문서(spec · plan · report · review · roadmap)를 함께 커밋한다 |

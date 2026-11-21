@@ -5,7 +5,7 @@ import {bootHttpPath, createJwtServiceMock, createUserRepositoryMock, internalHe
 const USER_ID = 'u'.repeat(32);
 const ROW = {
     user_id: USER_ID,
-    login_id: 'roomless_01',
+    login_id: 'deskless_01',
     name: '홍길동',
     gender: 'M',
     birth: '1990-01-01',
@@ -39,7 +39,7 @@ describe('GET /internal/v1/user-service/user/auth-user/:user_id — 로그인 �
         expect(res.status).toBe(200);
         expect(res.body).toEqual({
             user_id: USER_ID,
-            login_id: 'roomless_01',
+            login_id: 'deskless_01',
             name: '홍길동',
             gender: 'M',
             birth: '1990-01-01',

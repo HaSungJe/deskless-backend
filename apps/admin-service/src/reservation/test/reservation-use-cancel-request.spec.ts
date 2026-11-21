@@ -22,7 +22,7 @@ import {
 const PAYLOAD = {reservation_id: RESERVATION_ID, cancel_reason: '배관 누수로 객실을 쓸 수 없습니다'};
 
 /** 이용자 화면 주소 */
-const USER_WEB_URL = 'https://roomless.test';
+const USER_WEB_URL = 'https://deskless.test';
 
 /** 이용 중 예약 — 2026-11-10 12:00 ~ 15:00(한국 시각) */
 const IN_USE = {reservation_state_id: 'CHECKED_IN', start_at: new Date('2026-11-10T03:00:00Z'), end_at: new Date('2026-11-10T06:00:00Z')};
@@ -115,7 +115,7 @@ describe('admin.reservation.use-cancel-request — 이용 중 취소 요청 (큐
             expect(sms.send).toHaveBeenCalledTimes(1);
             expect(sms.send).toHaveBeenCalledWith({
                 to: '01012345678',
-                text: `[roomless] 루미 강남점에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 10분 안에 확인해주세요: https://roomless.test/reservation/${RESERVATION_ID}/cancel-request`,
+                text: `[바로방] 루미 강남점에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 10분 안에 확인해주세요: https://deskless.test/reservation/${RESERVATION_ID}/cancel-request`,
             });
             expect(sms.send.mock.invocationCallOrder[0]).toBeGreaterThan(repo.insertCancelRequest.mock.invocationCallOrder[0]);
             expect(result?.result).toEqual({reservation_cancel_request_id: request.reservation_cancel_request_id, expires_at: '2026-11-10T04:10:00.000Z'});
@@ -124,13 +124,13 @@ describe('admin.reservation.use-cancel-request — 이용 중 취소 요청 (큐
         });
 
         it('확정 예약(scheduler 가 이용 중으로 바꾸기 전)도 시작 뒤면 요청한다 · 주소 끝의 / 는 뗀다', async () => {
-            process.env.USER_WEB_URL = 'https://roomless.test/';
+            process.env.USER_WEB_URL = 'https://deskless.test/';
             repo.findReservation.mockResolvedValueOnce(reservationEntity({...IN_USE, reservation_state_id: 'CONFIRMED'}));
 
             const {decision} = await runRequest();
 
             expect(decision.action).toBe('ack');
-            expect(sms.send.mock.calls[0][0].text).toContain(`https://roomless.test/reservation/${RESERVATION_ID}/cancel-request`);
+            expect(sms.send.mock.calls[0][0].text).toContain(`https://deskless.test/reservation/${RESERVATION_ID}/cancel-request`);
         });
     });
 

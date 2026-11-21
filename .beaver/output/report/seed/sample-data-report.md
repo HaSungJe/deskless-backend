@@ -28,7 +28,7 @@
 | `apps/gateway/src/assets/sample/*.png` | created | 70개(업체 20 · 그룹 50, 404KB) — 생성기 결과 |
 | `nest-cli.json` | modified | gateway `assets`(PNG → dist) |
 | `scripts/sample-images.mjs` | created | PNG 생성기(node:zlib — 외부 패키지 없음) |
-| `scripts/docker-network.mjs` | modified | 공용 볼륨 `roomless-files` 도 만든다 |
+| `scripts/docker-network.mjs` | modified | 공용 볼륨 `deskless-files` 도 만든다 |
 | `compose.gateway.yml` · `compose.user-service.yml` · `compose.admin-service.yml` | modified | 공용 볼륨 `/app/storage/files` · `FILE_STORAGE_DIR` 고정 |
 | `Dockerfile` | modified | `/app/storage/files` 를 `node` 소유로(빈 볼륨이 물려받음) |
 | `.gitignore` | modified | `/storage` |
@@ -99,4 +99,4 @@ S3 로 바꾼 뒤에도 내부 파일 저장소에 올린 사진을 계속 연�
 
 ### Remaining issues
 - 마이그레이션 적용은 사용자 몫 — `npm run docker:user-service`(migrate 컨테이너가 `FileStorage` 를 적용, 기존 행은 `LOCAL`) → 나머지 앱 이미지 다시 빌드(`npm run docker:up`). 로컬 실행이면 `npm run db:migrate`.
-- 옛 사진을 S3 로 옮기는 일(볼륨 → 버킷 + `UPDATE … file_storage = 'S3'`)은 자동으로 하지 않는다 — aws-setup.md 에 방법만 적음. 옮기기 전까지 볼륨 `roomless-files` 를 지우지 않는다.
+- 옛 사진을 S3 로 옮기는 일(볼륨 → 버킷 + `UPDATE … file_storage = 'S3'`)은 자동으로 하지 않는다 — aws-setup.md 에 방법만 적음. 옮기기 전까지 볼륨 `deskless-files` 를 지우지 않는다.

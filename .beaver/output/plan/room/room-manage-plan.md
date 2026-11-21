@@ -28,7 +28,7 @@
 | `apps/admin-service/src/room/test/*.spec.ts` (service 기능 spec 21개 + `room.repository.spec.ts`) | new |
 | `apps/admin-service/src/store/test/store-mine-profile.spec.ts` | modified — Phase 12 단언 고침(값이 있는 키만 비교) |
 | `docs/data-layer.md` · `docs/architecture.md` · `AGENTS.md` · `README.md` · `.beaver/output/spec/platform/cache-spec.md` | modified — room 도메인 · `isExclusionViolation` · Smoke 목록 · 호실 상태 · 캐시 무효화 지점 |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified(ship) — Phase 13 done, #55 목표(상태 5개 · 정비 완료), 공통 규칙 재고 판정(사용중지 · 예약가능), 지금 할 일 사용자 줄(`RoomState`) |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified(ship) — Phase 13 done, #55 목표(상태 5개 · 정비 완료), 공통 규칙 재고 판정(사용중지 · 예약가능), 지금 할 일 사용자 줄(`RoomState`) |
 
 삭제할 코드: 없음. room 테이블을 다루는 코드가 처음 생긴다. Phase 12 시드의 STANDBY 는 데이터 마이그레이션이 AVAILABLE 로 옮기고 지운다(시드 배열에서도 뺀다).
 
@@ -4631,7 +4631,7 @@ export function storeRow(override: Record<string, unknown> = {}): Record<string,
         store_id: STORE_ID,
         store_code: STORE_CODE,
         store_state_id: 'ACTIVE',
-        store_name: '룸리스 강남점',
+        store_name: '바로방 강남점',
         business_number: '1234567890',
         owner_name: '홍길동',
         phone: '0212345678',

@@ -87,7 +87,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
                 ip: '10.0.0.1',
             });
             expect(sms.send).toHaveBeenCalledTimes(1);
-            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[roomless] 인증번호 [123456] — 5분 안에 입력해주세요.'});
+            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(repo.insertSmsVerification.mock.invocationCallOrder[0]).toBeLessThan(sms.send.mock.invocationCallOrder[0]);
             expect(result).toEqual({result: {sms_verification_id: inserted.sms_verification_id, expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000).toISOString()}, error: null});
         });

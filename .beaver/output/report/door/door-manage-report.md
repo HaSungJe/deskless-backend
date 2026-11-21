@@ -29,7 +29,7 @@
 | `apps/gateway/src/modules/door-socket/` (server · util · module) · `gateway.module.ts` | created · modified | 표준 WebSocket(`ws` noServer + HttpAdapterHost upgrade). 업그레이드 전 401 · 404 · 503 거절, 업체별 연결 묶음, verify → 답 · closed → 무응답, `door-commands` 구독 → 그 업체 연결에 `door.open`, 30초 ping, 종료 때 1001 |
 | `apps/gateway/src/api/v1/admin-service/room/…/room.controller.ts` · `store/…/store.controller.queue.ts` · `user-service/reservation/…/reservation.controller.ts` | modified | 바로 열기 · 시크릿(`RolesGuard` + `@Roles(HEAD_MANAGER)` + 403) · 내 예약 QR 라우트 |
 | `apps/gateway/src/api/v1/user-service/door/` · `libs/contracts/src/door/dto/` | deleted | 문 공개 라우트 · DTO |
-| `docker/nginx/gateway.conf` · `compose.gateway.yml` · `compose.admin-service.yml` · `compose.scheduler.yml` · `.env.example` | modified | `/ws/` 업그레이드(120초), `REDIS_URL` 필수(gateway · admin-service · scheduler), gateway 를 `roomless-data` 에 연결, Redis 절 주석 |
+| `docker/nginx/gateway.conf` · `compose.gateway.yml` · `compose.admin-service.yml` · `compose.scheduler.yml` · `.env.example` | modified | `/ws/` 업그레이드(120초), `REDIS_URL` 필수(gateway · admin-service · scheduler), gateway 를 `deskless-data` 에 연결, Redis 절 주석 |
 | `package.json` · `package-lock.json` | modified | `ws` · `@types/ws` |
 | 테스트 — admin-service room · store, user-service reservation, scheduler reservation | created · modified | 아래 Tests Written |
 | `README.md` · `AGENTS.md` · `docs/architecture.md` · `docs/integration.md` · `docs/guides/redis-setup.md` · `docs/data-layer.md` · `docs/testing.md` · `docs/realtime.md` | modified · created | 문 API 삭제 · 문 소켓 절(event 표) · Redis 를 쓰는 앱 4개 · 키 모양 · `t_room_qr` · `ON CONFLICT DO NOTHING` 규칙 · Smoke 목록 · 실시간 소켓 규약(초안 마커 유지 — ship 이 확정) |

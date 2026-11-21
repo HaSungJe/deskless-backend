@@ -27,7 +27,7 @@ async function bootstrap(): Promise<void> {
     app.useStaticAssets(sampleImageDir(), buildSampleImageStaticOptions());
 
     const swaggerConfig = new DocumentBuilder()
-        .setTitle(process.env.SWAGGER_TITLE || 'Roomless API')
+        .setTitle(process.env.SWAGGER_TITLE || 'Deskless API')
         .setDescription('큐 경로 API 는 text/event-stream 으로 응답한다 — event: accepted → done | failed | pending')
         .addBearerAuth()
         .build();

@@ -80,7 +80,7 @@ describe('매니저 비밀번호 초기화 (큐 경로)', () => {
             expect(repo.findManager).toHaveBeenCalledWith({login_id: 'manager_01', phone: PHONE, login_scope: 'MANAGER', store_id: STORE_ID, state_id: RECOVERY_STATES});
             const inserted = repo.insertSmsVerification.mock.calls[0][0];
             expect(inserted).toMatchObject({sms_purpose_id: 'PASSWORD_RESET', user_id: USER_ID, phone: PHONE});
-            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[roomless] 인증번호 [123456] — 5분 안에 입력해주세요.'});
+            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(result).toEqual({result: {sms_verification_id: inserted.sms_verification_id, expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000).toISOString()}, error: null});
         });
 
@@ -132,7 +132,7 @@ describe('매니저 비밀번호 초기화 (큐 경로)', () => {
             expect(repo.updateSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id}, {verified_at: FIXED_TIME});
             expect(getBcrypt).toHaveBeenCalledWith('Abc123def4');
             expect(repo.updateManager).toHaveBeenCalledWith({user_id: USER_ID}, {login_pw: '$2b$12$temp', is_password_change_required: 1});
-            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[roomless] 임시 비밀번호 Abc123def4 — 로그인 후 비밀번호를 바꿔주세요.'});
+            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 임시 비밀번호 Abc123def4 — 로그인 후 비밀번호를 바꿔주세요.'});
             expect(repo.updateManager.mock.invocationCallOrder[0]).toBeLessThan(sms.send.mock.invocationCallOrder[0]);
         });
 

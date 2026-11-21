@@ -58,7 +58,7 @@ describe('admin.store.application-approve — 입점 승인 (큐 경로)', () =>
             expect(store.store_code).not.toBe(store.store_id);
             expect(store).toMatchObject({
                 store_state_id: 'ACTIVE',
-                store_name: '룸리스 강남점',
+                store_name: '바로방 강남점',
                 business_number: '1234567890',
                 owner_name: '홍길동',
                 phone: '0212345678',
@@ -133,8 +133,8 @@ describe('admin.store.application-approve — 입점 승인 (큐 경로)', () =>
             expect(approved.reviewed_at).toBeInstanceOf(Date);
 
             // 승인 알림 SMS (마지막) — 자격증명 · 업체코드 없음
-            expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: storeApprovedText('룸리스 강남점')});
-            expect(storeApprovedText('룸리스 강남점')).toBe('[roomless] 룸리스 강남점 입점이 승인되었습니다.');
+            expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: storeApprovedText('바로방 강남점')});
+            expect(storeApprovedText('바로방 강남점')).toBe('[바로방] 바로방 강남점 입점이 승인되었습니다.');
             expect(repo.updateApplication.mock.invocationCallOrder[0]).toBeLessThan(sms.send.mock.invocationCallOrder[0]);
             expect(result).toEqual({result: {store_id: store.store_id, store_code: store.store_code}, error: null});
         });

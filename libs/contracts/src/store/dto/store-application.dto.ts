@@ -6,7 +6,7 @@ import {IsLatitude, IsLongitude, IsNotEmpty, IsOptional, Matches, MaxLength} fro
  * 대표자가 업체 총관리자다 — 승인 때 대표자명 · 대표자 휴대폰 번호로 매니저 계정을 만든다.
  */
 export class StoreApplicationDto {
-    @ApiProperty({description: '상호명', example: '룸리스 강남점'})
+    @ApiProperty({description: '상호명', example: '바로방 강남점'})
     @MaxLength(100, {message: '상호명은 100자 이내로 입력해주세요.'})
     @IsNotEmpty({message: '상호명을 입력해주세요.'})
     store_name: string;

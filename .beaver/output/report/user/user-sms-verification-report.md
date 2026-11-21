@@ -28,7 +28,7 @@
 | `apps/gateway/src/api/v1/user/user.controller.queue.ts` | modified | 큐 라우트 6개 |
 | `apps/user-service/src/user/test/user.test-helper.ts` | modified | `createSmsSenderMock` · 부팅 도우미 세 번째 인자 · repository mock 5개 |
 | `.env.example` · `README.md` · `AGENTS.md` · `docs/{data-layer,architecture,testing,integration}.md` | modified | `SMS_VERIFICATION_DAILY_LIMIT` · user-service 기능 · 컬럼 이름 규칙 · RequiresNew 예외 · `database → common` · 도우미 · 첫 사용처 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | #26 · #27 을 Phase 4 로 이동, 결정 · 상태 반영 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | #26 · #27 을 Phase 4 로 이동, 결정 · 상태 반영 |
 
 ## Tests Written
 build 규약상 실행하지 않았다 — `/beaver:test` 에서 실행한다.

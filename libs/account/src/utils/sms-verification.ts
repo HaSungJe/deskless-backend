@@ -82,5 +82,5 @@ export function buildSmsVerification(input: SmsVerificationInput): SmsVerificati
  * @returns 본문
  */
 export function smsVerificationText(code: string): string {
-    return `[roomless] 인증번호 [${code}] — ${SMS_CODE_TTL_MINUTES}분 안에 입력해주세요.`;
+    return `[바로방] 인증번호 [${code}] — ${SMS_CODE_TTL_MINUTES}분 안에 입력해주세요.`;
 }

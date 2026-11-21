@@ -44,7 +44,7 @@ export function nowKst(): Dayjs {
  * @returns 문구
  */
 export function buildStoreCancelSms(store_name: string, start_at: Date, reason: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: ${reason}`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: ${reason}`;
 }
 
 /**
@@ -57,7 +57,7 @@ export function buildStoreCancelSms(store_name: string, start_at: Date, reason: 
  * @returns 문구
  */
 export function buildRoomChangeSms(store_name: string, start_at: Date, from_room: string, to_room: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 호실이 ${from_room}에서 ${to_room}로 변경되었습니다.`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 호실이 ${from_room}에서 ${to_room}로 변경되었습니다.`;
 }
 
 /**
@@ -68,7 +68,7 @@ export function buildRoomChangeSms(store_name: string, start_at: Date, from_room
  * @returns 문구
  */
 export function buildUseCancelRequestSms(store_name: string, link: string): string {
-    return `[roomless] ${store_name}에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 ${RESERVATION_CANCEL_REQUEST_MINUTES}분 안에 확인해주세요: ${link}`;
+    return `[바로방] ${store_name}에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 ${RESERVATION_CANCEL_REQUEST_MINUTES}분 안에 확인해주세요: ${link}`;
 }
 
 /**

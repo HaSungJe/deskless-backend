@@ -65,7 +65,7 @@ describe('아이디 찾기 (큐 경로)', () => {
             expect(repo.countSmsVerifications).toHaveBeenCalledWith({phone: PHONE, created_at: MoreThanOrEqual(new Date('2025-12-31T15:00:00.000Z'))});
             const inserted = repo.insertSmsVerification.mock.calls[0][0];
             expect(inserted).toMatchObject({sms_purpose_id: 'FIND_LOGIN_ID', user_id: USER_ID, phone: PHONE, code_hash: sha256Hex('123456')});
-            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[roomless] 인증번호 [123456] — 5분 안에 입력해주세요.'});
+            expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(result).toEqual({result: {sms_verification_id: inserted.sms_verification_id, expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000).toISOString()}, error: null});
         });
 
@@ -127,7 +127,7 @@ describe('아이디 찾기 (큐 경로)', () => {
 
         it('[FAIL:validation] 인증번호가 다르면 400, 인증 완료 없음', async () => {
             repo.findSmsVerification.mockResolvedValueOnce(verification());
-            repo.findUser.mockResolvedValueOnce({user_id: USER_ID, login_id: 'roomless_01', sns_id: null, created_at: CREATED_AT});
+            repo.findUser.mockResolvedValueOnce({user_id: USER_ID, login_id: 'deskless_01', sns_id: null, created_at: CREATED_AT});
             repo.consumeSmsVerificationAttempt.mockResolvedValueOnce(true);
 
             const {result} = await runCommand(dispatcher, {type: USER_COMMAND.FIND_LOGIN_ID_CONFIRM, payload: {...PAYLOAD, code: '000000'}});

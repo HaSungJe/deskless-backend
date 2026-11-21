@@ -24,7 +24,7 @@ api_path: "SAMPLE_SEED_TARGETS · {GATEWAY_PUBLIC_URL}/sample/{파일} · {GATEW
 #   in the project's own naming. Read-only reads are not "write" but are still data. Leave empty if none.
 affected_data:
   - "샘플 시드(SEED_SAMPLE_DATA=1 일 때만) — t_store 10 · t_store_hour 28 · t_store_break 1 · t_room_plan 30 · t_store_file 20 · t_user 11 · t_user_setting 11 · t_room_group 25 · t_room_group_image 50 · t_room_group_plan 75 · t_room 96 — insert 만(이미 있는 PK 는 건너뜀)"
-  - "저장소 파일 — apps/gateway/src/assets/sample/*.png 70개(커밋), 내부 파일 저장소 폴더 FILE_STORAGE_DIR(기본 storage/files — Docker 공유 볼륨 roomless-files, git 제외)에 업로드 파일 쓰기 · 지우기"
+  - "저장소 파일 — apps/gateway/src/assets/sample/*.png 70개(커밋), 내부 파일 저장소 폴더 FILE_STORAGE_DIR(기본 storage/files — Docker 공유 볼륨 deskless-files, git 제외)에 업로드 파일 쓰기 · 지우기"
   - "DB 스키마 변경 없음 — 파일 행(t_store_file · t_room_group_image)의 키 모양은 S3 와 같다"
 ---
 
@@ -55,7 +55,7 @@ AWS 없이도 개발 · 포트폴리오 시연이 되게 한다 — `AWS_S3_BUCK
   - 키 · DB 행 모양은 S3 와 같다(키는 지금처럼 도메인 util 이 만든다 — store.util.ts:104 · room.util.ts:67, 공개 `store/` · 비공개 `private/`)
   - 업로드 주소: `GATEWAY_PUBLIC_URL/files/upload?key&expires&signature` — HMAC-SHA256(`INTERNAL_API_TOKEN`, `PUT\n키\nContent-Type\n만료`), 10분(STORAGE_UPLOAD_URL_TTL_SECONDS). `GATEWAY_PUBLIC_URL` · `INTERNAL_API_TOKEN` 이 비면 503 STORAGE_UNAVAILABLE_MESSAGE(인터페이스 계약 그대로)
   - `exists` = 폴더에 파일이 있는지, `remove` = 파일 삭제(없어도 성공, 샘플 키는 건너뜀), `getPublicUrl` = `GATEWAY_PUBLIC_URL/files/<키>`(샘플 키는 `/sample/…` — 비면 500 STORAGE_PUBLIC_URL_MISSING_MESSAGE), `createDownloadUrl` = 서명된 `/files/download?…`(10분)
-  - 폴더 `FILE_STORAGE_DIR`(기본 `storage/files` — 실행 위치 기준: 로컬은 저장소 루트, Docker 는 `/app`). 게이트웨이(받기 · 내주기) · user-service · admin-service(확인 · 삭제)가 같은 폴더를 본다 — Docker 는 공용 볼륨 `roomless-files`(external — `npm run docker:network` 가 네트워크와 함께 만든다)를 세 앱에 `/app/storage/files` 로 붙인다. 이미지에 그 폴더를 `node` 소유로 만들어 둔다(빈 볼륨이 소유자를 물려받는다)
+  - 폴더 `FILE_STORAGE_DIR`(기본 `storage/files` — 실행 위치 기준: 로컬은 저장소 루트, Docker 는 `/app`). 게이트웨이(받기 · 내주기) · user-service · admin-service(확인 · 삭제)가 같은 폴더를 본다 — Docker 는 공용 볼륨 `deskless-files`(external — `npm run docker:network` 가 네트워크와 함께 만든다)를 세 앱에 `/app/storage/files` 로 붙인다. 이미지에 그 폴더를 `node` 소유로 만들어 둔다(빈 볼륨이 소유자를 물려받는다)
   - 키 → 경로는 폴더 밖으로 나갈 수 없다(`..` · 절대 경로 · 역슬래시 거부). 쓰기는 임시 파일 → 이름 바꾸기(받다 끊기면 반쪽 파일이 남지 않는다)
   - S3 를 나중에 켜면 내부 저장소에 올린 파일은 S3 에 없다(옮기지 않는다 — 가이드에 적음)
 - **게이트웨이 `/files` 경로**(인프라 모듈 `modules/local-file/` — 문 소켓처럼 HttpAdapterHost 로 HTTP 앱에 직접 붙인다, 공개 API · Swagger 가 아니다): `onModuleInit` 에 붙여 Nest 라우트 뒤 · 404 처리 앞. CORS(CORS_ORIGINS — PUT 허용)와 API 로그 미들웨어는 그대로 걸린다. 서명은 시간차 안전 비교, 만료는 dayjs 로

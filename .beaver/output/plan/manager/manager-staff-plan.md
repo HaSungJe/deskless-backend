@@ -39,7 +39,7 @@
 | `AGENTS.md` · `docs/{conventions,data-layer,api,architecture,testing}.md` | modified — 부분 유니크 인덱스 · 업체 단위 매니저 계정 · RolesGuard 적용 · `search.ts` · Smoke 목록 |
 | `README.md` | modified — 매니저 로그인에 업체코드 · 업체 관리자 관리 · 입점 신청 자격증명 |
 | `.beaver/output/spec/platform/cache-spec.md` | modified — 무효화 지점(업체 관리자 수정 · 초기화 · 삭제) |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified — `roadmap-status.js` 로 상태 |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified — `roadmap-status.js` 로 상태 |
 
 삭제할 코드:
 - store: `generateHeadManagerLoginId` · `HEAD_MANAGER_LOGIN_ID_ATTEMPTS` · `countManagers`(포트 · 구현 · mock) · `insertHeadManager` 의 UK 분기 · `HEAD_MANAGER_PHONE_TAKEN_MESSAGE` · `STORE_APPLICATION_VISIBLE_STATES` · store.util.ts 의 `toContainsPattern`(→ libs/common)
@@ -777,7 +777,7 @@ export function toStaffDetail(entity: UserEntity): ManagerStaffDetailResultDto {
  * @returns 본문
  */
 export function staffRegisteredText(store_name: string, store_code: string, login_id: string, password: string): string {
-    return `[roomless] ${store_name} 업체 관리자 계정이 등록되었습니다. 업체코드 ${store_code} 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
+    return `[바로방] ${store_name} 업체 관리자 계정이 등록되었습니다. 업체코드 ${store_code} 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
 }
 ```
 
@@ -1065,7 +1065,7 @@ export const STORE_APPLICATION_NOT_FOUND_MESSAGE = '입점 신청을 찾을 수 
  * @returns 본문
  */
 export function storeApprovedText(store_name: string): string {
-    return `[roomless] ${store_name} 입점이 승인되었습니다.`;
+    return `[바로방] ${store_name} 입점이 승인되었습니다.`;
 }
 
 /**

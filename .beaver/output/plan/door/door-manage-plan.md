@@ -89,7 +89,7 @@
 | `apps/gateway/src/api/v1/admin-service/store/controllers/store.controller.queue.ts` | modified — 업체 문 시크릿(+ 환불 규정 주석의 지난 문구 바로잡기) |
 | `apps/gateway/src/api/v1/user-service/reservation/controllers/reservation.controller.ts` | modified — 내 예약 QR |
 | `docker/nginx/gateway.conf` | modified — `/ws/` WebSocket 업그레이드 |
-| `compose.gateway.yml` | modified — `REDIS_URL` 전달 · `roomless-data` 네트워크 |
+| `compose.gateway.yml` | modified — `REDIS_URL` 전달 · `deskless-data` 네트워크 |
 | `compose.admin-service.yml` · `compose.scheduler.yml` | modified — `REDIS_URL` 전달 |
 | `package.json` · `package-lock.json` | modified — `ws` · `@types/ws` |
 | `README.md` | modified — 문 API 삭제 · 소켓 · 시크릿 · Redis 를 쓰는 앱 |
@@ -2437,7 +2437,7 @@ export class GatewayModule {}
 networks:
     # … (기존)
     data:
-        name: roomless-data
+        name: deskless-data
         external: true
 ```
 

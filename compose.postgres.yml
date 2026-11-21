@@ -5,8 +5,8 @@
 # 실제 운영 DB(RDS 등)를 쓰면 이 묶음은 띄우지 않고, .env 의 DATABASE_URL 을 그 주소로 둔다 — 앱 쪽 설정은 그대로다.
 #
 # 네 묶음(postgres · rabbitmq · user-service · gateway)은 각자 따로 띄우고 내린다. 서로는 공용 네트워크로 만난다
-# (npm run docker:network). postgres 는 roomless-data 에만 붙고, 호스트 포트는 127.0.0.1 에만 연다.
-name: roomless-postgres
+# (npm run docker:network). postgres 는 deskless-data 에만 붙고, 호스트 포트는 127.0.0.1 에만 연다.
+name: deskless-postgres
 
 x-logging: &logging
     driver: json-file
@@ -17,7 +17,7 @@ x-logging: &logging
 services:
     postgres:
         image: postgres:17-alpine
-        container_name: roomless-postgres
+        container_name: deskless-postgres
         environment:
             POSTGRES_USER: '${POSTGRES_USER:?.env 에 POSTGRES_USER 가 필요합니다}'
             POSTGRES_PASSWORD: '${POSTGRES_PASSWORD:?.env 에 POSTGRES_PASSWORD 가 필요합니다}'
@@ -38,9 +38,9 @@ services:
 
 networks:
     data:
-        name: roomless-data
+        name: deskless-data
         external: true
 
 volumes:
     postgres-data:
-        name: roomless-postgres-data
+        name: deskless-postgres-data

@@ -9,7 +9,7 @@ const PATH = `/internal/v1/admin-service/user/${USER_ID}/reservation`;
 const ROW = {
     reservation_id: 'r'.repeat(32),
     store_id: 'b'.repeat(32),
-    store_name: '룸리스 강남점',
+    store_name: '바로방 강남점',
     room_name: '101호',
     room_group_name: '스탠다드',
     room_plan_type_id: 'HOURLY',
@@ -54,7 +54,7 @@ describe('GET /internal/v1/admin-service/user/:user_id/reservation — 이용자
                 {
                     reservation_id: 'r'.repeat(32),
                     store_id: 'b'.repeat(32),
-                    store_name: '룸리스 강남점',
+                    store_name: '바로방 강남점',
                     room_name: '101호',
                     room_group_name: '스탠다드',
                     room_plan_type_id: 'HOURLY',

@@ -29,11 +29,11 @@
 | `.beaver/output/frontend/screens.md` | new — 화면 목록과 주소 + 화면 구성과 쓰는 API(#125 · #127) |
 | `.beaver/output/frontend/dto/{common,user,manager,admin,store,room,reservation,discovery,stats}.md` | new — DTO 사본(처음 인계 기준점) |
 | `.beaver/output/frontend/design/{user,manager,admin}.html` | new — 화면 설계 아티팩트 원본(영역별 한 페이지 HTML) |
-| claude.ai 아티팩트 3개 — `roomless 이용자 화면` · `roomless 업체 관리자 콘솔` · `roomless 관리자 콘솔` | new — 화면 설계(#128 · #129 · #130), 일반 HTML 페이지(처음 Design 캔버스로 만들었다가 피그마식이라 바꿈 — 사용자 결정) |
+| claude.ai 아티팩트 3개 — `deskless 이용자 화면` · `deskless 업체 관리자 콘솔` · `deskless 관리자 콘솔` | new — 화면 설계(#128 · #129 · #130), 일반 HTML 페이지(처음 Design 캔버스로 만들었다가 피그마식이라 바꿈 — 사용자 결정) |
 | `.beaver/output/frontend/changes/README.md` | new — 수정 요청 목록 · 문서 틀 |
 | `AGENTS.md` | modified — "프론트 연계" 절 · Checklist 한 줄 |
 | `.beaver/memory/frontend.md` · `.beaver/memory/MEMORY.md` | new · modified — 수정 요청 문서를 빠뜨리지 않기 |
-| `.beaver/output/roadmap/roomless-roadmap.md` | modified — Phase 28 을 27 로 합친 구조(기획 때 반영) · 사용자 할 일 '프론트' 줄 → 인계 폴더 한 줄(내용은 screens.md 화면 주의로) |
+| `.beaver/output/roadmap/deskless-roadmap.md` | modified — Phase 28 을 27 로 합친 구조(기획 때 반영) · 사용자 할 일 '프론트' 줄 → 인계 폴더 한 줄(내용은 screens.md 화면 주의로) |
 | `README.md` | modified — 인계 · 수정 요청 위치 한 줄, user-service 설명에 내 정보 |
 | `libs/contracts/src/user/dto/user-me.dto.ts` | new — `UserMeResultDto` |
 | `libs/contracts/src/user/user.commands.ts` | modified — `USER_INTERNAL_PATH.ME` |
@@ -171,7 +171,7 @@ fs.writeFileSync(outPath, lines.join('\n'));
 ```text
 만들기(build — screens.md 를 다 쓴 뒤):
 1. Artifact publish — type_url https://claude.ai/artifact/QKN21svewxgyPb6SYRqWnd(Design), title, auto_open "after_first_write"
-   - "roomless 이용자 화면"(#128 — 모바일 390px 화면) · "roomless 업체 관리자 콘솔"(#129 — PC 1440px) · "roomless 관리자 콘솔"(#130 — PC 1440px, 업체 관리자 콘솔과 같은 틀)
+   - "deskless 이용자 화면"(#128 — 모바일 390px 화면) · "deskless 업체 관리자 콘솔"(#129 — PC 1440px) · "deskless 관리자 콘솔"(#130 — PC 1440px, 업체 관리자 콘솔과 같은 틀)
 2. 생성 결과의 타입 지침(채우는 방법 · 먼저 읽을 페이지)을 따라 화면을 채운다 — 원본 데이터 파일은 .beaver/output/frontend/design/<user|manager|admin>/ 에 두고 같은 url 로 게시
 3. 화면 = screens.md 의 키 하나(상태가 갈리면 상태별로 여러 장) — 화면 이름 "<키> <화면> — <주소>"(예: "U7 예약 1건(이용 중) — /reservation/[reservation_id]")
 4. 화면 안 문구 · 값: 실제 필드 이름에 맞는 예시 값, 버튼 · 안내 문구는 한국어, 상태 · 종류 이름은 룩업 이름(예약 상태 '이용 중', 상품 '시간 이용' …), 입력 오류 예시는 DTO 의 한국어 메시지
@@ -245,7 +245,7 @@ for (const domain of fs.readdirSync(contracts)) {
 
 ```md
 <!-- .beaver/output/frontend/README.md -->
-# roomless 프론트 인계
+# deskless 프론트 인계
 
 기준: 백엔드 커밋 <build 때 HEAD>(2026-11-10). 이후 바뀐 것은 `changes/` 로 온다.
 아티팩트(시안)와 이 지침서를 함께 보고 만든다 — 화면 모양은 아티팩트, 주소 · 구성 · API 는 지침서.

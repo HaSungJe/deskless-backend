@@ -1,4 +1,4 @@
-# roomless-backend
+# deskless-backend
 
 무인 객실 대여 서비스 백엔드 — NestJS 12 모노레포(MSA).
 
@@ -52,7 +52,7 @@ cp .env.example .env
 | `CORS_ORIGINS` · `GATEWAY_PUBLIC_URL` · `USER_WEB_URL` | 프론트 · 게이트웨이 · 이용자 화면의 실제 주소 |
 
 - `.env` 하나가 곧 서버 설정이다. Docker 는 값을 바꾸지 않고 그대로 쓰며, 필수값이 비어 있으면 띄우지 않는다.
-- AWS 값(`AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL`)은 비워도 된다 — 키가 비면 SMS 는 보내지 않고 로그에 남기고, 버킷이 비면 파일은 게이트웨이 내부 파일 저장소(폴더 `FILE_STORAGE_DIR`, 기본 `storage/files` · Docker 는 공용 볼륨 `roomless-files`)에 올린다. S3 를 쓰려면 버킷 · `AWS_S3_PUBLIC_URL`(CloudFront 배포 주소)을 채운다 — S3 로 바꿔도 이미 올린 사진은 그대로 열린다(파일마다 저장소 `file_storage` 를 적어 두어, 내부 저장소 파일은 계속 게이트웨이 `/files` 로 나간다 — 볼륨을 지우지 않는다) — [docs/guides/aws-setup.md](docs/guides/aws-setup.md).
+- AWS 값(`AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL`)은 비워도 된다 — 키가 비면 SMS 는 보내지 않고 로그에 남기고, 버킷이 비면 파일은 게이트웨이 내부 파일 저장소(폴더 `FILE_STORAGE_DIR`, 기본 `storage/files` · Docker 는 공용 볼륨 `deskless-files`)에 올린다. S3 를 쓰려면 버킷 · `AWS_S3_PUBLIC_URL`(CloudFront 배포 주소)을 채운다 — S3 로 바꿔도 이미 올린 사진은 그대로 열린다(파일마다 저장소 `file_storage` 를 적어 두어, 내부 저장소 파일은 계속 게이트웨이 `/files` 로 나간다 — 볼륨을 지우지 않는다) — [docs/guides/aws-setup.md](docs/guides/aws-setup.md).
 - 게이트웨이 공개 주소(`GATEWAY_PUBLIC_URL` — 브라우저가 게이트웨이에 닿는 주소, 예: `http://localhost:3000`)는 내부 파일 저장소의 업로드 · 사진 주소와 테스트 데이터 사진 주소의 기준이다. 버킷을 비우거나 테스트 데이터를 쓰면 채운다.
 - 테스트 데이터(`SEED_SAMPLE_DATA=1`)를 켜면 user-service 가 부팅할 때 서울 업체 10곳 · 객실 · 업체 총관리자 10명 · 이용자 1명을 넣는다(개발 · 테스트 DB 만) — 계정 · 업체코드는 [docs/guides/sample-data.md](docs/guides/sample-data.md).
 - 토스 시크릿 키(`TOSS_SECRET_KEY`)도 비워도 서버는 뜬다 — 예약 생성 · 결제 확인 · 환불만 실패한다(user-service · scheduler 가 쓴다). 테스트 키 받는 법 · 시험 순서는 [docs/guides/toss-setup.md](docs/guides/toss-setup.md).
@@ -67,7 +67,7 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 
 | 순서 | 묶음 | 명령 | 하는 일 |
 |---|---|---|---|
-| 1 | 공용 네트워크 · 볼륨 | `npm run docker:network` | 묶음끼리 이름으로 찾는 네트워크 4개 + 내부 파일 저장소 볼륨 `roomless-files` (이미 있으면 건너뜀) |
+| 1 | 공용 네트워크 · 볼륨 | `npm run docker:network` | 묶음끼리 이름으로 찾는 네트워크 4개 + 내부 파일 저장소 볼륨 `deskless-files` (이미 있으면 건너뜀) |
 | 2 | postgres | `npm run docker:postgres` | DB (127.0.0.1:5432) |
 | 3 | rabbitmq | `npm run docker:rabbitmq` | 브로커 + 앱별 계정 초기화 (관리 화면 http://localhost:15672) |
 | 4 | redis | `npm run docker:redis` | 문 정보 저장소 (127.0.0.1:6379, AOF 영속 — gateway · user-service · admin-service · scheduler 가 쓴다) — [docs/guides/redis-setup.md](docs/guides/redis-setup.md) |

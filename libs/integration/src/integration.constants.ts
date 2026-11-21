@@ -46,7 +46,7 @@ export const PRIVATE_FILE_KEY_PREFIX = 'private/';
 /** 내부 파일 저장소 경로(게이트웨이) — AWS_S3_BUCKET 이 비면 업로드 · 열람 · 공개 파일이 이 아래다(`/files/upload` · `/files/download` · `/files/<키>`) */
 export const LOCAL_FILE_ROUTE = '/files';
 
-/** 내부 파일 저장소 폴더 기본값 — 실행 위치 기준(로컬은 저장소 루트, Docker 는 /app — 공용 볼륨 roomless-files), FILE_STORAGE_DIR 로 바꾼다 */
+/** 내부 파일 저장소 폴더 기본값 — 실행 위치 기준(로컬은 저장소 루트, Docker 는 /app — 공용 볼륨 deskless-files), FILE_STORAGE_DIR 로 바꾼다 */
 export const LOCAL_FILE_STORAGE_DIR_DEFAULT = 'storage/files';
 
 /** 내부 파일 저장소 업로드 한도(바이트) — 게이트웨이 앞 nginx(docker/nginx/gateway.conf client_max_body_size 10m)와 같다 */

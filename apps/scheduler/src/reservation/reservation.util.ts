@@ -257,7 +257,7 @@ export function buildQrLinkSent(sent_at: Date | null): ReservationEntity {
  * @returns 문구
  */
 export function buildQrLinkSms(store_name: string, start_at: Date, link: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 — QR 확인: ${link}`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 — QR 확인: ${link}`;
 }
 
 /**

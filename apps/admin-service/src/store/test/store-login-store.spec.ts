@@ -29,7 +29,7 @@ describe('GET /internal/v1/admin-service/store/login-store/:store_code — 매�
             expect(res.status).toBe(200);
             expect(repo.findStore).toHaveBeenCalledTimes(1);
             expect(repo.findStore).toHaveBeenCalledWith({store_code: STORE_CODE});
-            expect(res.body).toEqual({store_id: STORE_ID, store_code: STORE_CODE, store_name: '룸리스 강남점'});
+            expect(res.body).toEqual({store_id: STORE_ID, store_code: STORE_CODE, store_name: '바로방 강남점'});
             expect(repo.findStoreFileRows).not.toHaveBeenCalled();
         });
     });

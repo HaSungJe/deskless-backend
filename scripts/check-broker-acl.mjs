@@ -14,8 +14,8 @@
 import 'dotenv/config';
 import amqp from 'amqplib';
 
-const COMMAND_EXCHANGE = 'roomless.cmd';
-const EVENT_EXCHANGE = 'roomless.event';
+const COMMAND_EXCHANGE = 'deskless.cmd';
+const EVENT_EXCHANGE = 'deskless.event';
 /** 어느 큐에도 바인딩되지 않는 라우팅 키 (명령 큐는 `user.#` · `admin.#`, 결과 큐는 `result.<인스턴스>.#`) */
 const PROBE_ROUTING_KEY = 'acl.probe';
 
@@ -23,14 +23,14 @@ const ALLOW = 'allow';
 const ACCESS_REFUSED = 403;
 const PRECONDITION_FAILED = 406;
 
-const ADMIN_USER = process.env.RABBITMQ_USER || 'roomless';
+const ADMIN_USER = process.env.RABBITMQ_USER || 'deskless';
 
 /** 점검 대상 계정과 비밀번호 환경변수 */
 const ACCOUNTS = {
     gateway: {user: 'gateway', password: process.env.RABBITMQ_GATEWAY_PASSWORD ?? ''},
     'user-service': {user: 'user-service', password: process.env.RABBITMQ_USER_SERVICE_PASSWORD ?? ''},
     'admin-service': {user: 'admin-service', password: process.env.RABBITMQ_ADMIN_SERVICE_PASSWORD ?? ''},
-    admin: {user: ADMIN_USER, password: process.env.RABBITMQ_PASSWORD || 'roomless'},
+    admin: {user: ADMIN_USER, password: process.env.RABBITMQ_PASSWORD || 'deskless'},
 };
 
 /** 점검 항목 — expect: ALLOW 또는 브로커가 돌려줘야 할 거부 코드 */

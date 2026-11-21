@@ -52,7 +52,7 @@ describe('GET /internal/v1/user-service/store/application/mine — 내 입점 �
                 {
                     store_application_id: 'd'.repeat(32),
                     store_application_state_id: 'APPROVED',
-                    store_name: '룸리스 강남점',
+                    store_name: '바로방 강남점',
                     business_number: '1234567890',
                     reject_comment: null,
                     reviewed_at: FIXED_TIME.toISOString(),
@@ -62,7 +62,7 @@ describe('GET /internal/v1/user-service/store/application/mine — 내 입점 �
                 {
                     store_application_id: 'a'.repeat(32),
                     store_application_state_id: 'REJECTED',
-                    store_name: '룸리스 강남점',
+                    store_name: '바로방 강남점',
                     business_number: '1234567890',
                     reject_comment: '서류 불충분',
                     reviewed_at: FIXED_TIME.toISOString(),

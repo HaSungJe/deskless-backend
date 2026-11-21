@@ -13,10 +13,10 @@
 | File | Action |
 |------|------|
 | `package.json` · `package-lock.json` | modified — 의존성 `redis`(node-redis 6.3.1), 스크립트 `docker:redis` · `docker:infra`(+redis) · `docker:down`(+redis) |
-| `compose.redis.yml` | new — Redis 8 묶음(AOF 영속 · 비밀번호 · `roomless-data` · 127.0.0.1:6379 · 볼륨 `roomless-redis-data`) |
+| `compose.redis.yml` | new — Redis 8 묶음(AOF 영속 · 비밀번호 · `deskless-data` · 127.0.0.1:6379 · 볼륨 `deskless-redis-data`) |
 | `compose.user-service.yml` | modified — `REDIS_URL` 필수 전달, `REDIS_PASSWORD` 빈 값 |
 | `compose.admin-service.yml` · `compose.scheduler.yml` · `compose.gateway.yml` | modified — 쓰지 않는 `REDIS_URL` · `REDIS_PASSWORD` 빈 값 |
-| `scripts/docker-network.mjs` | modified — `roomless-data` 용도에 redis, 머리 주석 |
+| `scripts/docker-network.mjs` | modified — `deskless-data` 용도에 redis, 머리 주석 |
 | `.env.example` | modified — Redis 절(`REDIS_PASSWORD` · `REDIS_PORT` · `REDIS_URL`) |
 | `libs/integration/src/integration.symbols.ts` | modified — `DOOR_STORE` |
 | `libs/integration/src/integration.constants.ts` | modified — `REDIS_UNAVAILABLE_MESSAGE` · `DOOR_QR_ISSUE_FAILED_MESSAGE` · `DOOR_STATE` · `DOOR_TIME_NONE` · `DOOR_QR_ISSUE_ATTEMPTS` |
@@ -44,7 +44,7 @@
 
 ### 인프라 — Redis Docker 묶음 · 스크립트 · 설정
 
-postgres 묶음(compose.postgres.yml:1-48)과 같은 모양 — `roomless-data` 외부 네트워크 · 127.0.0.1 포트 · 이름 있는 볼륨 · healthcheck · 필수값 `${VAR:?}`. 캐시가 아니라 원본이라 AOF 를 켠다.
+postgres 묶음(compose.postgres.yml:1-48)과 같은 모양 — `deskless-data` 외부 네트워크 · 127.0.0.1 포트 · 이름 있는 볼륨 · healthcheck · 필수값 `${VAR:?}`. 캐시가 아니라 원본이라 AOF 를 켠다.
 
 ```yaml
 # compose.redis.yml — new
@@ -52,11 +52,11 @@ postgres 묶음(compose.postgres.yml:1-48)과 같은 모양 — `roomless-data` 
 #   npm run docker:redis   (docker compose -f compose.redis.yml up -d --wait)
 #
 # 설정은 .env 를 그대로 쓴다(compose 가 값을 바꾸지 않는다). 필수값이 비어 있으면 띄우지 않는다.
-# 캐시가 아니라 원본이라 AOF(appendonly, 매초 디스크에 기록)를 켠다 — 컨테이너를 다시 띄워도 문 정보가 볼륨 roomless-redis-data 에 남는다.
+# 캐시가 아니라 원본이라 AOF(appendonly, 매초 디스크에 기록)를 켠다 — 컨테이너를 다시 띄워도 문 정보가 볼륨 deskless-redis-data 에 남는다.
 # 실제 운영 Redis(ElastiCache 등 — 클러스터 모드 끔)를 쓰면 이 묶음은 띄우지 않고, .env 의 REDIS_URL 을 그 주소로 둔다 — 앱 쪽 설정은 그대로다.
 #
-# roomless-data 네트워크에만 붙고, 호스트 포트는 127.0.0.1 에만 연다. 세팅 · 확인: docs/guides/redis-setup.md
-name: roomless-redis
+# deskless-data 네트워크에만 붙고, 호스트 포트는 127.0.0.1 에만 연다. 세팅 · 확인: docs/guides/redis-setup.md
+name: deskless-redis
 
 x-logging: &logging
     driver: json-file
@@ -67,7 +67,7 @@ x-logging: &logging
 services:
     redis:
         image: redis:8-alpine
-        container_name: roomless-redis
+        container_name: deskless-redis
         environment:
             REDIS_PASSWORD: '${REDIS_PASSWORD:?.env 에 REDIS_PASSWORD 가 필요합니다}'
             TZ: Asia/Seoul
@@ -88,12 +88,12 @@ services:
 
 networks:
     data:
-        name: roomless-data
+        name: deskless-data
         external: true
 
 volumes:
     redis-data:
-        name: roomless-redis-data
+        name: deskless-redis-data
 ```
 
 ```json
@@ -121,7 +121,7 @@ volumes:
             REDIS_PASSWORD: ''
 ```
 
-머리 주석의 네트워크 줄도 고친다: `roomless-broker / roomless-data : 브로커 / DB · Redis 로 나가는 길 (외부 RDS · Amazon MQ · ElastiCache 도 이 길로 나간다)`.
+머리 주석의 네트워크 줄도 고친다: `deskless-broker / deskless-data : 브로커 / DB · Redis 로 나가는 길 (외부 RDS · Amazon MQ · ElastiCache 도 이 길로 나간다)`.
 
 ```yaml
 # compose.admin-service.yml · compose.scheduler.yml · compose.gateway.yml — modified (각 "쓰지 않는 비밀값" 블록 끝에 두 줄)
@@ -130,7 +130,7 @@ volumes:
 ```
 
 ```js
-// scripts/docker-network.mjs — modified (머리 주석 · roomless-data 용도)
+// scripts/docker-network.mjs — modified (머리 주석 · deskless-data 용도)
 /**
  * Docker 공용 네트워크 만들기 — postgres · rabbitmq · redis · user-service · admin-service · scheduler · gateway 를 각자 따로 띄워도 서로 이름으로 찾게 한다.
  *
@@ -140,7 +140,7 @@ volumes:
  * 다른 묶음이 계속 동작한다.
  */
 ...
-    {name: 'roomless-data', internal: false, purpose: 'postgres · redis · migrate · user-service · admin-service · scheduler'},
+    {name: 'deskless-data', internal: false, purpose: 'postgres · redis · migrate · user-service · admin-service · scheduler'},
 ```
 
 ```sh
@@ -148,11 +148,11 @@ volumes:
 # ── Redis (문 정보) ─────────────────────────
 # 호실 문의 QR · 열림/닫힘 · 마지막 시각의 원본 저장소. 세팅 · 확인 방법: docs/guides/redis-setup.md
 # (필수) 가상 운영 Redis 컨테이너 비밀번호 — 서버에서는 반드시 바꾼다. 아래 REDIS_URL 의 비밀번호와 같게 둔다
-REDIS_PASSWORD=roomless
+REDIS_PASSWORD=deskless
 REDIS_PORT=6379
 # (필수) 앱(user-service)이 접속할 Redis — 가상 운영은 @redis, 실제 운영은 ElastiCache 등의 주소(TLS 면 rediss://)
 # 비밀번호에 @ : / 가 있으면 URL 인코딩한다
-REDIS_URL=redis://:roomless@redis:6379
+REDIS_URL=redis://:deskless@redis:6379
 ```
 
 ### 외부 연동 포트 — Redis 연결 · 문 정보(`libs/integration`)
@@ -1346,11 +1346,11 @@ describe('DoorRepository — t_room 을 door 어휘로 읽기만', () => {
    `npm run docker:infra` · `npm run docker:up` 도 redis 를 함께 띄운다.
 3. 확인한다.
    ```bash
-   docker exec roomless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'   # PONG
+   docker exec deskless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'   # PONG
    ```
    user-service 로그에 `Redis 연결됨` 이 보이면 붙은 것이다.
 4. 앱을 로컬(`npm run start:user-service`)로 돌리면 hosts 파일에 `127.0.0.1 redis` 를 넣는다(postgres · rabbitmq 와 같은 줄에 둬도 된다).
-5. 내린다 — `docker compose -f compose.redis.yml down`(데이터는 볼륨 `roomless-redis-data` 에 남는다). 데이터까지 지우려면 `docker volume rm roomless-redis-data`.
+5. 내린다 — `docker compose -f compose.redis.yml down`(데이터는 볼륨 `deskless-redis-data` 에 남는다). 데이터까지 지우려면 `docker volume rm deskless-redis-data`.
 
 - 비밀번호를 바꿀 때는 `.env` 의 `REDIS_PASSWORD` 와 `REDIS_URL` 을 함께 바꾸고 `docker compose -f compose.redis.yml up -d --force-recreate` 후 user-service 를 다시 띄운다.
 - 영속: `appendonly yes` · `appendfsync everysec` — 최대 1초 분량만 잃을 수 있다.
@@ -1370,7 +1370,7 @@ describe('DoorRepository — t_room 을 door 어휘로 읽기만', () => {
 | `door-qr:<QR>` | `room_id` | QR 로 문 찾기 · 같은 QR 이 두 문에 가지 않게 막는 색인 |
 
 ```bash
-docker exec -it roomless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli'
+docker exec -it deskless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli'
 GET door:<room_id>
 GET door-qr:<QR>
 SCAN 0 MATCH door:* COUNT 100
@@ -1383,7 +1383,7 @@ SCAN 0 MATCH door:* COUNT 100
 
 | 증상 | 확인 |
 |---|---|
-| 문 API 가 503 `상태 저장소에 연결할 수 없습니다` | Redis 가 떠 있는지(`docker ps`), `REDIS_URL` 주소 · 비밀번호, 같은 네트워크(`roomless-data`)인지, user-service 로그의 `Redis 오류` |
+| 문 API 가 503 `상태 저장소에 연결할 수 없습니다` | Redis 가 떠 있는지(`docker ps`), `REDIS_URL` 주소 · 비밀번호, 같은 네트워크(`deskless-data`)인지, user-service 로그의 `Redis 오류` |
 | 부팅 경고 `REDIS_URL 이 비어 있어` | `.env` 의 `REDIS_URL` |
 | 로그에 `WRONGPASS` · `NOAUTH` | `REDIS_URL` 의 비밀번호가 `REDIS_PASSWORD` 와 다르다 |
 | 로컬 실행에서 `getaddrinfo ENOTFOUND redis` | hosts 파일에 `127.0.0.1 redis` |
@@ -1522,7 +1522,7 @@ npm run docker:admin-service # 6. compose.admin-service.yml — 매니저 · 관
 npm run docker:scheduler     # 7. compose.scheduler.yml — crontab 전용 인스턴스 (포트 없음)
 npm run docker:gateway       # 8. compose.gateway.yml — 인스턴스 N대 → LB (:3000)
 
-| `compose.redis.yml` | redis | 가상 운영용 Redis 8 (127.0.0.1:6379) — 문 정보의 원본이라 AOF 영속 · 비밀번호(`REDIS_PASSWORD`), 볼륨 `roomless-redis-data` — 실제 운영(ElastiCache 등 · 클러스터 모드 끔)이면 띄우지 않는다 ([guides/redis-setup.md](guides/redis-setup.md)) |
+| `compose.redis.yml` | redis | 가상 운영용 Redis 8 (127.0.0.1:6379) — 문 정보의 원본이라 AOF 영속 · 비밀번호(`REDIS_PASSWORD`), 볼륨 `deskless-redis-data` — 실제 운영(ElastiCache 등 · 클러스터 모드 끔)이면 띄우지 않는다 ([guides/redis-setup.md](guides/redis-setup.md)) |
 
 <!-- 설정 절 -->
 - 가상 운영 · 실제 운영 줄: … 가상 운영은 같은 서버에 postgres · rabbitmq · redis 묶음을 띄우고 주소를 컨테이너 이름(`postgres` · `rabbitmq` · `redis`)으로 둔다. 실제 운영은 세 묶음을 띄우지 않고 RDS · Amazon MQ · ElastiCache 주소를 둔다.
@@ -1531,7 +1531,7 @@ npm run docker:gateway       # 8. compose.gateway.yml — 인스턴스 N대 → 
 - 쓰지 않는 비밀값 행: user-service 는 `REDIS_PASSWORD`, admin-service · scheduler · gateway 는 `REDIS_URL` · `REDIS_PASSWORD` 도 빈 값.
 
 <!-- 네트워크 표 -->
-| `roomless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
+| `deskless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
 
 <!-- 로컬 개발 명령 -->
 npm run docker:infra          # 공용 네트워크 + postgres + rabbitmq(+계정 초기화) + redis
@@ -1555,7 +1555,7 @@ npm run docker:infra          # 공용 네트워크 + postgres + rabbitmq(+계�
 <!-- Key Patterns — 외부 연동 목록에 한 줄 -->
   - 문 정보는 `DOOR_STORE`(Redis) — `door:<room_id>` = `QR:open|close:yyyyMMddHHmmss`, `door-qr:<QR>` = room_id. 열기 · 닫기 · QR 발급은 Lua 스크립트 1개씩(원자적, QR 은 `SET NX` 로 겹치지 않음). 캐시가 아니라 원본이라 Redis 는 AOF 영속 · 단일 노드(클러스터 모드 끔). Redis 가 없어도 부팅하고 문 요청만 503.
 <!-- Key Patterns — Docker 줄 -->
-- **Docker 실행 — 묶음 7개를 따로**: `compose.postgres.yml` · `compose.rabbitmq.yml`(…) · `compose.redis.yml`(Redis 8 — AOF 영속 · 비밀번호, `roomless-data`) · `compose.user-service.yml`(…) · … `docker:up` 순서는 인프라(postgres → rabbitmq → redis) → user-service(마이그레이션) → admin-service → scheduler → gateway. … `npm run docker:infra` 는 postgres · rabbitmq · redis.
+- **Docker 실행 — 묶음 7개를 따로**: `compose.postgres.yml` · `compose.rabbitmq.yml`(…) · `compose.redis.yml`(Redis 8 — AOF 영속 · 비밀번호, `deskless-data`) · `compose.user-service.yml`(…) · … `docker:up` 순서는 인프라(postgres → rabbitmq → redis) → user-service(마이그레이션) → admin-service → scheduler → gateway. … `npm run docker:infra` 는 postgres · rabbitmq · redis.
 <!-- Key Patterns — .env 줄의 환경 값 목록 -->
 … compose 는 환경 값(NODE_ENV · DB/RabbitMQ/Redis 접속정보 · 비밀값 · …)을 … 가상 운영(같은 서버의 postgres · rabbitmq · redis 묶음 …)과 실제 운영(RDS · Amazon MQ · ElastiCache) …
 ```

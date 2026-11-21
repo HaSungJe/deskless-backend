@@ -1586,7 +1586,7 @@ export function calculateRefundAmount(amount: number, now: Dayjs, refund_deadlin
  * @returns 문구
  */
 export function buildStoreCancelSms(store_name: string, start_at: Date, reason: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: ${reason}`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: ${reason}`;
 }
 
 /**
@@ -1599,7 +1599,7 @@ export function buildStoreCancelSms(store_name: string, start_at: Date, reason: 
  * @returns 문구
  */
 export function buildRoomChangeSms(store_name: string, start_at: Date, from_room: string, to_room: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 호실이 ${from_room}에서 ${to_room}로 변경되었습니다.`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 호실이 ${from_room}에서 ${to_room}로 변경되었습니다.`;
 }
 
 /**
@@ -6113,7 +6113,7 @@ describe('user.reservation.store-cancel — 업체 취소 (큐 경로)', () => {
         expect(where).toEqual({payment_id: PAYMENT_ID, payment_state_id: 'DONE'});
         expect(refund).toMatchObject({payment_state_id: 'REFUND_REQUESTED', refund_amount: 30000, refund_reason: '업체 예약 취소'});
         expect(sms.send).toHaveBeenCalledTimes(1);
-        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[roomless] 루미 강남점 11/10 13:00 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: 설비 고장'});
+        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[바로방] 루미 강남점 11/10 13:00 예약이 업체 사정으로 취소되었습니다. 결제 금액은 전액 환불됩니다. 사유: 설비 고장'});
         expect(sms.send.mock.invocationCallOrder[0]).toBeGreaterThan(repo.updatePayment.mock.invocationCallOrder[0]);
     });
 
@@ -6234,7 +6234,7 @@ describe('user.reservation.room-change — 호실 이동 (큐 경로)', () => {
         expect(where).toEqual({reservation_id: RESERVATION_ID, reservation_state_id: 'CONFIRMED'});
         expect(entity).toBeInstanceOf(ReservationEntity);
         expect(entity).toEqual(Object.assign(new ReservationEntity(), {room_id: ROOM_ID_2}));
-        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[roomless] 루미 강남점 11/10 13:00 예약 호실이 101호에서 102호로 변경되었습니다.'});
+        expect(sms.send).toHaveBeenCalledWith({to: '01012345678', text: '[바로방] 루미 강남점 11/10 13:00 예약 호실이 101호에서 102호로 변경되었습니다.'});
     });
 
     it.each([

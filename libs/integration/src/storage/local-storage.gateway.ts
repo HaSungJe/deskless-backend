@@ -10,7 +10,7 @@ import type {LocalFileRequest} from './local-storage.util.js';
 /**
  * 파일 저장소 어댑터 — 내부 파일 저장소. 실제로 저장 · 제공한다(가짜 저장소가 아니다).
  * 저장소 포트(RoutingStorageGateway)가 AWS_S3_BUCKET 이 빌 때 업로드 저장소로(사용자 결정 2026-11-15), 버킷이 있어도 file_storage 가 LOCAL 인 행(S3 로 바꾸기 전에 올린 파일)을 읽고 지울 때 쓴다(사용자 결정 2026-11-18). 샘플 키는 라우터가 맡는다.
- * 파일은 FILE_STORAGE_DIR(기본 storage/files — Docker 는 공용 볼륨 roomless-files)에 있고, 받기 · 내주기는 게이트웨이 /files(modules/local-file), 확인 · 삭제는 이 어댑터가 같은 폴더에서 한다.
+ * 파일은 FILE_STORAGE_DIR(기본 storage/files — Docker 는 공용 볼륨 deskless-files)에 있고, 받기 · 내주기는 게이트웨이 /files(modules/local-file), 확인 · 삭제는 이 어댑터가 같은 폴더에서 한다.
  * 업로드 · 열람 주소는 INTERNAL_API_TOKEN 으로 서명한다(S3 presigned 와 같은 쓰임 — 10분, 업로드는 Content-Type 까지). 키 · DB 행 모양은 S3 와 같다.
  * 세팅: docs/guides/aws-setup.md "AWS 없이 돌리기"
  */

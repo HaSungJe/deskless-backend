@@ -29,7 +29,7 @@ memory: `git`(산출물 커밋 포함 — 지킴) · `api-log`(해당 없음) ·
 | # | Severity | Location (path:line) | Description | Recommendation |
 |---|--------|-----------------|------|------|
 | 1 | Low | apps/user-service/src/user/user.service.ts `login` · `tokenRefresh` (기존 동작) | 탈퇴 대기(LEAVE_WAIT) 이용자는 로그인 404 · 재발급 401 이라 access 토큰(20분)이 끝나면 다시 들어올 수 없다 — 탈퇴 철회(`user.member.leave-cancel`)는 로그인이 필요해 14일 대기 중 철회할 길이 사실상 없다. 이번 변경 전부터 있던 동작이고 Phase 20 범위 밖 | 그대로 두고 별도 작업으로 — 로그인 · 재발급 상태에 LEAVE_WAIT 를 넣을지(철회만 허용) 결정 필요 |
-| 2 | Low | apps/admin-service/src/user/controllers/user.controller.queue.ts · manager.controller.queue.ts `resetAccountPassword` | 총관리자 명령 2개는 `requireActor()` 를 부르지 않는다(체크리스트 "로그인 필요 명령은 requireActor") — 형제인 업체 상태 변경 `admin.store.state` 와 같은 방식(관리자 가드는 게이트웨이, `roomless.cmd` 는 gateway 계정만 발행) | 그대로 둠 — 형제와 같게. 바꾸면 총관리자 명령 전체를 한 번에 |
+| 2 | Low | apps/admin-service/src/user/controllers/user.controller.queue.ts · manager.controller.queue.ts `resetAccountPassword` | 총관리자 명령 2개는 `requireActor()` 를 부르지 않는다(체크리스트 "로그인 필요 명령은 requireActor") — 형제인 업체 상태 변경 `admin.store.state` 와 같은 방식(관리자 가드는 게이트웨이, `deskless.cmd` 는 gateway 계정만 발행) | 그대로 둠 — 형제와 같게. 바꾸면 총관리자 명령 전체를 한 번에 |
 | 3 | Low | apps/user-service/src/user/repositories/user.repository.ts `buildLoginUserQuery` | 이용 제한 이용자의 인증 확인(auth-user) 결과 `is_login_allowed` 는 0 으로 나간다(BLOCK 룩업 값) — 게이트웨이 전략은 이 값을 보지 않는다(결과가 있으면 통과) | 그대로 둠 — 응답 필드 설명만 "이용자 그룹은 상태 목록으로 판정" 으로 이해. 쓰는 곳이 생기면 그룹별 의미로 바꾼다 |
 | 4 | Low | apps/admin-service/src/user/repositories/user.repository.ts `buildUserListQuery` | 목록이 `getMany` 로 회원 전체 컬럼(비밀번호 해시 · 탈퇴 백업 포함)을 읽는다 — 응답 매핑(`toUserListItem`)에서 빠지므로 밖으로 나가지 않는다. 업체 관리자 목록(`buildStaffListQuery`)과 같은 방식 | 그대로 둠 — 필요하면 select 를 좁힌다 |
 

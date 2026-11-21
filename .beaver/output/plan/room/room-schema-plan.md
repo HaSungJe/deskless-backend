@@ -61,7 +61,7 @@
 | `apps/scheduler/src/user/repositories/user.repository.ts` | 확인 — `t_user` 만 다뤄 변경 없을 것(초안에서 확인) |
 | repository spec 5개 · `apps/admin-service/src/store/test/store.test-helper.ts` | modified — 조건에 `is_deleted: 0` · 삭제 단언 `delete` → `update(is_deleted 1)` · 통일 500 표 · Smoke 스냅샷 · 도우미 행에 `is_deleted: 0` |
 | `.beaver/memory/naming.md` · `data-layer.md` · `MEMORY.md` | ship 에서 보관 — 네 규칙(종류별 1행 · 음역 금지 · jsonb 기본값 · 소프트 삭제)을 docs · AGENTS.md 에 옮긴 뒤 `_archived/` 로 |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified(ship) — Phase 12 유닛 목표(#51 상품 종류 · 업체 상품 설정 · 그룹 상품) · Phase 13 에 업체 상품 설정 API 유닛 · #45 편의시설 이동 메모 · Cross-Cutting "객실 모델" · "이용 단위" · "체크인 · 연장" · Phase 17 #67 · Phase 19 #81 메모 · Notes/Risks "배타 제약과 오프라인 검사" 해결 · 지금 할 일 사용자 줄(`RoomSchema`) |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified(ship) — Phase 12 유닛 목표(#51 상품 종류 · 업체 상품 설정 · 그룹 상품) · Phase 13 에 업체 상품 설정 API 유닛 · #45 편의시설 이동 메모 · Cross-Cutting "객실 모델" · "이용 단위" · "체크인 · 연장" · Phase 17 #67 · Phase 19 #81 메모 · Notes/Risks "배타 제약과 오프라인 검사" 해결 · 지금 할 일 사용자 줄(`RoomSchema`) |
 
 삭제할 코드(편의시설을 객실 그룹으로 옮기며 빈 자리를 남기지 않는다 — §1.7):
 - `t_store.store_detail` 컬럼(마이그레이션 DROP) · `StoreDetail` 인터페이스(store.entity.ts:4-14)

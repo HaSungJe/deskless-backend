@@ -9,8 +9,8 @@
 #   - 쓰지 않는 비밀값(브로커 · JWT · 토큰 암호화 · 내부 토큰 · 비밀번호 해시 · DB 관리자)은 빈 값으로 덮어 전달하지 않는다. 토스 시크릿 키는 결제 대기 만료 · 환불에,
 #     AWS 키(SNS)와 USER_WEB_URL 은 이용 시작 5분 전 QR 확인 링크 SMS 에 쓴다.
 #
-# 네트워크 — DB · Redis 로 나가는 roomless-data 하나뿐이다(서비스 · 브로커 · 외부 진입 네트워크에 붙지 않는다)
-name: roomless-scheduler
+# 네트워크 — DB · Redis 로 나가는 deskless-data 하나뿐이다(서비스 · 브로커 · 외부 진입 네트워크에 붙지 않는다)
+name: deskless-scheduler
 
 x-logging: &logging
     driver: json-file
@@ -20,7 +20,7 @@ x-logging: &logging
 
 services:
     scheduler:
-        image: roomless/scheduler
+        image: deskless/scheduler
         build:
             context: .
             args:
@@ -55,5 +55,5 @@ services:
 
 networks:
     data:
-        name: roomless-data
+        name: deskless-data
         external: true

@@ -4,7 +4,7 @@
 > 원래 문서: `.beaver/output/plan/room/room-manage-plan.md` · `report/room/room-manage-report.md`(객실 그룹 · 호실 관리)
 
 ## Reason for Change Request
-프론트 요청(2026-11-20 — roomless-frontend Phase 12 상품 · 객실, 시안 `frontend/design/manager.html` M5 객실 그룹 상세 · M4 호실): 시안에 있는 값 3개가 응답에 없어 프론트가 화면마다 API 를 여러 번 불러야 한다. 응답에 넣는다.
+프론트 요청(2026-11-20 — deskless-frontend Phase 12 상품 · 객실, 시안 `frontend/design/manager.html` M5 객실 그룹 상세 · M4 호실): 시안에 있는 값 3개가 응답에 없어 프론트가 화면마다 API 를 여러 번 불러야 한다. 응답에 넣는다.
 1. M5 그룹 상품 표의 "기간 가격" 칸 — 상품마다 기간 가격 개수
 2. M5 맨 위 설명 줄 "호실 3개(203호 · 301호 · 302호)" — 그룹의 호실 수 · 호실 목록
 3. M4 층 거르기 "전체 · 2층 · 3층 · 4층" — 내 업체 호실이 있는 층 전부(페이지 · 거르기와 상관없이)

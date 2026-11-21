@@ -4,7 +4,7 @@ import {StoreEntity} from '@app/database/entities/store/store.entity.js';
 import type {CommandDispatcher} from '@app/messaging/command.dispatcher.js';
 import {ADMIN_ACTOR, bootCommandPath, createStoreRepositoryMock, runCommand, STORE_ID, StoreRepositoryMock, storeRow} from './store.test-helper.js';
 
-const PAYLOAD = {store_id: STORE_ID, store_name: '룸리스 역삼점', owner_name: '김대표', phone: '0298765432', address: '서울시 강남구 역삼동', latitude: '37.5006', longitude: '127.0364'};
+const PAYLOAD = {store_id: STORE_ID, store_name: '바로방 역삼점', owner_name: '김대표', phone: '0298765432', address: '서울시 강남구 역삼동', latitude: '37.5006', longitude: '127.0364'};
 
 describe('admin.store.update — 업체 정보 수정 (큐 경로)', () => {
     let repo: StoreRepositoryMock;
@@ -32,7 +32,7 @@ describe('admin.store.update — 업체 정보 수정 (큐 경로)', () => {
             expect(where).toEqual({store_id: STORE_ID});
             expect(entity).toBeInstanceOf(StoreEntity);
             expect(entity).toMatchObject({
-                store_name: '룸리스 역삼점',
+                store_name: '바로방 역삼점',
                 owner_name: '김대표',
                 phone: '0298765432',
                 address: '서울시 강남구 역삼동',

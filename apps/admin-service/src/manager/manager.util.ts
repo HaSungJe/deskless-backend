@@ -101,7 +101,7 @@ export function toStaffDetail(entity: UserEntity): ManagerStaffDetailResultDto {
  * @returns 본문
  */
 export function staffRegisteredText(store_name: string, store_code: string, login_id: string, password: string): string {
-    return `[roomless] ${store_name} 업체 관리자 계정이 등록되었습니다. 업체코드 ${store_code} 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
+    return `[바로방] ${store_name} 업체 관리자 계정이 등록되었습니다. 업체코드 ${store_code} 아이디 ${login_id} 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
 }
 
 /**

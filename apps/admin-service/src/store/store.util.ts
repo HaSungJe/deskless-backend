@@ -227,7 +227,7 @@ export function buildUnavailablePeriodOverlapWhere(store_id: string, starts_at: 
  * @returns 본문
  */
 export function storeApprovedText(store_name: string): string {
-    return `[roomless] ${store_name} 입점이 승인되었습니다.`;
+    return `[바로방] ${store_name} 입점이 승인되었습니다.`;
 }
 
 /**

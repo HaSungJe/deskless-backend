@@ -14,7 +14,7 @@
 | `apps/scheduler/src/user/crontabs/user-leave-cleanup.crontab.ts` | moved (user-service → scheduler) | 클래스 주석만 수정 — 본문 · 잠금 키 그대로 |
 | `apps/scheduler/src/user/test/user-leave-cleanup.crontab.spec.ts` | moved | 제목 한 곳("다른 scheduler 인스턴스") |
 | `apps/scheduler/src/user/test/user.test-helper.ts` · `user.repository.spec.ts` | created | repository mock · `[SMOKE:data-access]` |
-| `compose.scheduler.yml` | created | scheduler × `SCHEDULER_REPLICAS`(기본 1), `roomless-data` 만, 쓰지 않는 비밀값 빈 값 |
+| `compose.scheduler.yml` | created | scheduler × `SCHEDULER_REPLICAS`(기본 1), `deskless-data` 만, 쓰지 않는 비밀값 빈 값 |
 | `nest-cli.json` · `package.json` · `Dockerfile` · `.env.example` | modified | scheduler 프로젝트 · 스크립트(build · start · docker · logs, docker:up/down 순서) · 주석 · `SCHEDULER_REPLICAS` · `DATABASE_CONNECTION_TIMEOUT_MS` |
 | `libs/common/src/exception/returned-exception.interceptor.ts` | created | 내부 HTTP 에서 반환된 `HttpException` 을 다시 throw → `CustomErrorFilter` |
 | `libs/common/src/utils/env.ts` | created | `readPositiveInt`(gateway `transport.util.ts` 에서 이동) |
@@ -26,7 +26,7 @@
 | `apps/user-service/src/user/test/user.test-helper.ts` · `user.repository.spec.ts` | modified | `findUsers` mock · 케이스 제거, `bootHttpPath` 에 `APP_INTERCEPTOR` |
 | `apps/gateway/src/modules/transport/transport.util.ts` · `command-stream.service.ts` · `internal-http.client.ts` · `test/internal-http.client.spec.ts` | modified | `readPositiveInt` 를 `@app/common/utils/env.js` 에서 가져온다, 케이스는 env.spec.ts 로 이동 |
 | `README.md` · `AGENTS.md` · `docs/{architecture,messaging,error-handling,data-layer,testing,conventions}.md` | modified | scheduler 서버 · 묶음 5개 · crontab 은 scheduler 에만 · 커밋해야 하는 실패는 return(RequiresNew 예외 삭제) · 연결 대기 env · smoke 적용처 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | Phase 5 진행 중 · build 완료 메모 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | Phase 5 진행 중 · build 완료 메모 |
 
 ## Tests Written
 build 규약상 실행하지 않았다 — `/beaver:test` 에서 실행한다.

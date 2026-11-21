@@ -179,7 +179,7 @@ export function internalHeaders(clientIp = '10.0.0.1', actor: Actor | null = nul
  * @returns 업체 행
  */
 export function storeRow(override: Record<string, unknown> = {}): Record<string, unknown> {
-    return {store_id: STORE_ID, store_code: STORE_CODE, store_name: '룸리스 강남점', store_state_id: 'ACTIVE', ...override};
+    return {store_id: STORE_ID, store_code: STORE_CODE, store_name: '바로방 강남점', store_state_id: 'ACTIVE', ...override};
 }
 
 /**
@@ -246,7 +246,7 @@ export function accountRow(override: Record<string, unknown> = {}): Record<strin
     return {
         user_id: STAFF_ID,
         store_id: STORE_ID,
-        store_name: '룸리스 강남점',
+        store_name: '바로방 강남점',
         store_code: STORE_CODE,
         store_state_id: 'ACTIVE',
         login_id: 'staff01',

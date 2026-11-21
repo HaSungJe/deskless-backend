@@ -1,4 +1,4 @@
-# Roadmap — roomless (무인 객실 대여 플랫폼 — 입점 업체가 객실을 운영하고 이용자가 지도에서 찾아 예약 · QR 입장 · 이용)
+# Roadmap — deskless (무인 객실 대여 플랫폼 — 입점 업체가 객실을 운영하고 이용자가 지도에서 찾아 예약 · QR 입장 · 이용)
 
 ## Direction
 
@@ -253,7 +253,7 @@ ship 완료 (2026-10-23, 커밋 f7c198f) — report: `.beaver/output/report/user
 |---|------|------|--------------|---------|--------|
 | 28 | admin-service 앱 | nest-cli 프로젝트 · 루트 모듈(`InternalAuthGuard` · `ReturnedExceptionInterceptor` · `MessagingModule.forService` · `SmsModule`) · 매니저 · 관리자 도메인 | 공유 DB 직접 · 마이그레이션 · 시드는 user-service 묶음 (결정 2026-10-23) | — | done(f7c198f) |
 | 29 | Docker 묶음 | `compose.admin-service.yml` · nginx LB(`admin-service.conf`) · 공용 네트워크 · `.env` 의 `ADMIN_SERVICE_REPLICAS`(기본 1) | — | 28 | done(f7c198f) |
-| 30 | 브로커 계정 | `BROKER_USER.ADMIN_SERVICE` · init.sh 권한(`q.admin.cmd` · `roomless.event`) · `broker:check` 대상 추가 | — | 28 | done(f7c198f) |
+| 30 | 브로커 계정 | `BROKER_USER.ADMIN_SERVICE` · init.sh 권한(`q.admin.cmd` · `deskless.event`) · `broker:check` 대상 추가 | — | 28 | done(f7c198f) |
 | 31 | 게이트웨이 연결 | `InternalHttpClient` 의 `InternalService 'admin'` · `ADMIN_SERVICE_URL` | — | 28 | done(f7c198f) |
 
 **Entry points**: `apps/admin-service/src/main.ts`(:3020) · `admin-service.module.ts` · 큐 `q.admin.cmd`(← `admin.#`) · `http://admin-service-lb:3020`.
@@ -540,7 +540,7 @@ build 완료 — report: `.beaver/output/report/api-log/api-log-report.md`. 마�
 ### 후순위 (별도 기획 — 이 트랙 밖)
 | # | Unit | Goal | Key decision | Depends | Status |
 |---|------|------|--------------|---------|--------|
-| — | notify-service | `roomless.event` 도메인 이벤트를 구독해 SMS 발송을 서비스에서 떼어낸다(그 전까지는 각 서비스가 `SmsSender` 포트를 직접 쓴다) | — | Phase 3 | 후순위 |
+| — | notify-service | `deskless.event` 도메인 이벤트를 구독해 SMS 발송을 서비스에서 떼어낸다(그 전까지는 각 서비스가 `SmsSender` 포트를 직접 쓴다) | — | Phase 3 | 후순위 |
 | — | 업체 정산 | 수수료 · 정산 주기 · 지급 내역 | — | Phase 17 | 후순위 |
 | — | 리뷰 · 평점 | 이용 완료 후 | — | Phase 19 | 후순위 |
 | — | 특정 날짜 특별영업 | 그 날만 영업시간을 바꾼다(임시휴무는 일시 예약불가 #98 로 당겼다) | — | Phase 11 | 후순위 |

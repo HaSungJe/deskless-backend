@@ -6,8 +6,8 @@
 # 실제 운영 브로커(Amazon MQ 등)를 쓰면 이 묶음은 띄우지 않는다 — 그 브로커에 init.sh 와 같은 계정 · 권한을 만들고
 # .env 의 RABBITMQ_HOST · RABBITMQ_PORT 를 그 주소로 둔다. 앱 쪽 설정은 그대로다.
 #
-# roomless-broker 네트워크에 붙는다. 관리 화면 http://localhost:15672 (관리자 계정 RABBITMQ_USER/PASSWORD)
-name: roomless-rabbitmq
+# deskless-broker 네트워크에 붙는다. 관리 화면 http://localhost:15672 (관리자 계정 RABBITMQ_USER/PASSWORD)
+name: deskless-rabbitmq
 
 x-logging: &logging
     driver: json-file
@@ -18,9 +18,9 @@ x-logging: &logging
 services:
     rabbitmq:
         image: rabbitmq:4-management-alpine
-        container_name: roomless-rabbitmq
+        container_name: deskless-rabbitmq
         # 노드 이름(rabbit@<hostname>)이 바뀌면 볼륨의 데이터를 못 읽으므로 고정한다
-        hostname: roomless-rabbitmq
+        hostname: deskless-rabbitmq
         environment:
             # 관리자 계정 — 관리 화면 · rabbitmq-init 전용. 앱은 쓰지 않는다
             RABBITMQ_DEFAULT_USER: '${RABBITMQ_USER:?.env 에 RABBITMQ_USER 가 필요합니다}'
@@ -61,9 +61,9 @@ services:
 
 networks:
     broker:
-        name: roomless-broker
+        name: deskless-broker
         external: true
 
 volumes:
     rabbitmq-data:
-        name: roomless-rabbitmq-data
+        name: deskless-rabbitmq-data

@@ -8,7 +8,7 @@ import {bootCommandPath, createStoreRepositoryMock, runCommand, StoreRepositoryM
 vi.mock('@app/common/utils/bcrypt.js', () => ({getBcrypt: vi.fn(), matchBcrypt: vi.fn()}));
 
 const DTO = {
-    store_name: '룸리스 강남점',
+    store_name: '바로방 강남점',
     business_number: '1234567890',
     owner_name: '홍길동',
     owner_phone: '01012345678',

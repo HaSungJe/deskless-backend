@@ -46,7 +46,7 @@
 | `compose.admin-service.yml` · `docker/nginx/admin-service.conf` | add | admin-service × N + LB |
 | `compose.{gateway,user-service,scheduler,rabbitmq}.yml` · `docker/rabbitmq/init.sh` · `scripts/check-broker-acl.mjs` · `Dockerfile` · `nest-cli.json` · `package.json` · `.env.example` | modify | admin-service 연결 · 계정 · 스크립트 |
 | `README.md` · `AGENTS.md` · `docs/*.md` | modify | 도메인 분리 · admin-service · libs/account · 그룹별 인증 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modify | Phase 7 을 이번에 함께, 결정 갱신 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modify | Phase 7 을 이번에 함께, 결정 갱신 |
 
 ## Code Changes
 
@@ -267,7 +267,7 @@ async changePassword(@PassportActor() actor: Actor, @Body() dto: ManagerPassword
 # compose.admin-service.yml — after (요지)
 services:
     admin-service:
-        image: roomless/admin-service
+        image: deskless/admin-service
         build: {context: ., args: {APP: admin-service}}
         environment:
             NODE_ENV: '${NODE_ENV:?…}'
@@ -291,7 +291,7 @@ services:
 ```sh
 # docker/rabbitmq/init.sh — after (추가)
 put "users/admin-service" "{\"password\":\"${RABBITMQ_ADMIN_SERVICE_PASSWORD}\",\"tags\":\"\"}"
-put "permissions/%2F/admin-service" '{"configure":"^(roomless\\.(cmd|event|dlx)|q\\.dead|q\\.admin\\.cmd)$","write":"^(roomless\\.(event|dlx)|q\\.dead|q\\.admin\\.cmd)$","read":"^(roomless\\.(cmd|dlx)|q\\.admin\\.cmd)$"}'
+put "permissions/%2F/admin-service" '{"configure":"^(deskless\\.(cmd|event|dlx)|q\\.dead|q\\.admin\\.cmd)$","write":"^(deskless\\.(event|dlx)|q\\.dead|q\\.admin\\.cmd)$","read":"^(deskless\\.(cmd|dlx)|q\\.admin\\.cmd)$"}'
 ```
 
 `docker:up` 순서: infra → user-service(마이그레이션) → admin-service → scheduler → gateway. 게이트웨이 compose 에 `ADMIN_SERVICE_URL: http://admin-service-lb:4002`.

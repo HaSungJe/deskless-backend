@@ -35,7 +35,7 @@
 | `apps/gateway/src/assets/sample/*.png` | new — 70개(`store-NN-P.png` 20 · `room-NN-G-P.png` 50, 생성기 결과) |
 | `nest-cli.json` | modified — gateway `assets`(PNG → dist) |
 | `scripts/sample-images.mjs` | new — PNG 생성기(node:zlib) |
-| `scripts/docker-network.mjs` | modified — 공용 볼륨 `roomless-files` 도 만든다 |
+| `scripts/docker-network.mjs` | modified — 공용 볼륨 `deskless-files` 도 만든다 |
 | `compose.gateway.yml` · `compose.user-service.yml` · `compose.admin-service.yml` | modified — 공용 볼륨 `/app/storage/files` · `FILE_STORAGE_DIR` 고정 |
 | `Dockerfile` | modified — `/app/storage/files` 를 `node` 소유로 |
 | `.gitignore` | modified — `/storage` |
@@ -47,7 +47,7 @@
 | `docs/integration.md` | modified — SMS 생략 · 내부 파일 저장소 · 샘플 키 |
 | `README.md` | modified — 외부 연동 · 환경 값 · 명령 · 가이드 · 구조 · Docker 볼륨 |
 | `AGENTS.md` | modified — 구조 트리 · 기본 데이터 시드 · 외부 연동(개발 모드 예외 · 파일 본문 규칙) · Docker · Checklist |
-| `C:/Users/timec/.claude/projects/C--workspace-roomless-backend/memory/no-mock-adapters.md` | modified — 사용자 결정 2026-11-15 예외 |
+| `C:/Users/timec/.claude/projects/C--workspace-deskless-backend/memory/no-mock-adapters.md` | modified — 사용자 결정 2026-11-15 예외 |
 | `.beaver/output/frontend/changes/2026-11-13-sample-data.md` | new — 프론트 안내(테스트 계정 · 업체코드 · 테스트 로그인 · 사진 · 업로드 호스트) |
 | `.beaver/output/frontend/changes/README.md` | modified — 목록 한 줄 |
 | `.beaver/output/report/seed/sample-data-report.md` | new (build) |
@@ -231,7 +231,7 @@ const PLANS_HOURLY: Record<SamplePlanType, boolean> = {HOURLY: true, NIGHT: fals
  */
 export const SAMPLE_STORES: SampleStore[] = [
     {
-        store_name: '룸리스 강남역점',
+        store_name: '바로방 강남역점',
         address: '서울 강남구 강남대로 396',
         address_detail: '5층',
         latitude: 37.4979,
@@ -250,7 +250,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 홍대입구점',
+        store_name: '바로방 홍대입구점',
         address: '서울 마포구 양화로 160',
         address_detail: '3층',
         latitude: 37.5572,
@@ -268,7 +268,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 잠실점',
+        store_name: '바로방 잠실점',
         address: '서울 송파구 올림픽로 240',
         address_detail: '7층',
         latitude: 37.5133,
@@ -287,7 +287,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 성수점',
+        store_name: '바로방 성수점',
         address: '서울 성동구 아차산로 100',
         address_detail: '2층',
         latitude: 37.5446,
@@ -305,7 +305,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 여의도점',
+        store_name: '바로방 여의도점',
         address: '서울 영등포구 여의대로 108',
         address_detail: '4층',
         latitude: 37.5259,
@@ -323,7 +323,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 종로점',
+        store_name: '바로방 종로점',
         address: '서울 종로구 종로 51',
         address_detail: '6층',
         latitude: 37.5703,
@@ -342,7 +342,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 신촌점',
+        store_name: '바로방 신촌점',
         address: '서울 서대문구 신촌로 83',
         address_detail: '4층',
         latitude: 37.5551,
@@ -360,7 +360,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 건대입구점',
+        store_name: '바로방 건대입구점',
         address: '서울 광진구 아차산로 243',
         address_detail: '5층',
         latitude: 37.5404,
@@ -379,7 +379,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 이태원점',
+        store_name: '바로방 이태원점',
         address: '서울 용산구 이태원로 177',
         address_detail: '3층',
         latitude: 37.5345,
@@ -397,7 +397,7 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
     {
-        store_name: '룸리스 합정점',
+        store_name: '바로방 합정점',
         address: '서울 마포구 양화로 45',
         address_detail: '8층',
         latitude: 37.5495,
@@ -823,7 +823,7 @@ export const PRIVATE_FILE_KEY_PREFIX = 'private/';
 /** 내부 파일 저장소 경로(게이트웨이) — AWS_S3_BUCKET 이 비면 업로드 · 열람 · 공개 파일이 이 아래다(`/files/upload` · `/files/download` · `/files/<키>`) */
 export const LOCAL_FILE_ROUTE = '/files';
 
-/** 내부 파일 저장소 폴더 기본값 — 실행 위치 기준(로컬은 저장소 루트, Docker 는 /app — 공용 볼륨 roomless-files), FILE_STORAGE_DIR 로 바꾼다 */
+/** 내부 파일 저장소 폴더 기본값 — 실행 위치 기준(로컬은 저장소 루트, Docker 는 /app — 공용 볼륨 deskless-files), FILE_STORAGE_DIR 로 바꾼다 */
 export const LOCAL_FILE_STORAGE_DIR_DEFAULT = 'storage/files';
 
 /** 내부 파일 저장소 업로드 한도(바이트) — 게이트웨이 앞 nginx(docker/nginx/gateway.conf client_max_body_size 10m)와 같다 */
@@ -979,7 +979,7 @@ export function localFileStorageDir(env: NodeJS.ProcessEnv = process.env): strin
  * @returns hex 서명
  */
 export function signLocalFileRequest(secret: string, request: LocalFileRequest): string {
-    return createHmac('sha256', secret).update(['roomless-local-file', request.method, request.key, request.content_type, String(request.expires)].join('\n')).digest('hex');
+    return createHmac('sha256', secret).update(['deskless-local-file', request.method, request.key, request.content_type, String(request.expires)].join('\n')).digest('hex');
 }
 
 /**
@@ -1029,7 +1029,7 @@ import type {LocalFileRequest} from './local-storage.util.js';
 
 /**
  * 파일 저장소 어댑터 — 내부 파일 저장소(AWS_S3_BUCKET 이 비었을 때 — 사용자 결정 2026-11-15). 실제로 저장 · 제공한다(가짜 저장소가 아니다).
- * 파일은 FILE_STORAGE_DIR(기본 storage/files — Docker 는 공용 볼륨 roomless-files)에 있고, 받기 · 내주기는 게이트웨이 /files(modules/local-file), 확인 · 삭제는 이 어댑터가 같은 폴더에서 한다.
+ * 파일은 FILE_STORAGE_DIR(기본 storage/files — Docker 는 공용 볼륨 deskless-files)에 있고, 받기 · 내주기는 게이트웨이 /files(modules/local-file), 확인 · 삭제는 이 어댑터가 같은 폴더에서 한다.
  * 업로드 · 열람 주소는 INTERNAL_API_TOKEN 으로 서명한다(S3 presigned 와 같은 쓰임 — 10분, 업로드는 Content-Type 까지). 키 · DB 행 모양은 S3 와 같다.
  * 세팅: docs/guides/aws-setup.md "AWS 없이 돌리기"
  */
@@ -1829,7 +1829,7 @@ function drawStoreDay(canvas, hue, rand) {
     }
     const sy = by + 240;
     fillRect(canvas, bx, sy, bw, 60, hsl(hue, 55, 36));
-    drawText(canvas, 'ROOMLESS', bx + (bw - textWidth('ROOMLESS', 6)) / 2, sy + 9, 6, WHITE);
+    drawText(canvas, 'DESKLESS', bx + (bw - textWidth('DESKLESS', 6)) / 2, sy + 9, 6, WHITE);
     fillRect(canvas, bx + 40, sy + 76, bw - 80, ground - sy - 76, hsl(hue, 15, 55));
     fillGradient(canvas, bx + 48, sy + 84, bw - 96, ground - sy - 84, hsl(200, 35, 72), hsl(200, 30, 52));
     fillRect(canvas, bx + bw / 2 - 50, sy + 84, 100, ground - sy - 84, hsl(200, 25, 40));
@@ -1867,7 +1867,7 @@ function drawStoreNight(canvas, hue, rand) {
     const sy = by + 240;
     fillRect(canvas, bx - 6, sy - 6, bw + 12, 72, hsl(hue, 70, 55), 0.35);
     fillRect(canvas, bx, sy, bw, 60, hsl(hue, 70, 50));
-    drawText(canvas, 'ROOMLESS', bx + (bw - textWidth('ROOMLESS', 6)) / 2, sy + 9, 6, WHITE);
+    drawText(canvas, 'DESKLESS', bx + (bw - textWidth('DESKLESS', 6)) / 2, sy + 9, 6, WHITE);
     fillGradient(canvas, bx + 48, sy + 84, bw - 96, ground - sy - 84, hsl(40, 80, 72), hsl(35, 70, 55));
     fillRect(canvas, bx + bw / 2 - 2, sy + 84, 4, ground - sy - 84, hsl(hue, 15, 30));
     fillRect(canvas, 70, 240, 10, ground - 240, hsl(220, 8, 40));
@@ -2057,7 +2057,7 @@ console.log(`[sample-images] ${count}개 · ${Math.round(bytes / 1024)}KB → ${
 
 ### Docker (공용 볼륨 — 내부 파일 저장소)
 
-게이트웨이(받기 · 내주기, 인스턴스 여러 대) · user-service · admin-service(확인 · 삭제)가 같은 폴더를 봐야 한다 → 공용 네트워크와 같은 방식(external — 따로 띄운 묶음끼리 공유)의 볼륨 `roomless-files`. compose 가 고정하는 서버 구성(컨테이너 안 경로)이라 `FILE_STORAGE_DIR` 은 compose 가 `/app/storage/files` 로 고정한다(.env 의 로컬 경로가 컨테이너로 새지 않게).
+게이트웨이(받기 · 내주기, 인스턴스 여러 대) · user-service · admin-service(확인 · 삭제)가 같은 폴더를 봐야 한다 → 공용 네트워크와 같은 방식(external — 따로 띄운 묶음끼리 공유)의 볼륨 `deskless-files`. compose 가 고정하는 서버 구성(컨테이너 안 경로)이라 `FILE_STORAGE_DIR` 은 compose 가 `/app/storage/files` 로 고정한다(.env 의 로컬 경로가 컨테이너로 새지 않게).
 
 ```js
 // scripts/docker-network.mjs — 변경 부분
@@ -2071,7 +2071,7 @@ console.log(`[sample-images] ${count}개 · ${Math.round(bytes / 1024)}KB → ${
  */
 
 /** 공용 볼륨 — 묶음끼리 같은 파일을 본다 */
-const VOLUMES = [{name: 'roomless-files', purpose: '내부 파일 저장소(AWS_S3_BUCKET 이 빌 때) — gateway · user-service · admin-service 의 /app/storage/files'}];
+const VOLUMES = [{name: 'deskless-files', purpose: '내부 파일 저장소(AWS_S3_BUCKET 이 빌 때) — gateway · user-service · admin-service 의 /app/storage/files'}];
 
 /**
  * 볼륨을 확인하고 없으면 만든다.
@@ -2084,7 +2084,7 @@ function ensureVolume(volume) {
         console.log(`· ${volume.name}: 이미 있음 — ${volume.purpose}`);
         return true;
     }
-    if (docker(['volume', 'create', '--label', 'roomless.volume=shared', volume.name]) === null) {
+    if (docker(['volume', 'create', '--label', 'deskless.volume=shared', volume.name]) === null) {
         console.log(`✗ ${volume.name}: 만들지 못함 — Docker 가 실행 중인지 확인`);
         return false;
     }
@@ -2103,7 +2103,7 @@ function ensureVolume(volume) {
 # compose.gateway.yml · compose.user-service.yml(user-service — migrate 는 아님) · compose.admin-service.yml(admin-service) — 같은 모양
         environment:
             # … 기존 그대로 …
-            # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 공용 볼륨 roomless-files 를 붙인 자리(서버 구성 — .env 값과 무관)
+            # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 공용 볼륨 deskless-files 를 붙인 자리(서버 구성 — .env 값과 무관)
             FILE_STORAGE_DIR: /app/storage/files
         volumes:
             - files:/app/storage/files
@@ -2111,14 +2111,14 @@ function ensureVolume(volume) {
 # 파일 끝
 volumes:
     files:
-        name: roomless-files
+        name: deskless-files
         external: true
 ```
-(머리 주석의 "네트워크" 설명 옆에 `볼륨 roomless-files : 내부 파일 저장소 — npm run docker:network 가 만든다` 한 줄.)
+(머리 주석의 "네트워크" 설명 옆에 `볼륨 deskless-files : 내부 파일 저장소 — npm run docker:network 가 만든다` 한 줄.)
 
 ```dockerfile
 # Dockerfile — 4. 실행 이미지, USER node 앞
-# 내부 파일 저장소 폴더 — 빈 공용 볼륨(roomless-files)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
+# 내부 파일 저장소 폴더 — 빈 공용 볼륨(deskless-files)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
 RUN mkdir -p /app/storage/files && chown -R node:node /app/storage
 USER node
 ```
@@ -2146,7 +2146,7 @@ AWS_S3_BUCKET=
 # 공개 파일 주소의 기준 — CloudFront 배포 주소 https://<배포>.cloudfront.net (S3 를 쓸 때. docs/guides/aws-setup.md). 비어 있으면 공개 파일 주소 요청이 실패한다
 AWS_S3_PUBLIC_URL=
 # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 비우면 storage/files(실행 위치 기준 — 로컬은 저장소 루트). gateway · user-service · admin-service 가 같은 폴더를 봐야 한다.
-# Docker 는 compose 가 공용 볼륨 roomless-files 자리(/app/storage/files)로 고정한다
+# Docker 는 compose 가 공용 볼륨 deskless-files 자리(/app/storage/files)로 고정한다
 FILE_STORAGE_DIR=
 
 # ── 게이트웨이 공개 주소 ─────────────────────
@@ -2171,7 +2171,7 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 | `AWS_S3_BUCKET` | 파일은 **내부 파일 저장소** — 업로드 주소 API 가 게이트웨이 `GATEWAY_PUBLIC_URL/files/upload?…`(서명 · 10분)를 주고, 프론트는 S3 때와 똑같이 같은 `Content-Type` 으로 PUT 한다(10MB 까지). 공개 사진은 `GATEWAY_PUBLIC_URL/files/<키>`, 사업자등록증은 서명된 10분 주소. 키 · DB 행 모양은 S3 와 같다 |
 
 - 필요한 값: `GATEWAY_PUBLIC_URL`(브라우저가 게이트웨이에 닿는 주소) · `INTERNAL_API_TOKEN`(서명 — 이미 필수)
-- 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), Docker 는 공용 볼륨 `roomless-files`(`npm run docker:network` 가 만든다 — gateway · user-service · admin-service 가 같이 본다)
+- 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), Docker 는 공용 볼륨 `deskless-files`(`npm run docker:network` 가 만든다 — gateway · user-service · admin-service 가 같이 본다)
 - 나중에 S3 를 켜면 내부 저장소에 올린 파일은 S3 에 없다(옮기지 않는다) — 그 사진은 다시 올린다
 - IAM 역할만으로 돌리는 배포는 키가 비어 SMS 가 생략된다 — SMS 를 보내려면 키를 넣는다(S3 는 버킷만 있으면 역할로 된다)
 ```
@@ -2179,7 +2179,7 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 ```md
 <!-- docs/integration.md — SMS 절 · 파일 저장 절에 추가 -->
 - **SMS 생략(AWS 미설정 개발 모드 — 사용자 결정 2026-11-15)**: `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 가 비면 SnsSmsSender 가 SNS 를 부르지 않고 받는 번호 · 본문을 경고 로그로 남긴 뒤 성공으로 끝난다(인증번호 · 임시 비밀번호는 로그에서 본다). 서비스는 그대로 마지막 단계에서 `send` 를 부른다.
-- **내부 파일 저장소(AWS 미설정 개발 모드)**: `AWS_S3_BUCKET` 이 비면 StorageModule 이 `LocalStorageGateway` 를 고른다 — 실제로 저장 · 제공하는 두 번째 어댑터(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명, 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(private/ 는 공개 경로로 안 나감). 받기 · 내주기는 게이트웨이 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR` · Docker 공용 볼륨 `roomless-files`). S3 일 때 "파일 본문은 게이트웨이를 거치지 않는다" 는 그대로이고, 내부 저장소일 때는 게이트웨이가 저장소다(브로커 · 서비스는 거치지 않음).
+- **내부 파일 저장소(AWS 미설정 개발 모드)**: `AWS_S3_BUCKET` 이 비면 StorageModule 이 `LocalStorageGateway` 를 고른다 — 실제로 저장 · 제공하는 두 번째 어댑터(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명, 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(private/ 는 공개 경로로 안 나감). 받기 · 내주기는 게이트웨이 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR` · Docker 공용 볼륨 `deskless-files`). S3 일 때 "파일 본문은 게이트웨이를 거치지 않는다" 는 그대로이고, 내부 저장소일 때는 게이트웨이가 저장소다(브로커 · 서비스는 거치지 않음).
 ```
 ```md
 <!-- docs/guides/sample-data.md — 새 파일 전체 -->
@@ -2201,16 +2201,16 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 | # | 업체 | 위치 | 운영 | 판매 | 객실 그룹(호실 수) |
 |---|---|---|---|---|---|
-| 01 | 룸리스 강남역점 | 강남구 강남대로 396 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(5) · 디럭스(4) · 스위트(3 — 숙박만) |
-| 02 | 룸리스 홍대입구점 | 마포구 양화로 160 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 트윈(3) |
-| 03 | 룸리스 잠실점 | 송파구 올림픽로 240 | 매일 12:00 ~ 다음 날 10:00 | 시간 이용(3시간) · 1박 | 스탠다드(5) · 디럭스(4) · 패밀리(3) |
-| 04 | 룸리스 성수점 | 성동구 아차산로 100 | 24시간 | 시간 이용(4시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(3) |
-| 05 | 룸리스 여의도점 | 영등포구 여의대로 108 | 10:00 ~ 23:00 · 일요일 휴무 · 브레이크 15:00 ~ 16:00 | 시간 이용(2시간)만 | 스탠다드(5) · 비즈니스(4) |
-| 06 | 룸리스 종로점 | 종로구 종로 51 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(4) · 스위트(3 — 숙박만) |
-| 07 | 룸리스 신촌점 | 서대문구 신촌로 83 | 매일 14:00 ~ 다음 날 12:00 | 시간 이용(3시간) · 1박 | 스탠다드(5) · 트윈(3) |
-| 08 | 룸리스 건대입구점 | 광진구 아차산로 243 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(5) · 디럭스(4) · 패밀리(3) |
-| 09 | 룸리스 이태원점 | 용산구 이태원로 177 | 10:00 ~ 22:00 · 월요일 휴무 | 시간 이용(3시간)만 | 스탠다드(4) · 디럭스(3) |
-| 10 | 룸리스 합정점 | 마포구 양화로 45 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(4) · 스위트(3 — 숙박만) |
+| 01 | 바로방 강남역점 | 강남구 강남대로 396 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(5) · 디럭스(4) · 스위트(3 — 숙박만) |
+| 02 | 바로방 홍대입구점 | 마포구 양화로 160 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 트윈(3) |
+| 03 | 바로방 잠실점 | 송파구 올림픽로 240 | 매일 12:00 ~ 다음 날 10:00 | 시간 이용(3시간) · 1박 | 스탠다드(5) · 디럭스(4) · 패밀리(3) |
+| 04 | 바로방 성수점 | 성동구 아차산로 100 | 24시간 | 시간 이용(4시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(3) |
+| 05 | 바로방 여의도점 | 영등포구 여의대로 108 | 10:00 ~ 23:00 · 일요일 휴무 · 브레이크 15:00 ~ 16:00 | 시간 이용(2시간)만 | 스탠다드(5) · 비즈니스(4) |
+| 06 | 바로방 종로점 | 종로구 종로 51 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(4) · 스위트(3 — 숙박만) |
+| 07 | 바로방 신촌점 | 서대문구 신촌로 83 | 매일 14:00 ~ 다음 날 12:00 | 시간 이용(3시간) · 1박 | 스탠다드(5) · 트윈(3) |
+| 08 | 바로방 건대입구점 | 광진구 아차산로 243 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(5) · 디럭스(4) · 패밀리(3) |
+| 09 | 바로방 이태원점 | 용산구 이태원로 177 | 10:00 ~ 22:00 · 월요일 휴무 | 시간 이용(3시간)만 | 스탠다드(4) · 디럭스(3) |
+| 10 | 바로방 합정점 | 마포구 양화로 45 | 24시간 | 시간 이용(3시간) · 1박 · 연박 | 스탠다드(4) · 디럭스(4) · 스위트(3 — 숙박만) |
 
 - 모두 활성 · 영업 중, 업체 사진 2장 · 그룹 사진 2장, 호실은 모두 예약가능. 1박 22:00 ~ 09:00 · 연박 15:00 ~ 11:00(1 ~ 30박) · 연장 최대 3회 · 예약 가능 72시간 · 100% 환불 마감 60분 · 마감 뒤 50%(입점 승인 기본값과 같다)
 - 그룹은 층이 다르다(2층 · 3층 · 4층, 호실명 `201` · `301` …). 요금은 [sample-seed.data.ts](../../libs/database/src/seeder/sample-seed.data.ts)
@@ -2223,16 +2223,16 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 | # | 업체 | 업체코드 |
 |---|---|---|
-| 01 | 룸리스 강남역점 | `5a3e0200000000000000000000000001` |
-| 02 | 룸리스 홍대입구점 | `5a3e0200000000000000000000000002` |
-| 03 | 룸리스 잠실점 | `5a3e0200000000000000000000000003` |
-| 04 | 룸리스 성수점 | `5a3e0200000000000000000000000004` |
-| 05 | 룸리스 여의도점 | `5a3e0200000000000000000000000005` |
-| 06 | 룸리스 종로점 | `5a3e0200000000000000000000000006` |
-| 07 | 룸리스 신촌점 | `5a3e0200000000000000000000000007` |
-| 08 | 룸리스 건대입구점 | `5a3e0200000000000000000000000008` |
-| 09 | 룸리스 이태원점 | `5a3e0200000000000000000000000009` |
-| 10 | 룸리스 합정점 | `5a3e0200000000000000000000000010` |
+| 01 | 바로방 강남역점 | `5a3e0200000000000000000000000001` |
+| 02 | 바로방 홍대입구점 | `5a3e0200000000000000000000000002` |
+| 03 | 바로방 잠실점 | `5a3e0200000000000000000000000003` |
+| 04 | 바로방 성수점 | `5a3e0200000000000000000000000004` |
+| 05 | 바로방 여의도점 | `5a3e0200000000000000000000000005` |
+| 06 | 바로방 종로점 | `5a3e0200000000000000000000000006` |
+| 07 | 바로방 신촌점 | `5a3e0200000000000000000000000007` |
+| 08 | 바로방 건대입구점 | `5a3e0200000000000000000000000008` |
+| 09 | 바로방 이태원점 | `5a3e0200000000000000000000000009` |
+| 10 | 바로방 합정점 | `5a3e0200000000000000000000000010` |
 
 - **이용자** — `sns_id` `KAKAO` · `sns_user_id` `sample-user-01`, 닉네임 `테스트 이용자`, 휴대폰 인증 완료. 이용자는 SNS 로만 로그인하므로 카카오 로그인 창으로는 이 계정에 들어갈 수 없다 — `POST /api/v1/user-service/user/login` 에 `{"sns_id": "KAKAO", "sns_user_id": "sample-user-01"}` 를 바로 보낸다(프론트의 개발용 테스트 로그인)
 
@@ -2256,7 +2256,7 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 <!-- docs/architecture.md — 게이트웨이 구성 · Docker 절에 추가 -->
 - 게이트웨이 인프라 `modules/local-file` — `AWS_S3_BUCKET` 이 비면 `/files`(서명된 업로드 받기 · 비공개 열람 · 공개 파일)를 HTTP 앱에 직접 붙인다(문 소켓과 같은 HttpAdapterHost 방식, Swagger 밖).
-- 공용 볼륨 `roomless-files`(external — `npm run docker:network` 가 네트워크와 함께 만든다) — gateway · user-service · admin-service 의 `/app/storage/files`(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 둔다.
+- 공용 볼륨 `deskless-files`(external — `npm run docker:network` 가 네트워크와 함께 만든다) — gateway · user-service · admin-service 의 `/app/storage/files`(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 둔다.
 ```
 
 ```md
@@ -2267,19 +2267,19 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 README.md (같은 변경):
 - 외부 연동 줄(:11) — "mock 없이 실제 서비스에 붙는 코드" 뒤에: AWS 값을 비우면 AWS 없이 돈다 — SMS 는 보내지 않고 로그에 남기고(인증번호 · 임시 비밀번호는 로그에서), 파일은 게이트웨이 내부 파일 저장소(`/files` — `GATEWAY_PUBLIC_URL`)에 올린다. 테스트 데이터 사진은 게이트웨이 `/sample/` — [docs/guides/aws-setup.md](docs/guides/aws-setup.md) "AWS 없이 돌리기" · [docs/guides/sample-data.md](docs/guides/sample-data.md)
 - 환경 값 안내(:53) — AWS 줄을 "비워도 서버는 뜨고 SMS 는 로그로, 파일은 내부 파일 저장소로" 로 고치고, `GATEWAY_PUBLIC_URL`(게이트웨이 공개 주소 — 내부 파일 저장소 · 샘플 사진 주소) · `SEED_SAMPLE_DATA=1`(테스트 데이터 — 개발 · 테스트 DB 만, 계정 · 업체코드는 가이드) 줄
-- Docker 표 · 설명 — `npm run docker:network` 가 공용 볼륨 `roomless-files` 도 만든다
+- Docker 표 · 설명 — `npm run docker:network` 가 공용 볼륨 `deskless-files` 도 만든다
 - 명령에 `npm run sample:images`(샘플 사진 다시 그리기)
 - 가이드 목록(:99 · :127)에 테스트 데이터 가이드
 - 구조(게이트웨이 · scripts)에 `modules/local-file` · `assets/sample/` · `sample-images.mjs`, `storage/`(로컬 업로드 — git 제외)
 
 AGENTS.md (같은 변경):
-- Architecture 트리 gateway: `│   ├── modules/local-file/   # 내부 파일 저장소 경로(/files — AWS_S3_BUCKET 이 빌 때만): 서명된 업로드 받기 · 비공개 열람 · 공개 파일 — 폴더는 user-service · admin-service 와 공유(FILE_STORAGE_DIR · Docker 공용 볼륨 roomless-files)`, `│   ├── assets/sample/        # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, /sample/ 정적 경로 · nest-cli assets 로 dist 복사)`, `config/` 줄에 `sample-image.config.ts`
+- Architecture 트리 gateway: `│   ├── modules/local-file/   # 내부 파일 저장소 경로(/files — AWS_S3_BUCKET 이 빌 때만): 서명된 업로드 받기 · 비공개 열람 · 공개 파일 — 폴더는 user-service · admin-service 와 공유(FILE_STORAGE_DIR · Docker 공용 볼륨 deskless-files)`, `│   ├── assets/sample/        # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, /sample/ 정적 경로 · nest-cli assets 로 dist 복사)`, `config/` 줄에 `sample-image.config.ts`
 - libs/integration 줄: 파일 저장(STORAGE_GATEWAY · S3 + CloudFront, 버킷이 비면 내부 파일 저장소 LocalStorageGateway)
 - scripts 줄: `sample-images.mjs(테스트 데이터 사진 생성)` · `docker-network.mjs(공용 네트워크 · 볼륨)`
 - Key Patterns "기본 데이터 시드" 끝: `테스트 데이터(업체 10 · 객실 · 업체 총관리자 · 이용자 1)는 sample-seed.data.ts · sample-seed.targets.ts 의 SAMPLE_SEED_TARGETS 가 SEED_TARGETS 끝에서 SEED_SAMPLE_DATA=1 일 때만 고정 ID(sampleId)로 넣는다 — 운영 DB 에서는 켜지 않는다(docs/guides/sample-data.md)`
 - 외부 연동 첫 줄 `mock · 가짜 어댑터를 두지 않는다 …` 를: `mock · 가짜 어댑터를 두지 않는다. 실제 서비스 어댑터 + 세팅 가이드(docs/guides/)로 만든다. **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: AWS_S3_BUCKET 이 비면 STORAGE_GATEWAY 는 내부 파일 저장소(LocalStorageGateway — 실제로 저장 · 제공, 게이트웨이 /files), AWS 키가 비면 SMS 는 보내지 않고 받는 번호 · 본문을 로그에 남긴 뒤 성공. 그 밖(토스 · Redis)은 세팅 전에는 .env 값이 비어 요청만 실패한다(부팅은 된다)` 로
 - 외부 연동 사진 줄 `파일 본문은 게이트웨이 · 브로커를 거치지 않는다` 를: `S3 면 파일 본문은 게이트웨이 · 브로커를 거치지 않는다(presigned URL). 내부 파일 저장소면 게이트웨이 /files 가 저장소다(서명된 주소 · 같은 PUT 방식 — 브로커 · 서비스는 거치지 않음)` 로, 열람 주소 줄에 `내부 파일 저장소는 공개 GATEWAY_PUBLIC_URL/files/<키>, 비공개 서명된 /files/download`, 그리고 `저장 키가 sample/ 이면(테스트 데이터 사진) 어느 어댑터든 공개 주소 GATEWAY_PUBLIC_URL/sample/…, 삭제는 건너뜀`
-- Docker 줄: 공용 볼륨 `roomless-files`(external — docker:network) · 세 앱 `/app/storage/files`
+- Docker 줄: 공용 볼륨 `deskless-files`(external — docker:network) · 세 앱 `/app/storage/files`
 - Checklist 외부 연동 줄: `mock · 가짜 어댑터 없음(실제 어댑터 + docs/guides/ 가이드 — AWS 미설정 개발 모드 예외: 내부 파일 저장소 · SMS 로그)`, `파일은 STORAGE_GATEWAY 업로드 주소(S3 presigned 또는 내부 저장소 서명 주소 — 파일 본문을 브로커 · 서비스로 보내지 않음)`
 
 메모리(사용자 auto-memory) `no-mock-adapters.md` — 본문 끝에 추가:
@@ -2311,16 +2311,16 @@ AGENTS.md (같은 변경):
 
 | # | 업체 | 업체코드 |
 |---|---|---|
-| 01 | 룸리스 강남역점 | `5a3e0200000000000000000000000001` |
-| 02 | 룸리스 홍대입구점 | `5a3e0200000000000000000000000002` |
-| 03 | 룸리스 잠실점 | `5a3e0200000000000000000000000003` |
-| 04 | 룸리스 성수점 | `5a3e0200000000000000000000000004` |
-| 05 | 룸리스 여의도점 | `5a3e0200000000000000000000000005` |
-| 06 | 룸리스 종로점 | `5a3e0200000000000000000000000006` |
-| 07 | 룸리스 신촌점 | `5a3e0200000000000000000000000007` |
-| 08 | 룸리스 건대입구점 | `5a3e0200000000000000000000000008` |
-| 09 | 룸리스 이태원점 | `5a3e0200000000000000000000000009` |
-| 10 | 룸리스 합정점 | `5a3e0200000000000000000000000010` |
+| 01 | 바로방 강남역점 | `5a3e0200000000000000000000000001` |
+| 02 | 바로방 홍대입구점 | `5a3e0200000000000000000000000002` |
+| 03 | 바로방 잠실점 | `5a3e0200000000000000000000000003` |
+| 04 | 바로방 성수점 | `5a3e0200000000000000000000000004` |
+| 05 | 바로방 여의도점 | `5a3e0200000000000000000000000005` |
+| 06 | 바로방 종로점 | `5a3e0200000000000000000000000006` |
+| 07 | 바로방 신촌점 | `5a3e0200000000000000000000000007` |
+| 08 | 바로방 건대입구점 | `5a3e0200000000000000000000000008` |
+| 09 | 바로방 이태원점 | `5a3e0200000000000000000000000009` |
+| 10 | 바로방 합정점 | `5a3e0200000000000000000000000010` |
 
 - **총관리자** — `admin` / `1234`(첫 로그인 때 비밀번호 변경)
 - **둘러보기 시험 위치** — 업체는 서울(강남역 · 홍대입구 · 잠실 · 성수 · 여의도 · 종각 · 신촌 · 건대입구 · 이태원 · 합정). 반경 검색 기준을 서울시청(37.5665, 126.9780) 근처로 두면 여러 곳이 잡힌다

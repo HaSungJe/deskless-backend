@@ -1,7 +1,7 @@
 import type {Actor} from './actor.js';
 
 /**
- * RabbitMQ 메시지 봉투 — 명령(roomless.cmd)과 결과(roomless.event)가 같은 모양을 쓴다.
+ * RabbitMQ 메시지 봉투 — 명령(deskless.cmd)과 결과(deskless.event)가 같은 모양을 쓴다.
  * 모든 키는 snake_case.
  */
 export interface MessageEnvelope<T> {

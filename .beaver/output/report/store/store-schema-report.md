@@ -23,7 +23,7 @@
 | `docs/data-layer.md` | modified | 엔티티 트리 · 제약명 `CHK_<Model>_<내용>` · 타입(하루 안 시각 `time` · 좌표 `double precision`) · 룩업 목록 · 서비스 간 FK 예(`t_store_application.user_id`) |
 | `AGENTS.md` | modified | Data Layer 엔티티 줄 — `@Check('CHK_…')` · `time` · `double precision` |
 | `.beaver/memory/data-layer.md` · `MEMORY.md` | created · modified | 영업시간은 휴무가 아니면 open_time · close_time 세트(사용자 결정 2026-10-24) |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified | Phase 8 유닛 상태 |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified | Phase 8 유닛 상태 |
 | `README.md` | 변경 없음(확인) | 테이블 목록을 두지 않는다(README.md:69 은 `entities/<domain>/` 경로만) |
 
 ## Tests Written

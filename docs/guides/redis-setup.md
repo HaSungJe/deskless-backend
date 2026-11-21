@@ -17,11 +17,11 @@
    `npm run docker:infra` · `npm run docker:up` 도 redis 를 함께 띄운다.
 3. 확인한다.
    ```bash
-   docker exec roomless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'   # PONG
+   docker exec deskless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping'   # PONG
    ```
    각 앱 로그에 `Redis 연결됨` 이 보이면 붙은 것이다.
 4. 앱을 로컬(`npm run start:*`)로 돌리면 hosts 파일에 `127.0.0.1 redis` 를 넣는다(postgres · rabbitmq 와 같은 줄에 둬도 된다).
-5. 내린다 — `docker compose -f compose.redis.yml down`(데이터는 볼륨 `roomless-redis-data` 에 남는다). 데이터까지 지우려면 `docker volume rm roomless-redis-data`.
+5. 내린다 — `docker compose -f compose.redis.yml down`(데이터는 볼륨 `deskless-redis-data` 에 남는다). 데이터까지 지우려면 `docker volume rm deskless-redis-data`.
 
 - 비밀번호를 바꿀 때는 `.env` 의 `REDIS_PASSWORD` 와 `REDIS_URL` 을 함께 바꾸고 `docker compose -f compose.redis.yml up -d --force-recreate` 후 Redis 를 쓰는 앱(gateway · user-service · admin-service · scheduler)을 다시 띄운다.
 - 영속: `appendonly yes` · `appendfsync everysec` — 최대 1초 분량만 잃을 수 있다.
@@ -42,7 +42,7 @@
 | 채널 `door-commands` | `{"store_id", "room_id", "command": "open"}` · `{"store_id", "command": "disconnect"}` | 업체 관리자의 바로 열기 → 그 업체 소켓에 `door.open` / 업체 문 시크릿 변경 → 그 업체 소켓을 모두 끊기 — gateway 가 구독한다 |
 
 ```bash
-docker exec -it roomless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli'
+docker exec -it deskless-redis sh -c 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli'
 GET door-qr:<room_id>
 GET door-opened:<room_id>
 PTTL door-qr:<room_id>        # 남은 유효 시간(ms)
@@ -57,8 +57,8 @@ SUBSCRIBE door-commands       # 바로 열기 명령 지켜보기
 
 | 증상 | 확인 |
 |---|---|
-| 호실 목록 · 바로 열기 · 내 예약 QR · 문 소켓 QR 확인이 503 `상태 저장소에 연결할 수 없습니다` | Redis 가 떠 있는지(`docker ps`), `REDIS_URL` 주소 · 비밀번호, 같은 네트워크(`roomless-data`)인지, 그 앱 로그의 `Redis 오류` |
-| 바로 열기는 200 인데 문 프로그램에 `door.open` 이 안 간다 | gateway 로그의 `Redis 구독 실패` · gateway 가 `roomless-data` 에 붙어 있는지, `SUBSCRIBE door-commands` 로 메시지가 나가는지 |
+| 호실 목록 · 바로 열기 · 내 예약 QR · 문 소켓 QR 확인이 503 `상태 저장소에 연결할 수 없습니다` | Redis 가 떠 있는지(`docker ps`), `REDIS_URL` 주소 · 비밀번호, 같은 네트워크(`deskless-data`)인지, 그 앱 로그의 `Redis 오류` |
+| 바로 열기는 200 인데 문 프로그램에 `door.open` 이 안 간다 | gateway 로그의 `Redis 구독 실패` · gateway 가 `deskless-data` 에 붙어 있는지, `SUBSCRIBE door-commands` 로 메시지가 나가는지 |
 | 문 소켓 `door.verified` 가 계속 `ok: false` | `GET door-qr:<room_id>` 가 비었으면 이용 시간이 아니거나 QR 이 아직 안 쓰였다 — 내 예약 QR 을 한 번 열거나 scheduler 다음 회차(1분)를 기다린다 |
 | 부팅 경고 `REDIS_URL 이 비어 있어` | `.env` 의 `REDIS_URL` |
 | 로그에 `WRONGPASS` · `NOAUTH` | `REDIS_URL` 의 비밀번호가 `REDIS_PASSWORD` 와 다르다 |

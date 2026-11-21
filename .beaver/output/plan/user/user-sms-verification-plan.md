@@ -57,7 +57,7 @@
 | `README.md` | modified — user-service 기능 · 하루 발송 한도 env |
 | `AGENTS.md` | modified — Data Layer 의 컬럼 이름 규칙 · Transaction 예외(RequiresNew) · 외부 연동 첫 사용처 · Auth 의 `is_phone_verified` |
 | `docs/data-layer.md` · `docs/architecture.md` · `docs/testing.md` · `docs/integration.md` | modified — 컬럼 이름 규칙 · 예시 · RequiresNew 예외 · `database → common` 의존 · `createSmsSenderMock` · 첫 사용처 |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified — #26 · #27 을 Phase 4 로 이동, 결정 반영 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified — #26 · #27 을 Phase 4 로 이동, 결정 반영 |
 | `apps/gateway/src/api/v1/user/user.controller.ts` · `compose.*.yml` · `Dockerfile` | 변경 없음 — 로그인 결과는 내부 HTTP 그대로 전달되고, env 는 `env_file: .env` 로 들어간다 |
 | `apps/user-service/src/user/user.util.ts` 의 `issueAccessAndRefresh` | 변경 없음 — refreshToken 은 이미 `365d` |
 
@@ -1106,7 +1106,7 @@ export function buildSmsVerification(input: SmsVerificationInput): SmsVerificati
  * @returns 본문
  */
 export function smsVerificationText(code: string): string {
-    return `[roomless] 인증번호 [${code}] — ${SMS_CODE_TTL_MINUTES}분 안에 입력해주세요.`;
+    return `[바로방] 인증번호 [${code}] — ${SMS_CODE_TTL_MINUTES}분 안에 입력해주세요.`;
 }
 
 /**
@@ -1116,7 +1116,7 @@ export function smsVerificationText(code: string): string {
  * @returns 본문
  */
 export function temporaryPasswordText(password: string): string {
-    return `[roomless] 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
+    return `[바로방] 임시 비밀번호 ${password} — 로그인 후 비밀번호를 바꿔주세요.`;
 }
 
 // toUserAuthUserResult — 끝에 한 줄 추가
@@ -1746,7 +1746,7 @@ SMS_VERIFICATION_DAILY_LIMIT=10
 +> 첫 사용처는 user-service 의 휴대폰 SMS 인증 · 아이디 찾기 · 비밀번호 초기화다(`SmsModule`). ...
 ```
 
-로드맵(`.beaver/output/roadmap/roomless-roadmap.md`) — build 때 상태 · 구조를 반영한다.
+로드맵(`.beaver/output/roadmap/deskless-roadmap.md`) — build 때 상태 · 구조를 반영한다.
 - Phase 4 표에 #26 · #27 을 옮긴다(유닛 5개). #21 · #22 문구를 확정 결정으로 바꾸고, 그래프의 유닛 수를 고친다.
 - Phase 5 는 #24 · #25 만 남는다(유닛 2개). #25 에서 "일반 가입 휴대폰 필수" 를 지운다.
 - Open Decisions "휴대폰 인증 규칙 · 비밀번호 초기화 방식" 을 닫힘으로 바꾼다.
@@ -1791,7 +1791,7 @@ SMS_VERIFICATION_DAILY_LIMIT=10
 ```
 [SUCCESS]  발송 — findUser(본인 · phone_verified_at null) → findUser({phone}) null → countSmsVerifications({phone, created_at: MoreThanOrEqual(kstDayStart(FIXED_TIME))}) 9
            → insertSmsVerification 1회(SmsVerificationEntity · purpose PHONE_VERIFY · user_id · phone · code_hash = sha256Hex('123456') · attempt 0 · expires_at = FIXED_TIME + 5분 · ip '10.0.0.1')
-           → sms.send({to:'01012345678', text: '[roomless] 인증번호 [123456] — 5분 안에 입력해주세요.'}) · insert 다음에 send(invocationCallOrder) · done {sms_verification_id: insert 한 엔티티의 ID, expires_at}
+           → sms.send({to:'01012345678', text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'}) · insert 다음에 send(invocationCallOrder) · done {sms_verification_id: insert 한 엔티티의 ID, expires_at}
 [FAIL:service]  이미 인증한 회원 → 400 '이미 휴대폰 인증을 마쳤습니다.' · count · insert · send 미호출
 [FAIL:duplicate] 다른 계정이 인증한 번호 → 400 '이미 가입된 번호입니다.' + validation_errors [{property:'phone'}] · insert · send 미호출
 [FAIL:business] 오늘 이미 10건(env 없음 → 10) → 429 '오늘은 이 번호로 …' · insert · send 미호출 / SMS_VERIFICATION_DAILY_LIMIT='3' 이면 3건에서 429
@@ -1811,7 +1811,7 @@ SMS_VERIFICATION_DAILY_LIMIT=10
 [SUCCESS]  발송 — findUser({phone, state_id: In(['ACTIVE','BLOCK','LEAVE_WAIT'])}) → count → insert(purpose FIND_LOGIN_ID · user_id = 찾은 회원) → send · done {sms_verification_id, expires_at}
 [FAIL:service]  그 번호의 회원 없음 → 404 '일치하는 회원 정보가 없습니다.' · insert · send 미호출
 [FAIL:business] 하루 한도 → 429
-[SUCCESS]  확인 — findSmsVerification({sms_verification_id, sms_purpose_id:'FIND_LOGIN_ID'}) → findUser({user_id: 기록의 user_id, state_id: In([...])}) 일반 계정 → done {login_id:'roomless_01', sns_id:null, created_at: 회원 created_at 의 ISO 문자열}
+[SUCCESS]  확인 — findSmsVerification({sms_verification_id, sms_purpose_id:'FIND_LOGIN_ID'}) → findUser({user_id: 기록의 user_id, state_id: In([...])}) 일반 계정 → done {login_id:'deskless_01', sns_id:null, created_at: 회원 created_at 의 ISO 문자열}
 [SUCCESS]  확인 — SNS 계정 → done {login_id:null, sns_id:'KAKAO', created_at}
 [FAIL:service]  인증 ID 의 기록 없음 → 404 · consume 미호출 / 그 기록의 회원이 탈퇴 완료 → 404 · consume 미호출
 [FAIL:validation] 불일치 → 400 · updateSmsVerification 미호출
@@ -1825,7 +1825,7 @@ SMS_VERIFICATION_DAILY_LIMIT=10
 [FAIL:business] 하루 한도 → 429
 [SUCCESS]  확인 — findSmsVerification({sms_verification_id, sms_purpose_id:'PASSWORD_RESET'}) → findUser({user_id: 기록의 user_id, state_id: In([...])}) → consume → 일치
            → updateSmsVerification verified_at → getBcrypt('Abc123def4') → updateUser({user_id}, {login_pw: 해시, is_password_change_required: 1})
-           → sms.send({to: 기록의 phone, text: '[roomless] 임시 비밀번호 Abc123def4 — 로그인 후 비밀번호를 바꿔주세요.'}) · updateUser 다음에 send(마지막) · done null
+           → sms.send({to: 기록의 phone, text: '[바로방] 임시 비밀번호 Abc123def4 — 로그인 후 비밀번호를 바꿔주세요.'}) · updateUser 다음에 send(마지막) · done null
 [FAIL:service]  인증 ID 의 기록 없음 → 404 · findUser · consume 미호출 / 그 기록의 회원이 탈퇴 완료 → 404 · consume 미호출
 [FAIL:validation] 불일치 → 400 · getBcrypt · updateUser · send 미호출
 ```

@@ -14,7 +14,7 @@
 
 ## Prerequisites
 - [x] `t_api_log` 엔티티 · 테이블(`libs/database/src/entities/api-log/api-log.entity.ts:12` · `1791903600000-Init.ts:16` · `1792477492198-RenameColumns.ts:5`) — PK `(api_log_id, created_at)` 라 파티션 키 조건을 이미 만족
-- [x] 게이트웨이 → postgres 길 — 게이트웨이는 이미 `roomless-data` 네트워크에 있다(`compose.gateway.yml:78`, postgres `compose.postgres.yml:30`)
+- [x] 게이트웨이 → postgres 길 — 게이트웨이는 이미 `deskless-data` 네트워크에 있다(`compose.gateway.yml:78`, postgres `compose.postgres.yml:30`)
 
 ---
 
@@ -772,7 +772,7 @@ export class GatewayModule implements NestModule {
 
 ```yaml
 # compose.gateway.yml — 게이트웨이에 DATABASE_URL 전달(필수), 네트워크 주석 · 빈 값 덮기 정리
-#   roomless-data    : Redis(문 소켓의 서버 명령 구독) · PostgreSQL(API 로그 적재 — 로그 전용 연결) 로 나가는 길
+#   deskless-data    : Redis(문 소켓의 서버 명령 구독) · PostgreSQL(API 로그 적재 — 로그 전용 연결) 로 나가는 길
         environment:
             # …
             # API 로그 적재(로그 전용 연결, t_api_log 만) — user-service · admin-service 와 같은 DB

@@ -374,7 +374,7 @@ export const RESERVATION_QR_LINK_BEFORE_MINUTES = 5;
 
 // reservation.util.ts (scheduler)
 export function buildQrLinkSms(store_name: string, start_at: Date, link: string): string {
-    return `[roomless] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 — QR 확인: ${link}`;
+    return `[바로방] ${store_name} ${dayjs(start_at).tz(KST_TIMEZONE).format('M/D HH:mm')} 예약 — QR 확인: ${link}`;
 }
 // repository: buildQrLinkRowsQuery(now, until) — r 조인 t_user u(phone IS NOT NULL) · t_store s, 상태 IN(확정 · 이용 중) · start_at <= until · end_at > now · qr_link_sent_at IS NULL
 //             claimQrLink(id, at) — update({reservation_id, qr_link_sent_at: IsNull()}, {qr_link_sent_at: at}) affected === 1
@@ -483,7 +483,7 @@ export function cancelRequestState(request: Pick<ReservationCancelRequestEntity,
         // 2. 이용 중인지 — 확정 · 이용 중 + start_at ≤ 지금 < end_at, 아니면 400 '이용 중인 예약만 이용자 동의 취소를 요청할 수 있습니다.'
         // 3. 예약자 번호 — 없으면 400 '예약자 휴대폰 번호가 없어 동의를 받을 수 없습니다.'
         // 4. 이전 요청 중 → 만료(expireCancelRequests) · 새 요청 insert(UK → 400 '이미 진행 중인 취소 요청이 있습니다.')
-        // 5. SMS(마지막): '[roomless] <업체명>에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 10분 안에 확인해주세요: <USER_WEB_URL>/reservation/<id>/cancel-request'
+        // 5. SMS(마지막): '[바로방] <업체명>에서 이용 중인 예약 취소를 요청했습니다(전액 환불). 동의하려면 10분 안에 확인해주세요: <USER_WEB_URL>/reservation/<id>/cancel-request'
         return {reservation_cancel_request_id: request.reservation_cancel_request_id, expires_at: request.expires_at.toISOString()};
     }
 ```

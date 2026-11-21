@@ -69,7 +69,7 @@ describe('GET /internal/v1/admin-service/store/mine — 내 업체 상세 (업�
                 store_id: STORE_ID,
                 store_code: STORE_CODE,
                 store_state_id: 'SUSPEND',
-                store_name: '룸리스 강남점',
+                store_name: '바로방 강남점',
                 business_number: '1234567890',
                 owner_name: '홍길동',
                 phone: '0212345678',

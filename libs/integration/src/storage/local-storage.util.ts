@@ -30,7 +30,7 @@ export function localFileStorageDir(env: NodeJS.ProcessEnv = process.env): strin
  */
 export function signLocalFileRequest(secret: string, request: LocalFileRequest): string {
     return createHmac('sha256', secret)
-        .update(['roomless-local-file', request.method, request.key, request.content_type, String(request.expires)].join('\n'))
+        .update(['deskless-local-file', request.method, request.key, request.content_type, String(request.expires)].join('\n'))
         .digest('hex');
 }
 

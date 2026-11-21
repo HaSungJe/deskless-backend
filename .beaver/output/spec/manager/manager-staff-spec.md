@@ -104,7 +104,7 @@ affected_data: ["t_store (store_code 추가 — UUID 32자, UK_Store_StoreCode, 
 - **승인(B)** — Phase 9 순서에서 바뀌는 것만.
   - 업체 등록 때 `store_code = generateId()`.
   - 업체 총관리자 계정: `login_id = head_manager_login_id`, `login_pw = head_manager_login_pw`(이미 해시), `is_password_change_required = 0`. 무작위 아이디 · 겹침 확인 · 임시 비밀번호를 없앤다.
-  - SMS(대표자 번호, 마지막): `[roomless] <상호명> 입점이 승인되었습니다.` — 자격증명 · 업체코드 없음.
+  - SMS(대표자 번호, 마지막): `[바로방] <상호명> 입점이 승인되었습니다.` — 자격증명 · 업체코드 없음.
   - 결과 `{store_id, store_code}`.
 - **내 신청(B)** — 대기 · 반려 · 승인 모두 보인다(남의 신청만 404). 항목 · 상세의 `store_code` 는 승인 신청이면 그 업체의 코드, 아니면 null.
   - 파일 업로드 주소 · 등록 · 삭제 · 신청 취소는 지금처럼 **대기 중일 때만**(반려 · 승인 400).

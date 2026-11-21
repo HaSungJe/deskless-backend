@@ -48,7 +48,7 @@
 | `README.md` | modified — discovery 공개 API · 예약 가능 시간 모양 · 지금 바로 · 결제 확인 QR |
 | `AGENTS.md` | modified — 구조(user-service discovery) · 인증 없는 공개 라우트 · Query DTO 목록 · 외부 연동 사용처 · Smoke 목록 |
 | `docs/architecture.md` · `docs/integration.md` · `docs/testing.md` | modified — 도메인 · 모듈 · `STORAGE_GATEWAY` 사용처 · Smoke 목록 |
-| `.beaver/output/roadmap/roomless-roadmap.md` (+ html) | modified — Phase 18 유닛 · 파일 집합(사용자 승인 뒤) |
+| `.beaver/output/roadmap/deskless-roadmap.md` (+ html) | modified — Phase 18 유닛 · 파일 집합(사용자 승인 뒤) |
 
 변경 없음(확인): `compose.user-service.yml`(AWS 값을 빈 값으로 덮지 않음 — `AWS_S3_PUBLIC_URL` 이 이미 닿는다), `apps/user-service/src/reservation/repositories/reservation.repository.ts`(그룹 필터는 service 가 호실 목록에서), 총관리자 업체 목록 `GET /api/v1/admin-service/store`(좌표 무관 — 그대로).
 

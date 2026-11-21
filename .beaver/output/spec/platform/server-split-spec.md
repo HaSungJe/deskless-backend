@@ -23,7 +23,7 @@ affected_data: ["t_user (탈퇴 자동처리 — scheduler 로 이전)", "t_sms_
    - crontab 만 도는 새 앱 `apps/scheduler` 를 만든다.
    - 들어오는 연결이 없다. HTTP 리스너 · 큐 소비 · 컨트롤러가 없다(`NestFactory.createApplicationContext`).
    - DB 에 직접 붙어 작업한다. 탈퇴 자동처리 crontab 을 user-service 에서 옮겨 오고, user-service 에는 crontab 을 두지 않는다.
-   - Docker 묶음 `compose.scheduler.yml` 은 `roomless-data` 네트워크 하나에만 붙는다. 인스턴스 수는 `.env` 의 `SCHEDULER_REPLICAS`(기본 1)로 정한다.
+   - Docker 묶음 `compose.scheduler.yml` 은 `deskless-data` 네트워크 하나에만 붙는다. 인스턴스 수는 `.env` 의 `SCHEDULER_REPLICAS`(기본 1)로 정한다.
 2. **인스턴스 수는 서버마다 `.env`** — `GATEWAY_REPLICAS`(기본 2) · `USER_SERVICE_REPLICAS`(기본 2) · `SCHEDULER_REPLICAS`(기본 1). admin-service 의 `ADMIN_SERVICE_REPLICAS` 는 Phase 7 에서 앱과 함께 넣는다.
 3. **인증번호 확인 교착 수정(#91, 리뷰 261020-3 #1)**
    - **지금의 문제**

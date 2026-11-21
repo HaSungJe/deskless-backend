@@ -35,7 +35,7 @@
 | `apps/gateway/src/gateway.module.ts` | modified — `AdminModule` · `ManagerModule` |
 | `apps/gateway/src/api/v1/{user,admin,manager}/test/*.spec.ts` | modified · new — 라우트 · 권한 · 없어진 라우트 404 |
 | `README.md` · `AGENTS.md` · `docs/{api,architecture,conventions,data-layer,testing}.md` | modified — 로그인 그룹 · 라우트 접두 · RolesGuard 적용 · service 예외(로그인 그룹 인자) · 성인 기준 · 일반 가입 폐지 · `store_detail` |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified — Phase 6 유닛 문구 · #92 · #93 · 결정 · 규칙 |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified — Phase 6 유닛 문구 · #92 · #93 · 결정 · 규칙 |
 
 정리할 기존 코드(§1.7)
 - 일반 가입 전체: `generalSign` · DTO · 명령 · 게이트웨이 라우트 · spec

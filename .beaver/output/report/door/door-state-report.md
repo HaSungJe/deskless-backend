@@ -9,11 +9,11 @@
 ## Created/Modified/Deleted Files
 | File | Change Type | Description |
 |------|-----------|------|
-| `compose.redis.yml` | created | Redis 8 묶음 — AOF(`appendonly yes` · 매초) · 비밀번호(`REDIS_PASSWORD`) · `roomless-data` · 127.0.0.1:6379 · 볼륨 `roomless-redis-data` · healthcheck |
+| `compose.redis.yml` | created | Redis 8 묶음 — AOF(`appendonly yes` · 매초) · 비밀번호(`REDIS_PASSWORD`) · `deskless-data` · 127.0.0.1:6379 · 볼륨 `deskless-redis-data` · healthcheck |
 | `package.json` · `package-lock.json` | modified | 의존성 `redis`(node-redis 6.3.1), `docker:redis`, `docker:infra` · `docker:down` 에 redis |
 | `compose.user-service.yml` | modified | `REDIS_URL` 필수 전달, `REDIS_PASSWORD` 빈 값, 네트워크 주석 |
 | `compose.admin-service.yml` · `compose.scheduler.yml` · `compose.gateway.yml` | modified | 쓰지 않는 `REDIS_URL` · `REDIS_PASSWORD` 빈 값 |
-| `scripts/docker-network.mjs` | modified | `roomless-data` 용도에 redis(· admin-service · scheduler), 머리 주석 |
+| `scripts/docker-network.mjs` | modified | `deskless-data` 용도에 redis(· admin-service · scheduler), 머리 주석 |
 | `.env.example` | modified | Redis 절 — `REDIS_PASSWORD` · `REDIS_PORT` · `REDIS_URL` |
 | `libs/integration/src/integration.symbols.ts` · `integration.constants.ts` · `interfaces/integration.interface.ts` | modified | `DOOR_STORE`, `REDIS_UNAVAILABLE_MESSAGE` · `DOOR_QR_ISSUE_FAILED_MESSAGE` · `DOOR_STATE` · `DOOR_TIME_NONE` · `DOOR_QR_ISSUE_ATTEMPTS`, `DoorState` · `DoorRecord` · `DoorStoreInterface` |
 | `libs/integration/src/redis/redis.connection.ts` · `redis.module.ts` | created | `RedisConnection`(부팅을 막지 않는 연결 · `disableOfflineQueue` · 준비 전 503 · `error` 리스너) · `RedisModule`(전역) |

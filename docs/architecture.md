@@ -1,7 +1,7 @@
 # Architecture
 
 NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls 트랜잭션 · passport-jwt · Swagger · `@nestjs/schedule` · Vitest.
-설계 배경(왜 게이트웨이 + RabbitMQ + 요청 단위 SSE 인가)은 구상 문서 [Roomless MSA 구상](https://claude.ai/artifact/JzyUD3QVHa4wb2rUBcDaDX) 에 있고, 이 문서는 **지금 코드가 따르는 규칙**을 적는다. 둘이 다르면 이 문서가 맞다.
+설계 배경(왜 게이트웨이 + RabbitMQ + 요청 단위 SSE 인가)은 구상 문서 [Deskless MSA 구상](https://claude.ai/artifact/JzyUD3QVHa4wb2rUBcDaDX) 에 있고, 이 문서는 **지금 코드가 따르는 규칙**을 적는다. 둘이 다르면 이 문서가 맞다.
 
 ## 앱 구성
 
@@ -12,9 +12,9 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 ┌──────────────┐  내부 HTTP (동기)      ┌────────────────┐
 │   gateway    │ ─────────────────────▶ │  user-service  │ ──▶ PostgreSQL
 │  :3000       │                        │  :3010 (내부)  │
-│              │  roomless.cmd (명령)   │                │
+│              │  deskless.cmd (명령)   │                │
 │              │ ──▶ RabbitMQ ────────▶ │ q.user.cmd     │
-│              │ ◀── q.gw.result.<id> ◀ │ roomless.event │
+│              │ ◀── q.gw.result.<id> ◀ │ deskless.event │
 └──────────────┘  결과 → 요청 단위 SSE   └────────────────┘
 ```
 
@@ -170,15 +170,15 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 
 | 수신 경로 | 막는 방법 |
 |---|---|
-| 내부 HTTP | ① 서비스 루트 모듈의 전역 `InternalAuthGuard`(APP_GUARD) — `x-internal-token` 이 INTERNAL_API_TOKEN 과 같아야 한다(시간차 안전 비교, 미설정이면 전부 거부) ② 바인딩 `USER_SERVICE_HOST` · `ADMIN_SERVICE_HOST` 기본 127.0.0.1 ③ Docker 에서는 포트 미공개 + gateway · 서비스 LB · 서비스 인스턴스만 있는 internal 네트워크(`roomless-service`) |
-| RabbitMQ 명령 | ① 앱별 브로커 계정 — `roomless.cmd` 에 쓸 수 있는 계정은 gateway 뿐(user-service · admin-service 계정은 쓸 수 없다) ② 모든 발행 메시지에 접속 계정을 `user_id` 로 붙이고 브로커가 대조 ③ 서비스는 `user_id` 가 gateway 가 아닌 명령을 처리 · 회신 없이 DLQ 로 보낸다 |
+| 내부 HTTP | ① 서비스 루트 모듈의 전역 `InternalAuthGuard`(APP_GUARD) — `x-internal-token` 이 INTERNAL_API_TOKEN 과 같아야 한다(시간차 안전 비교, 미설정이면 전부 거부) ② 바인딩 `USER_SERVICE_HOST` · `ADMIN_SERVICE_HOST` 기본 127.0.0.1 ③ Docker 에서는 포트 미공개 + gateway · 서비스 LB · 서비스 인스턴스만 있는 internal 네트워크(`deskless-service`) |
+| RabbitMQ 명령 | ① 앱별 브로커 계정 — `deskless.cmd` 에 쓸 수 있는 계정은 gateway 뿐(user-service · admin-service 계정은 쓸 수 없다) ② 모든 발행 메시지에 접속 계정을 `user_id` 로 붙이고 브로커가 대조 ③ 서비스는 `user_id` 가 gateway 가 아닌 명령을 처리 · 회신 없이 DLQ 로 보낸다 |
 
 - 관리자 계정(관리 화면)도 `user_id` 를 gateway 로 위조할 수 없다 — RabbitMQ 는 impersonator 태그가 없는 계정의 위조를 거절한다. gateway 비밀번호만 지키면 된다.
 - CORS 는 브라우저만 지키는 규칙이라 서버 간 호출을 막지 못한다. 서비스에는 CORS 를 두지 않고, 게이트웨이에만 `CORS_ORIGINS`(허용할 프론트 주소, 비우면 다른 출처를 모두 차단)로 건다 — [cors.config.ts](../apps/gateway/src/config/cors.config.ts).
 
 ## 실행 (Docker) — 묶음 7개를 따로 띄운다
 
-postgres · rabbitmq · redis · user-service · admin-service · scheduler · gateway 는 compose 파일이 하나씩 따로 있어 각자 띄우고 내린다. gateway · user-service · admin-service 는 여러 대로 뜰 수 있고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 포트 · 로드밸런서가 없다. 이미지는 [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `roomless/gateway` · `roomless/user-service` · `roomless/admin-service` · `roomless/scheduler` 를 만든다.
+postgres · rabbitmq · redis · user-service · admin-service · scheduler · gateway 는 compose 파일이 하나씩 따로 있어 각자 띄우고 내린다. gateway · user-service · admin-service 는 여러 대로 뜰 수 있고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 포트 · 로드밸런서가 없다. 이미지는 [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `deskless/gateway` · `deskless/user-service` · `deskless/admin-service` · `deskless/scheduler` 를 만든다.
 
 ```bash
 npm run docker:up            # 아래 1~8 을 순서대로
@@ -196,13 +196,13 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 
 | compose 파일 | 서비스 | 하는 일 |
 |---|---|---|
-| `compose.postgres.yml` | postgres | 가상 운영용 PostgreSQL 17 (127.0.0.1:5432), 볼륨 `roomless-postgres-data` — 실제 운영(RDS 등)이면 띄우지 않는다 |
+| `compose.postgres.yml` | postgres | 가상 운영용 PostgreSQL 17 (127.0.0.1:5432), 볼륨 `deskless-postgres-data` — 실제 운영(RDS 등)이면 띄우지 않는다 |
 | `compose.rabbitmq.yml` | rabbitmq · rabbitmq-init | 가상 운영용 RabbitMQ 4 + 관리 화면 (127.0.0.1:5672 · :15672), 브로커 계정 gateway · user-service · admin-service 와 권한 생성 ([init.sh](../docker/rabbitmq/init.sh)) |
-| `compose.redis.yml` | redis | 가상 운영용 Redis 8 (127.0.0.1:6379) — 문 정보의 원본이라 AOF 영속 · 비밀번호(`REDIS_PASSWORD`), 볼륨 `roomless-redis-data` — 실제 운영(ElastiCache 등 · 클러스터 모드 끔)이면 띄우지 않는다 ([guides/redis-setup.md](guides/redis-setup.md)) |
+| `compose.redis.yml` | redis | 가상 운영용 Redis 8 (127.0.0.1:6379) — 문 정보의 원본이라 AOF 영속 · 비밀번호(`REDIS_PASSWORD`), 볼륨 `deskless-redis-data` — 실제 운영(ElastiCache 등 · 클러스터 모드 끔)이면 띄우지 않는다 ([guides/redis-setup.md](guides/redis-setup.md)) |
 | `compose.user-service.yml` | migrate · user-service × `USER_SERVICE_REPLICAS` · user-service-lb | 마이그레이션 1회(DB 를 최대 1분 기다림) → 인스턴스 → 내부 HTTP 로드밸런서 ([user-service.conf](../docker/nginx/user-service.conf)) |
 | `compose.admin-service.yml` | admin-service × `ADMIN_SERVICE_REPLICAS`(기본 1) · admin-service-lb | 매니저 · 관리자 도메인 인스턴스 → 내부 HTTP 로드밸런서 ([admin-service.conf](../docker/nginx/admin-service.conf)). 마이그레이션은 user-service 묶음이 먼저 적용한다 |
-| `compose.scheduler.yml` | scheduler × `SCHEDULER_REPLICAS`(기본 1) | crontab 전용 — `roomless-data` 네트워크만(DB · Redis), 포트 · LB 없음. 마이그레이션은 user-service 묶음이 먼저 적용한다 |
-| `compose.gateway.yml` | gateway × `GATEWAY_REPLICAS` · gateway-lb | 인스턴스 → 외부 진입점 로드밸런서, 호스트 포트 `GATEWAY_PORT` · Swagger `/swagger` · 문 소켓 `/ws/`(WebSocket 업그레이드, 읽기 대기 120초) ([gateway.conf](../docker/nginx/gateway.conf)). Redis 구독 때문에 `roomless-data` 에도 붙는다 |
+| `compose.scheduler.yml` | scheduler × `SCHEDULER_REPLICAS`(기본 1) | crontab 전용 — `deskless-data` 네트워크만(DB · Redis), 포트 · LB 없음. 마이그레이션은 user-service 묶음이 먼저 적용한다 |
+| `compose.gateway.yml` | gateway × `GATEWAY_REPLICAS` · gateway-lb | 인스턴스 → 외부 진입점 로드밸런서, 호스트 포트 `GATEWAY_PORT` · Swagger `/swagger` · 문 소켓 `/ws/`(WebSocket 업그레이드, 읽기 대기 120초) ([gateway.conf](../docker/nginx/gateway.conf)). Redis 구독 때문에 `deskless-data` 에도 붙는다 |
 
 - 묶음끼리는 depends_on 으로 묶을 수 없어 기다림을 앱이 맡는다 — migrate 는 DB 연결을 최대 1분 재시도, user-service 는 `@nestjs/typeorm` 기본 재시도(10회 · 3초 간격, 명시 설정 없음), 앱 모두 RabbitMQ 자동 재연결(로그인 거부도 재시도). 그래도 순서는 위 1~7 을 따른다.
 
@@ -241,12 +241,12 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 
 | 네트워크 | 붙는 컨테이너 |
 |---|---|
-| `roomless-edge` | gateway-lb · gateway (외부 포트는 gateway-lb 만) |
-| `roomless-service` (internal) | gateway · user-service-lb · user-service · admin-service-lb · admin-service |
-| `roomless-broker` | rabbitmq · rabbitmq-init · gateway · user-service · admin-service |
-| `roomless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
+| `deskless-edge` | gateway-lb · gateway (외부 포트는 gateway-lb 만) |
+| `deskless-service` (internal) | gateway · user-service-lb · user-service · admin-service-lb · admin-service |
+| `deskless-broker` | rabbitmq · rabbitmq-init · gateway · user-service · admin-service |
+| `deskless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
 
-- 공용 볼륨 `roomless-files` — 내부 파일 저장소(`AWS_S3_BUCKET` 이 빌 때)를 gateway · user-service · admin-service 가 `/app/storage/files` 로 같이 본다(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다.
+- 공용 볼륨 `deskless-files` — 내부 파일 저장소(`AWS_S3_BUCKET` 이 빌 때)를 gateway · user-service · admin-service 가 `/app/storage/files` 로 같이 본다(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다.
 - [docker-network.mjs](../scripts/docker-network.mjs) 가 네트워크 · 볼륨을 만든다. 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
 - 서비스의 HTTP 에 닿는 컨테이너는 gateway · 그 서비스의 LB 뿐이고, 게이트웨이는 DB 에 닿지 않는다.
 - 이미지: Node 24 LTS slim — `node:24.22.3-slim`(패치까지 고정 — 보안 패치가 나오면 Dockerfile `NODE_IMAGE` 와 package.json `engines` 하한을 같이 올린다, bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행.

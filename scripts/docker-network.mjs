@@ -11,14 +11,14 @@ import {execFileSync} from 'node:child_process';
 
 /** 공용 네트워크 — internal 이면 외부로 나가는 길도, 호스트 포트도 없다 */
 const NETWORKS = [
-    {name: 'roomless-edge', internal: false, purpose: 'gateway-lb · gateway (외부 포트는 gateway-lb 만)'},
-    {name: 'roomless-service', internal: true, purpose: 'gateway → user-service-lb → user-service 내부 HTTP'},
-    {name: 'roomless-broker', internal: false, purpose: 'rabbitmq · gateway · user-service'},
-    {name: 'roomless-data', internal: false, purpose: 'postgres · redis · migrate · user-service · admin-service · scheduler'},
+    {name: 'deskless-edge', internal: false, purpose: 'gateway-lb · gateway (외부 포트는 gateway-lb 만)'},
+    {name: 'deskless-service', internal: true, purpose: 'gateway → user-service-lb → user-service 내부 HTTP'},
+    {name: 'deskless-broker', internal: false, purpose: 'rabbitmq · gateway · user-service'},
+    {name: 'deskless-data', internal: false, purpose: 'postgres · redis · migrate · user-service · admin-service · scheduler'},
 ];
 
 /** 공용 볼륨 — 묶음끼리 같은 파일을 본다 */
-const VOLUMES = [{name: 'roomless-files', purpose: '내부 파일 저장소(AWS_S3_BUCKET 이 빌 때) — gateway · user-service · admin-service 의 /app/storage/files'}];
+const VOLUMES = [{name: 'deskless-files', purpose: '내부 파일 저장소(AWS_S3_BUCKET 이 빌 때) — gateway · user-service · admin-service 의 /app/storage/files'}];
 
 /**
  * docker CLI 를 실행하고 표준 출력을 돌려준다. 실패하면 null.
@@ -50,7 +50,7 @@ function ensure(network) {
         console.log(`· ${network.name}: 이미 있음 — ${network.purpose}`);
         return true;
     }
-    const created = docker(['network', 'create', ...(network.internal ? ['--internal'] : []), '--label', 'roomless.network=shared', network.name]);
+    const created = docker(['network', 'create', ...(network.internal ? ['--internal'] : []), '--label', 'deskless.network=shared', network.name]);
     if (created === null) {
         console.log(`✗ ${network.name}: 만들지 못함 — Docker 가 실행 중인지 확인`);
         return false;
@@ -70,7 +70,7 @@ function ensureVolume(volume) {
         console.log(`· ${volume.name}: 이미 있음 — ${volume.purpose}`);
         return true;
     }
-    if (docker(['volume', 'create', '--label', 'roomless.volume=shared', volume.name]) === null) {
+    if (docker(['volume', 'create', '--label', 'deskless.volume=shared', volume.name]) === null) {
         console.log(`✗ ${volume.name}: 만들지 못함 — Docker 가 실행 중인지 확인`);
         return false;
     }

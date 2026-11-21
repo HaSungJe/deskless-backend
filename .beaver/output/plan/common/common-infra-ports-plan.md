@@ -47,7 +47,7 @@
 | `docs/conventions.md` | modified — Query DTO 절 상태 · util 목록 |
 | `docs/data-layer.md` | modified — Pagination 절 상태 |
 | `docs/testing.md` | modified — mock 경계 · 위치 표 · 분류 태그 `[CASES:<unit>]` |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified — AWS · mock 없음 결정은 기획 때 반영됨, ship 때 #17 ~ #20 done |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified — AWS · mock 없음 결정은 기획 때 반영됨, ship 때 #17 ~ #20 done |
 | `compose.user-service.yml` | 변경 없음 — `env_file: .env`(compose.user-service.yml:50)로 AWS 값을 받는다. 첫 사용처는 Phase 5 다. AWS 세팅 전이라 `${VAR:?}` 필수로 걸지 않는다 |
 | `nest-cli.json` · `Dockerfile` · `vitest.config.ts` | 변경 없음 — 라이브러리 항목 없음(기존 lib 4개도 없음) · `COPY libs ./libs`(Dockerfile:18) + `npm ci --omit=dev` · `vite-tsconfig-paths`(vitest.config.ts:6) |
 | `apps/user-service/src/user-service.module.ts` · `apps/gateway/src/gateway.module.ts` | 변경 없음 — `SmsModule` · `StorageModule` 은 첫 사용처(Phase 5 · 10)에서 import |
@@ -672,12 +672,12 @@ return {list, pagination: pagination.getPagination()};
 ## 0. 준비
 
 - AWS 계정. 리전은 서울(`ap-northeast-2`) — SMS · S3 모두 지원한다.
-- 개발용 · 운영용을 나눈다. 버킷 2개(`roomless-dev-files` · `roomless-prod-files`)와 IAM 사용자 또는 역할 2개를 만들고, `.env` 만 바꿔 고른다. compose 는 다시 세팅하지 않는다.
+- 개발용 · 운영용을 나눈다. 버킷 2개(`deskless-dev-files` · `deskless-prod-files`)와 IAM 사용자 또는 역할 2개를 만들고, `.env` 만 바꿔 고른다. compose 는 다시 세팅하지 않는다.
 
 ## 1. S3 — 사진 버킷
 
 1. **S3 → 버킷 만들기**
-   - 이름 `roomless-<dev|prod>-files`, 리전 `ap-northeast-2`
+   - 이름 `deskless-<dev|prod>-files`, 리전 `ap-northeast-2`
    - 객체 소유권: ACL 비활성화(버킷 소유자 적용)
 2. **퍼블릭 액세스 차단** — 사진을 버킷 주소로 바로 보이게 하려면 아래 두 항목만 끈다. ACL 관련 두 항목은 켜 둔다.
    - 새 퍼블릭 버킷 또는 액세스 지점 정책을 통해 부여된 퍼블릭 액세스 차단
@@ -688,7 +688,7 @@ return {list, pagination: pagination.getPagination()};
    ```json
    {
      "Version": "2012-10-17",
-     "Statement": [{"Sid": "PublicRead", "Effect": "Allow", "Principal": "*", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::roomless-<dev|prod>-files/*"}]
+     "Statement": [{"Sid": "PublicRead", "Effect": "Allow", "Principal": "*", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::deskless-<dev|prod>-files/*"}]
    }
    ```
 4. **CORS** — 브라우저가 presigned URL 로 직접 PUT 한다. `AllowedOrigins` 는 `.env` 의 `CORS_ORIGINS` 와 같은 프론트 주소로 한다.
@@ -712,14 +712,14 @@ return {list, pagination: pagination.getPagination()};
 
 ## 3. IAM — 앱 권한
 
-정책 `roomless-<dev|prod>-app` (최소 권한):
+정책 `deskless-<dev|prod>-app` (최소 권한):
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
-    {"Sid": "FilesObject", "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::roomless-<dev|prod>-files/*"},
-    {"Sid": "FilesList", "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::roomless-<dev|prod>-files"},
+    {"Sid": "FilesObject", "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::deskless-<dev|prod>-files/*"},
+    {"Sid": "FilesList", "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "arn:aws:s3:::deskless-<dev|prod>-files"},
     {"Sid": "Sms", "Effect": "Allow", "Action": "sns:Publish", "Resource": "*"}
   ]
 }
@@ -736,8 +736,8 @@ return {list, pagination: pagination.getPagination()};
 AWS_REGION=ap-northeast-2
 AWS_ACCESS_KEY_ID=<IAM 액세스 키>        # IAM 역할이면 비운다
 AWS_SECRET_ACCESS_KEY=<IAM 비밀 키>     # IAM 역할이면 비운다
-AWS_S3_BUCKET=roomless-dev-files
-AWS_S3_PUBLIC_URL=https://roomless-dev-files.s3.ap-northeast-2.amazonaws.com   # 필수 — CloudFront 를 쓰면 그 주소
+AWS_S3_BUCKET=deskless-dev-files
+AWS_S3_PUBLIC_URL=https://deskless-dev-files.s3.ap-northeast-2.amazonaws.com   # 필수 — CloudFront 를 쓰면 그 주소
 ```
 
 Docker 는 `env_file: .env` 로 그대로 받는다. 게이트웨이에는 AWS 비밀값이 전달되지 않는다(compose.gateway.yml).
@@ -745,7 +745,7 @@ Docker 는 `env_file: .env` 로 그대로 받는다. 게이트웨이에는 AWS �
 ## 5. 확인
 
 - 부팅 로그에 `AWS_REGION ...` · `AWS_REGION · AWS_S3_BUCKET · AWS_S3_PUBLIC_URL ...` 경고가 없으면 값이 들어간 것이다.
-- SMS — 샌드박스에 등록한 번호로 보내 본다: `aws sns publish --region ap-northeast-2 --phone-number +8210XXXXXXXX --message "roomless 테스트"`
+- SMS — 샌드박스에 등록한 번호로 보내 본다: `aws sns publish --region ap-northeast-2 --phone-number +8210XXXXXXXX --message "deskless 테스트"`
 - S3 — 콘솔에서 아무 이미지나 올리고 `https://<버킷>.s3.ap-northeast-2.amazonaws.com/<키>` 가 열리는지 본다.
 ~~~
 
@@ -801,7 +801,7 @@ Docker 는 `env_file: .env` 로 그대로 받는다. 게이트웨이에는 AWS �
 
 // service — 포트만 안다
 constructor(@Inject(SMS_SENDER) private readonly smsSender: SmsSenderInterface) {}
-await this.smsSender.send({to: phone, text: `[roomless] 인증번호 ${code}`});
+await this.smsSender.send({to: phone, text: `[바로방] 인증번호 ${code}`});
 ```
 
 ## 실패 계약
@@ -956,14 +956,14 @@ docs 변경부:
 **`libs/integration/src/sms/test/sns-sms.sender.spec.ts`** — 형제는 RabbitMQ 어댑터 spec 이다(`vi.hoisted` + `vi.mock('amqplib', ...)`, docs/testing.md:101 · 118). 가짜 `SNSClient`(`send` = hoisted mock)와 `PublishCommand`(생성자 인자를 `input` 으로 보관)를 쓴다. `new SnsSmsSender()` 로 직접 만든다.
 
 ```
-[SUCCESS]      send({to:'010-1234-5678', text:'[roomless] 인증번호 123456'}) → client.send 1회, PublishCommand.input = {PhoneNumber:'+821012345678', Message:'[roomless] 인증번호 123456', MessageAttributes:{'AWS.SNS.SMS.SMSType':{DataType:'String', StringValue:'Transactional'}}}
+[SUCCESS]      send({to:'010-1234-5678', text:'[바로방] 인증번호 123456'}) → client.send 1회, PublishCommand.input = {PhoneNumber:'+821012345678', Message:'[바로방] 인증번호 123456', MessageAttributes:{'AWS.SNS.SMS.SMSType':{DataType:'String', StringValue:'Transactional'}}}
 [FAIL:infra]   client.send 가 reject(new Error('Throttling')) → ServiceUnavailableException, getResponse() = {message:'SMS를 보내지 못했습니다. 잠시 후 다시 시도해주세요.'}
 ```
 
 **`libs/integration/src/storage/test/s3-storage.gateway.spec.ts`** — 가짜 `S3Client` · `PutObjectCommand` · `HeadObjectCommand` · `DeleteObjectCommand` · `getSignedUrl`. `AWS_REGION` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL` 은 `beforeEach` 에서 저장 · 설정하고 `afterEach` 에서 복원한다. 날짜는 `vi.useFakeTimers({toFake: ['Date']})` 다.
 
 ```
-[SUCCESS]      createUploadUrl({key:'store/s1/a.jpg', content_type:'image/jpeg'}) → getSignedUrl 1회(client, PutObjectCommand.input={Bucket:'roomless-test-files', Key:'store/s1/a.jpg', ContentType:'image/jpeg'}, expiresIn 600) · 결과 {upload_url:<서명 결과>, expires_at: 고정 시각 + 600초}
+[SUCCESS]      createUploadUrl({key:'store/s1/a.jpg', content_type:'image/jpeg'}) → getSignedUrl 1회(client, PutObjectCommand.input={Bucket:'deskless-test-files', Key:'store/s1/a.jpg', ContentType:'image/jpeg'}, expiresIn 600) · 결과 {upload_url:<서명 결과>, expires_at: 고정 시각 + 600초}
 [FAIL:infra]   getSignedUrl reject → 503 {message:'파일 저장소에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.'}
 [SUCCESS]      exists('store/s1/a.jpg') — HeadObject resolve → true (HeadObjectCommand.input={Bucket, Key})
 [SUCCESS]      exists — reject({$metadata:{httpStatusCode:404}}) → false
@@ -973,7 +973,7 @@ docs 변경부:
 [SECURITY]     서명 옵션 = {expiresIn:600, signableHeaders: Set(['content-type'])} — 다른 타입으로는 올릴 수 없다 (ship 리뷰 #2)
 [CASES:getPublicUrl]
  1. AWS_S3_PUBLIC_URL 'https://cdn.example.com/' → 'https://cdn.example.com/store/s1/a.jpg' (끝 / 제거)
- 2. AWS_S3_PUBLIC_URL 'https://roomless-test-files.s3.ap-northeast-2.amazonaws.com' → '…amazonaws.com/store/s1/a.jpg'
+ 2. AWS_S3_PUBLIC_URL 'https://deskless-test-files.s3.ap-northeast-2.amazonaws.com' → '…amazonaws.com/store/s1/a.jpg'
 [FAIL:infra]   AWS_S3_PUBLIC_URL 비움 → InternalServerErrorException {message:'설정된 파일 공개 주소가 없습니다. 관리자에게 문의해주세요.'} — 주소를 지어내지 않는다 (ship 리뷰 #3)
 ```
 

@@ -43,7 +43,7 @@ describe('GET /internal/v1/admin-service/manager/account/:user_id — 업체 관
             expect(res.body).toEqual({
                 user_id: STAFF_ID,
                 store_id: STORE_ID,
-                store_name: '룸리스 강남점',
+                store_name: '바로방 강남점',
                 store_code: STORE_CODE,
                 store_state_id: 'ACTIVE',
                 login_id: 'staff01',

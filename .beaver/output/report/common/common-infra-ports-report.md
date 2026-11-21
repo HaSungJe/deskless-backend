@@ -35,7 +35,7 @@
 | `docs/conventions.md` | modified | Query DTO 절 상태(`PaginationDto` 위치) · util 목록 + `Pagination` class 예외 |
 | `docs/data-layer.md` | modified | Pagination 절 상태 · 쓰는 모양 한 줄 |
 | `docs/testing.md` | modified | AWS 어댑터 행 · mock 경계에 외부 연동 포트 · 태그 `[CASES:<unit>]` |
-| `.beaver/output/roadmap/roomless-roadmap.md` · `.html` | modified | Phase 3 build 완료 메모 (#17 ~ #20 은 in-progress, done 은 ship) |
+| `.beaver/output/roadmap/deskless-roadmap.md` · `.html` | modified | Phase 3 build 완료 메모 (#17 ~ #20 은 in-progress, done 은 ship) |
 
 ## Tests Written
 build 규약상 실행하지 않았다 — `/beaver:test` 에서 실행한다.
