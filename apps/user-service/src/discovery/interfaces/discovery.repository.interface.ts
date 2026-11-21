@@ -8,15 +8,29 @@ import type {StoreFileEntity} from '@app/database/entities/store/store-file.enti
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
 
-/** 반경 업체 조회 조건 — 중심 · 반경(m) · 인덱스로 먼저 거를 위경도 사각형 */
+/** 추가정보 조건 하나 — 객실 그룹 상세 JSON 항목(빠지면 기본값)과 비교 */
+export interface DiscoveryDetailCondition {
+    /** 항목 키(ROOM_GROUP_DETAIL_FILTERS 에 있는 것만) */
+    key: string;
+    /** EQ: 같다, GTE: 이상 */
+    operator: 'EQ' | 'GTE';
+    /** 비교 값 */
+    value: number;
+    /** JSON 에 항목이 빠졌을 때 볼 값(ROOM_GROUP_DETAIL_DEFAULTS) */
+    default_value: number;
+}
+
+/** 반경 업체 조회 조건 — 중심 · 반경(m) · 인덱스로 먼저 거를 위경도 사각형(거리 제한 없음이면 반경 · 사각형 null) · 추가정보 조건 */
 export interface DiscoveryStoreFilter {
     latitude: number;
     longitude: number;
-    radius_m: number;
-    min_latitude: number;
-    max_latitude: number;
-    min_longitude: number;
-    max_longitude: number;
+    radius_m: number | null;
+    min_latitude: number | null;
+    max_latitude: number | null;
+    min_longitude: number | null;
+    max_longitude: number | null;
+    /** 모두 갖춘 이용자에게 보이는 객실 그룹이 있는 업체만 — 없으면 [] */
+    detail_conditions: DiscoveryDetailCondition[];
 }
 
 /** 반경 업체 행 (QueryBuilder raw — 별칭이 이 키와 같다) */

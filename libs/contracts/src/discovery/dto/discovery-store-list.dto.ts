@@ -1,8 +1,8 @@
 import {ApiProperty} from '@nestjs/swagger';
-import {IsIn, IsLatitude, IsLongitude, IsNotEmpty} from 'class-validator';
+import {IsIn, IsLatitude, IsLongitude, IsNotEmpty, IsOptional, Matches, MaxLength} from 'class-validator';
 
 /**
- * 반경 업체 조회 query — 지도 중심(처음엔 내 위치) 위경도 + 반경. 쿼리 값은 문자열이다.
+ * 반경 업체 조회 query — 지도 중심(처음엔 내 위치) 위경도 + 반경(ALL — 거리 제한 없음) + 추가정보 필터(선택). 쿼리 값은 문자열이다.
  */
 export class DiscoveryStoreListDto {
     @ApiProperty({description: '중심 위도 (WGS84 — 지도 중심 · 내 위치)', example: '37.5665'})
@@ -15,18 +15,29 @@ export class DiscoveryStoreListDto {
     @IsNotEmpty({message: '경도를 입력해주세요.'})
     longitude: string;
 
-    @ApiProperty({description: '반경(km) — 5 · 10 · 20 · 50', enum: ['5', '10', '20', '50']})
-    @IsIn(['5', '10', '20', '50'], {message: '반경은 5 · 10 · 20 · 50km 중에서 골라주세요.'})
+    @ApiProperty({description: '반경(km) — 5 · 10 · 20 · 50, ALL: 거리 제한 없음(가까운 순 300개)', enum: ['5', '10', '20', '50', 'ALL']})
+    @IsIn(['5', '10', '20', '50', 'ALL'], {message: '반경은 5 · 10 · 20 · 50km · 제한 없음(ALL) 중에서 골라주세요.'})
     @IsNotEmpty({message: '반경을 입력해주세요.'})
     radius_km: string;
 
+    @ApiProperty({
+        description: '추가정보 필터 — 객실 그룹 상세 항목 키를 쉼표로(항목은 GET /api/v1/user-service/discovery/room-group-detail-filter). 고른 조건을 모두 갖춘 객실 그룹이 있는 업체만',
+        required: false,
+        example: 'has_pc,has_shower',
+    })
+    @IsOptional()
+    @Matches(/^[a-z_]+(,[a-z_]+)*$/, {message: '추가정보 필터가 올바르지 않습니다.'})
+    @MaxLength(200, {message: '추가정보 필터가 올바르지 않습니다.'})
+    detail_filter: string | null;
+
     /**
-     * @param data 요청 쿼리 — 빠진 값은 빈 문자열(검증에서 걸린다)
+     * @param data 요청 쿼리 — 빠진 필수 값은 빈 문자열(검증에서 걸린다), 빠진 필터는 null
      */
     constructor(data?: Partial<DiscoveryStoreListDto>) {
         this.latitude = data?.latitude ?? '';
         this.longitude = data?.longitude ?? '';
         this.radius_km = data?.radius_km ?? '';
+        this.detail_filter = data?.detail_filter ?? null;
     }
 }
 

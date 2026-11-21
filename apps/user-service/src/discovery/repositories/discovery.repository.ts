@@ -29,6 +29,10 @@ const DISTANCE_SQL = `(${2 * DISCOVERY_EARTH_RADIUS_KM * 1000} * ASIN(LEAST(1, S
 /** 그 그룹에 예약 받을 호실(지워지지 않고 사용중지 아님)이 있는지 — 최저가 서브쿼리용 */
 const GROUP_HAS_BOOKABLE_ROOM_SQL = 'EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> :disabled_state)';
 
+/** 그 그룹에 판매 중인 그룹 상품(그룹 상품 사용 · 요금 > 0 · 업체 상품 설정 사용)이 있는지 — 객실 그룹 목록의 isRoomGroupPlanOnSale 과 같은 기준(추가정보 필터용) */
+const GROUP_ON_SALE_SQL =
+    'EXISTS (SELECT 1 FROM "t_room_group_plan" "gp" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "gp"."room_group_id" = "g"."room_group_id" AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1)';
+
 /**
  * discovery repository (아웃바운드 어댑터) — 공유 DB 의 업체 · 객실 표(store · room 도메인 표)를 둘러보기 어휘로 읽기만 한다.
  * is_deleted 가 있는 표의 조회에는 항상 is_deleted = 0 을 붙인다(notDeleted · QueryBuilder 는 서브쿼리 표까지).
@@ -106,17 +110,18 @@ export class DiscoveryRepository implements DiscoveryRepositoryInterface {
     }
 
     /**
-     * 반경 업체 쿼리 — 활성 · 지워지지 않은 업체를 위경도 사각형(인덱스 IDX_Store_LatitudeLongitude)으로 먼저 거르고 대원 거리 ≤ 반경만 남긴다.
+     * 반경 업체 쿼리 — 활성 · 지워지지 않은 업체를 위경도 사각형(인덱스 IDX_Store_LatitudeLongitude)으로 먼저 거르고 대원 거리 ≤ 반경만 남긴다(거리 제한 없음이면 둘 다 없다).
      * 대표 사진(지워지지 않은 업체 사진 중 정렬 순서 · 등록일이 가장 앞인 1장의 키)과 상품 종류별 최저가(업체 상품 설정 사용 · 그룹 상품 사용 · 요금 > 0 ·
      * 지워지지 않은 그룹 · 예약 받을 호실이 있는 그룹의 기본 요금 최솟값, 없으면 NULL)는 서브쿼리다.
-     * 매핑 민감(서브쿼리 · raw select — 별칭이 DiscoveryStoreRow 키와 같다 · 같은 이름 파라미터 재사용)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
+     * 추가정보 조건이 있으면 조건을 모두 갖춘 이용자에게 보이는 그룹(지워지지 않음 · 예약 받을 호실 · 판매 중 상품)이 있는 업체만 — JSON 항목 키 · 기본값 · 비교 값은 파라미터.
+     * 매핑 민감(서브쿼리 · raw select — 별칭이 DiscoveryStoreRow 키와 같다 · 같은 이름 파라미터 재사용 · 동적 조립)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
      *
-     * @param filter 중심 · 반경 · 사각형
+     * @param filter 중심 · 반경 · 사각형 · 추가정보 조건
      * @param limit 개수
      * @returns 쿼리 빌더
      */
     buildStoreRowsQuery(filter: DiscoveryStoreFilter, limit: number): SelectQueryBuilder<StoreEntity> {
-        return this.stores
+        const query = this.stores
             .createQueryBuilder('s')
             .select('s.store_id', 'store_id')
             .addSelect('s.store_name', 'store_name')
@@ -185,15 +190,37 @@ export class DiscoveryRepository implements DiscoveryRepositoryInterface {
                 'min_night_price',
             )
             .where('s.store_state_id = :active_state')
-            .andWhere('s.is_deleted = 0')
-            .andWhere('s.latitude BETWEEN :min_latitude AND :max_latitude')
-            .andWhere('s.longitude BETWEEN :min_longitude AND :max_longitude')
-            .andWhere(`${DISTANCE_SQL} <= :radius_m`)
+            .andWhere('s.is_deleted = 0');
+        // 반경 — 거리 제한 없음(ALL)이면 사각형 · 거리 조건 없이 전체
+        if (filter.radius_m !== null) {
+            query
+                .andWhere('s.latitude BETWEEN :min_latitude AND :max_latitude', {min_latitude: filter.min_latitude, max_latitude: filter.max_latitude})
+                .andWhere('s.longitude BETWEEN :min_longitude AND :max_longitude', {min_longitude: filter.min_longitude, max_longitude: filter.max_longitude})
+                .andWhere(`${DISTANCE_SQL} <= :radius_m`, {radius_m: filter.radius_m});
+        }
+        // 추가정보 — 조건을 모두 갖춘 이용자에게 보이는 그룹이 있는 업체만, 빠진 JSON 항목은 기본값
+        if (filter.detail_conditions.length > 0) {
+            const parameters: Record<string, string | number> = {};
+            const conditions = filter.detail_conditions.map((condition, index) => {
+                parameters[`detail_key_${index}`] = condition.key;
+                parameters[`detail_default_${index}`] = condition.default_value;
+                parameters[`detail_value_${index}`] = condition.value;
+                // 항목 키는 text 로 못 박는다 — 타입 없는 파라미터면 jsonb ->> 가 text · integer(배열 번호) 중 고르지 못한다
+                return `COALESCE(("g"."room_group_detail" ->> CAST(:detail_key_${index} AS text))::integer, :detail_default_${index}) ${condition.operator === 'GTE' ? '>=' : '='} :detail_value_${index}`;
+            });
+            query.andWhere(
+                `EXISTS (SELECT 1 FROM "t_room_group" "g" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND ${GROUP_HAS_BOOKABLE_ROOM_SQL} AND ${GROUP_ON_SALE_SQL} AND ${conditions.join(' AND ')})`,
+                parameters,
+            );
+        }
+        // 가까운 순(같으면 업체 ID 순)
+        return query
             .orderBy('"distance_m"', 'ASC')
             .addOrderBy('s.store_id', 'ASC')
             .limit(limit)
             .setParameters({
-                ...filter,
+                latitude: filter.latitude,
+                longitude: filter.longitude,
                 active_state: DISCOVERY_STORE_STATE_ACTIVE,
                 image_purpose: DISCOVERY_STORE_IMAGE_PURPOSE,
                 hourly_type: DISCOVERY_PLAN_TYPE.HOURLY,

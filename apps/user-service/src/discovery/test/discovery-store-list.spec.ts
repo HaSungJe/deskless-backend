@@ -197,6 +197,49 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
         });
     });
 
+    describe('거리 제한 없음 · 추가정보 필터', () => {
+        it('[SUCCESS] radius_km=ALL — 반경 · 사각형 없이(null) 가까운 순 301개를 묻는다, 추가정보 없음', async () => {
+            await requestFilter({...SEOUL, radius_km: 'ALL'});
+
+            expect(repo.findStoreRows).toHaveBeenCalledTimes(1);
+            expect(repo.findStoreRows).toHaveBeenCalledWith(
+                {latitude: 37.5665, longitude: 126.978, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions: []},
+                301,
+            );
+        });
+
+        it('[SUCCESS] 반경을 주면 사각형 · 반경 그대로, 추가정보가 없으면 detail_conditions []', async () => {
+            await requestFilter({...SEOUL, radius_km: '5'});
+
+            const [filter] = repo.findStoreRows.mock.calls[0];
+            expect(filter.radius_m).toBe(5000);
+            expect(filter.min_latitude).toBeCloseTo(37.521534, 6);
+            expect(filter.detail_conditions).toEqual([]);
+        });
+
+        it('[SUCCESS] detail_filter — 항목 정의의 조건 · 비교 값 + 빠진 항목 기본값, 중복은 한 번(순서 유지)', async () => {
+            await requestFilter({...SEOUL, radius_km: '10', detail_filter: 'has_pc,room_count,has_pc'});
+
+            const [filter] = repo.findStoreRows.mock.calls[0];
+            expect(filter.detail_conditions).toEqual([
+                {key: 'has_pc', operator: 'EQ', value: 1, default_value: 1},
+                {key: 'room_count', operator: 'GTE', value: 2, default_value: 1},
+            ]);
+            expect(filter.radius_m).toBe(10000);
+        });
+
+        it('[FAIL:validation] 정의에 없는 항목(has_wifi) → 400 validation_errors.detail_filter, 조회 없음', async () => {
+            const res = await request(app.getHttpServer())
+                .get(PATH)
+                .query({...SEOUL, radius_km: '5', detail_filter: 'has_pc,has_wifi'})
+                .set(internalHeaders());
+
+            expect(res.status).toBe(400);
+            expect(res.body).toEqual({message: '추가정보 필터가 올바르지 않습니다.', validation_errors: [{property: 'detail_filter', message: '추가정보 필터가 올바르지 않습니다.'}]});
+            expect(repo.findStoreRows).not.toHaveBeenCalled();
+        });
+    });
+
     describe('[SKIP]', () => {
         it('반경 안에 업체가 없으면 빈 목록 · 잘림 0', async () => {
             const res = await request(app.getHttpServer())
@@ -212,7 +255,9 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
     describe('[FAIL:validation] 게이트웨이 ValidationPipe', () => {
         it.each([
             ['위도 91', {...SEOUL, latitude: '91', radius_km: '5'}, 'latitude', '위도가 올바르지 않습니다.'],
-            ['반경 7km', {...SEOUL, radius_km: '7'}, 'radius_km', '반경은 5 · 10 · 20 · 50km 중에서 골라주세요.'],
+            ['반경 7km', {...SEOUL, radius_km: '7'}, 'radius_km', '반경은 5 · 10 · 20 · 50km · 제한 없음(ALL) 중에서 골라주세요.'],
+            ['반경 all(소문자)', {...SEOUL, radius_km: 'all'}, 'radius_km', '반경은 5 · 10 · 20 · 50km · 제한 없음(ALL) 중에서 골라주세요.'],
+            ['추가정보 필터 모양(쉼표 · 소문자 · _ 밖)', {...SEOUL, radius_km: '5', detail_filter: 'has_pc;drop'}, 'detail_filter', '추가정보 필터가 올바르지 않습니다.'],
             ['경도 없음', {latitude: '37.5665', radius_km: '5'}, 'longitude', '경도를 입력해주세요.'],
         ])('%s → %s', async (_label, query, property, message) => {
             await expect(validateBody(DiscoveryStoreListDto, query)).resolves.toEqual({message, validation_errors: [{property, message}]});

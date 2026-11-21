@@ -123,8 +123,8 @@ export interface ReservationRepositoryInterface {
     updatePayment(where: FindOptionsWhere<PaymentEntity>, entity: PaymentEntity): Promise<boolean>;
     /** 예약 개수 */
     countReservations(where: FindOptionsWhere<ReservationEntity>): Promise<number>;
-    /** 내 예약 목록 행 — 결제 대기 만료 제외, 입실 최근순 · 페이지 */
-    findMyReservationRows(user_id: string, limit: number, offset: number): Promise<ReservationListRow[]>;
+    /** 내 예약 목록 행 — 결제 대기 만료 제외, 상태를 주면 그 상태만(없으면 null), 입실 최근순 · 페이지 */
+    findMyReservationRows(user_id: string, reservation_state_id: string | null, limit: number, offset: number): Promise<ReservationListRow[]>;
     /** 내 예약 상세 행 — 결제 대기 만료 제외 */
     findMyReservationRow(user_id: string, reservation_id: string): Promise<ReservationListRow | null>;
     /** 예약 구간 행 — 시작 순 */

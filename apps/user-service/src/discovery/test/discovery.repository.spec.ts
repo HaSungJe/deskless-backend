@@ -14,7 +14,7 @@ import {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.
 import {StoreFileEntity} from '@app/database/entities/store/store-file.entity.js';
 import {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import {StoreEntity} from '@app/database/entities/store/store.entity.js';
-import type {DiscoveryRoomCountRow, DiscoveryStorePlanRow, DiscoveryStoreRow} from '../interfaces/discovery.repository.interface.js';
+import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow} from '../interfaces/discovery.repository.interface.js';
 import {DiscoveryRepository} from '../repositories/discovery.repository.js';
 
 /** DiscoveryStoreRow 키 — raw select 별칭과 비교 */
@@ -52,7 +52,35 @@ const STORE_PLAN_ROW_KEYS: (keyof DiscoveryStorePlanRow)[] = [
 const ROOM_COUNT_ROW_KEYS: (keyof DiscoveryRoomCountRow)[] = ['room_group_id', 'room_count'];
 
 /** 서울 5km 조건 */
-const FILTER = {latitude: 37.5665, longitude: 126.978, radius_m: 5000, min_latitude: 37.521534, max_latitude: 37.611466, min_longitude: 126.921271, max_longitude: 127.034729};
+const FILTER: DiscoveryStoreFilter = {
+    latitude: 37.5665,
+    longitude: 126.978,
+    radius_m: 5000,
+    min_latitude: 37.521534,
+    max_latitude: 37.611466,
+    min_longitude: 126.921271,
+    max_longitude: 127.034729,
+    detail_conditions: [],
+};
+/** 거리 제한 없음(ALL) */
+const FILTER_ALL: DiscoveryStoreFilter = {
+    latitude: 37.5665,
+    longitude: 126.978,
+    radius_m: null,
+    min_latitude: null,
+    max_latitude: null,
+    min_longitude: null,
+    max_longitude: null,
+    detail_conditions: [],
+};
+/** 서울 5km + 추가정보 2개(PC 있음 · 방 2개 이상) */
+const FILTER_DETAIL: DiscoveryStoreFilter = {
+    ...FILTER,
+    detail_conditions: [
+        {key: 'has_pc', operator: 'EQ', value: 1, default_value: 1},
+        {key: 'room_count', operator: 'GTE', value: 2, default_value: 1},
+    ],
+};
 
 /**
  * repository 가 manager.find · findOne 에 넘긴 옵션을 SQL 로 빌드한다 — EntityManager 와 같은 방식(실행만 뺀다).
@@ -168,6 +196,12 @@ describe('[SMOKE:data-access] 반경 업체 · 상품 설정 · 그룹별 호실
     /** 반경 업체 — 서울 5km · 301개 */
     const STORE_ROWS_SQL =
         'SELECT "s"."store_id" AS "store_id", "s"."store_name" AS "store_name", "s"."address" AS "address", "s"."latitude" AS "latitude", "s"."longitude" AS "longitude", "s"."is_open" AS "is_open", "s"."is_always_open" AS "is_always_open", CAST(ROUND((12742000 * ASIN(LEAST(1, SQRT(POWER(SIN(RADIANS("s"."latitude" - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS("s"."latitude")) * POWER(SIN(RADIANS("s"."longitude" - $2) / 2), 2)))))) AS integer) AS "distance_m", (SELECT "f"."file_key" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_key", (SELECT "f"."file_storage" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_storage", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $4 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_hourly_price", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $6 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_night_price" FROM "t_store" "s" WHERE "s"."store_state_id" = $7 AND "s"."is_deleted" = 0 AND "s"."latitude" BETWEEN $8 AND $9 AND "s"."longitude" BETWEEN $10 AND $11 AND (12742000 * ASIN(LEAST(1, SQRT(POWER(SIN(RADIANS("s"."latitude" - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS("s"."latitude")) * POWER(SIN(RADIANS("s"."longitude" - $2) / 2), 2))))) <= $12 ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301';
+    /** 반경 업체 — 거리 제한 없음 */
+    const STORE_ROWS_ALL_SQL =
+        'SELECT "s"."store_id" AS "store_id", "s"."store_name" AS "store_name", "s"."address" AS "address", "s"."latitude" AS "latitude", "s"."longitude" AS "longitude", "s"."is_open" AS "is_open", "s"."is_always_open" AS "is_always_open", CAST(ROUND((12742000 * ASIN(LEAST(1, SQRT(POWER(SIN(RADIANS("s"."latitude" - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS("s"."latitude")) * POWER(SIN(RADIANS("s"."longitude" - $2) / 2), 2)))))) AS integer) AS "distance_m", (SELECT "f"."file_key" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_key", (SELECT "f"."file_storage" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_storage", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $4 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_hourly_price", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $6 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_night_price" FROM "t_store" "s" WHERE "s"."store_state_id" = $7 AND "s"."is_deleted" = 0 ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301';
+    /** 반경 업체 — 서울 5km + 추가정보 2개 */
+    const STORE_ROWS_DETAIL_SQL =
+        'SELECT "s"."store_id" AS "store_id", "s"."store_name" AS "store_name", "s"."address" AS "address", "s"."latitude" AS "latitude", "s"."longitude" AS "longitude", "s"."is_open" AS "is_open", "s"."is_always_open" AS "is_always_open", CAST(ROUND((12742000 * ASIN(LEAST(1, SQRT(POWER(SIN(RADIANS("s"."latitude" - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS("s"."latitude")) * POWER(SIN(RADIANS("s"."longitude" - $2) / 2), 2)))))) AS integer) AS "distance_m", (SELECT "f"."file_key" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_key", (SELECT "f"."file_storage" FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = $3 AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1) AS "cover_file_storage", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $4 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_hourly_price", (SELECT MIN("gp"."price") FROM "t_room_group_plan" "gp" INNER JOIN "t_room_group" "g" ON "g"."room_group_id" = "gp"."room_group_id" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND "gp"."room_plan_type_id" = $6 AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5)) AS "min_night_price" FROM "t_store" "s" WHERE "s"."store_state_id" = $7 AND "s"."is_deleted" = 0 AND "s"."latitude" BETWEEN $8 AND $9 AND "s"."longitude" BETWEEN $10 AND $11 AND (12742000 * ASIN(LEAST(1, SQRT(POWER(SIN(RADIANS("s"."latitude" - $1) / 2), 2) + COS(RADIANS($1)) * COS(RADIANS("s"."latitude")) * POWER(SIN(RADIANS("s"."longitude" - $2) / 2), 2))))) <= $12 AND EXISTS (SELECT 1 FROM "t_room_group" "g" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND EXISTS (SELECT 1 FROM "t_room" "r" WHERE "r"."room_group_id" = "g"."room_group_id" AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $5) AND EXISTS (SELECT 1 FROM "t_room_group_plan" "gp" INNER JOIN "t_room_plan" "p" ON "p"."store_id" = "g"."store_id" AND "p"."room_plan_type_id" = "gp"."room_plan_type_id" WHERE "gp"."room_group_id" = "g"."room_group_id" AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1) AND COALESCE(("g"."room_group_detail" ->> CAST($13 AS text))::integer, $14) = $15 AND COALESCE(("g"."room_group_detail" ->> CAST($16 AS text))::integer, $17) >= $18) ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301';
     /** 그룹별 예약 받을 호실 수 */
     const ROOM_COUNTS_SQL =
         'SELECT "r"."room_group_id" AS "room_group_id", CAST(COUNT(*) AS integer) AS "room_count" FROM "t_room" "r" WHERE "r"."room_group_id" IN ($1, $2) AND "r"."is_deleted" = 0 AND "r"."room_state_id" <> $3 GROUP BY "r"."room_group_id"';
@@ -197,6 +231,31 @@ describe('[SMOKE:data-access] 반경 업체 · 상품 설정 · 그룹별 호실
         expect(flat).toContain('ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301');
         expect([...new Set(selectAliases(flat))].sort()).toEqual([...STORE_ROW_KEYS].sort());
         expect(flat).toBe(STORE_ROWS_SQL);
+    });
+
+    it('반경 업체 (거리 제한 없음) — 사각형 · 반경 조건 없이 활성 · 지워지지 않은 업체 전체, 거리(select)와 가까운 순은 그대로', () => {
+        const [sql, parameters] = repository.buildStoreRowsQuery(FILTER_ALL, 301).getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual([37.5665, 126.978, 'STORE_IMAGE', 'HOURLY', 'DISABLED', 'NIGHT', 'ACTIVE']);
+        expect(flat).not.toContain('BETWEEN');
+        expect(flat.match(/12742000 \* ASIN\(LEAST\(1, SQRT/g)).toHaveLength(1);
+        expect(flat).toContain('WHERE "s"."store_state_id" = $7 AND "s"."is_deleted" = 0 ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301');
+        expect(flat).toBe(STORE_ROWS_ALL_SQL);
+    });
+
+    it('반경 업체 (추가정보) — 조건을 모두 갖춘 이용자에게 보이는 그룹(지워지지 않음 · 예약 받을 호실 · 판매 중 상품)이 있는 업체만, JSON 항목 키 · 기본값 · 비교 값은 파라미터', () => {
+        const [sql, parameters] = repository.buildStoreRowsQuery(FILTER_DETAIL, 301).getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual(expect.arrayContaining(['has_pc', 'room_count', 1, 2]));
+        expect(flat).toContain('EXISTS (SELECT 1 FROM "t_room_group" "g" WHERE "g"."store_id" = "s"."store_id" AND "g"."is_deleted" = 0 AND EXISTS (SELECT 1 FROM "t_room" "r"');
+        expect(flat).toContain('AND "gp"."is_used" = 1 AND "gp"."price" > 0 AND "p"."is_used" = 1)');
+        expect(flat).toMatch(
+            /COALESCE\(\("g"\."room_group_detail" ->> CAST\(\$\d+ AS text\)\)::integer, \$\d+\) = \$\d+ AND COALESCE\(\("g"\."room_group_detail" ->> CAST\(\$\d+ AS text\)\)::integer, \$\d+\) >= \$\d+\)/,
+        );
+        expect(flat).toContain('"s"."latitude" BETWEEN');
+        expect(flat).toBe(STORE_ROWS_DETAIL_SQL);
     });
 
     it('그룹별 예약 받을 호실 수 — IN 펼침 · 지워지지 않음 · 사용중지 제외 · GROUP BY, 별칭 = DiscoveryRoomCountRow 키', () => {

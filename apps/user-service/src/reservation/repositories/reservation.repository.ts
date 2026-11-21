@@ -521,13 +521,14 @@ export class ReservationRepository implements ReservationRepositoryInterface {
      * 내 예약 목록 행
      *
      * @param user_id 이용자 ID
+     * @param reservation_state_id 예약 상태 — 거르기 없으면 null
      * @param limit 개수
      * @param offset 건너뛸 개수
      * @returns 목록 행
      */
-    async findMyReservationRows(user_id: string, limit: number, offset: number): Promise<ReservationListRow[]> {
+    async findMyReservationRows(user_id: string, reservation_state_id: string | null, limit: number, offset: number): Promise<ReservationListRow[]> {
         try {
-            return await this.buildMyReservationsQuery(user_id, null).orderBy('r.start_at', 'DESC').limit(limit).offset(offset).getRawMany<ReservationListRow>();
+            return await this.buildMyReservationsQuery(user_id, null, reservation_state_id).orderBy('r.start_at', 'DESC').limit(limit).offset(offset).getRawMany<ReservationListRow>();
         } catch {
             throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
         }
@@ -542,21 +543,22 @@ export class ReservationRepository implements ReservationRepositoryInterface {
      */
     async findMyReservationRow(user_id: string, reservation_id: string): Promise<ReservationListRow | null> {
         try {
-            return (await this.buildMyReservationsQuery(user_id, reservation_id).getRawOne<ReservationListRow>()) ?? null;
+            return (await this.buildMyReservationsQuery(user_id, reservation_id, null).getRawOne<ReservationListRow>()) ?? null;
         } catch {
             throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
         }
     }
 
     /**
-     * 내 예약 쿼리 — 업체 · 호실(상태 — 사용중지 표시) · 그룹 · 상품 종류 · 상태 조인(지운 업체 · 호실 · 그룹도 기록이라 그대로 보인다), 결제 대기 만료 제외, 예약 하나면 그 예약만.
+     * 내 예약 쿼리 — 업체 · 호실(상태 — 사용중지 표시) · 그룹 · 상품 종류 · 상태 조인(지운 업체 · 호실 · 그룹도 기록이라 그대로 보인다), 결제 대기 만료 제외, 예약 하나면 그 예약만, 상태를 주면 그 상태만.
      * 매핑 민감(조인 · raw select — 별칭이 ReservationListRow 키와 같다 · 동적 조립)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
      *
      * @param user_id 이용자 ID
      * @param reservation_id 예약 ID — 목록은 null
+     * @param reservation_state_id 예약 상태 — 거르기 없으면 null
      * @returns 쿼리 빌더
      */
-    buildMyReservationsQuery(user_id: string, reservation_id: string | null): SelectQueryBuilder<ReservationEntity> {
+    buildMyReservationsQuery(user_id: string, reservation_id: string | null, reservation_state_id: string | null): SelectQueryBuilder<ReservationEntity> {
         const query = this.reservations
             .createQueryBuilder('r')
             .select('r.reservation_id', 'reservation_id')
@@ -588,6 +590,9 @@ export class ReservationRepository implements ReservationRepositoryInterface {
             .andWhere('r.reservation_state_id <> :expired', {expired: RESERVATION_STATE.EXPIRED});
         if (reservation_id !== null) {
             query.andWhere('r.reservation_id = :reservation_id', {reservation_id});
+        }
+        if (reservation_state_id !== null) {
+            query.andWhere('r.reservation_state_id = :reservation_state_id', {reservation_state_id});
         }
         return query;
     }

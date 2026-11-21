@@ -26,8 +26,10 @@ describe('GET /internal/v1/user-service/reservation — 내 예약 목록 (동�
         const res = await request(app.getHttpServer()).get(PATH).query({page: '2', size: '20'}).set(internalHeaders(USER_ACTOR));
 
         expect(res.status).toBe(200);
+        expect(repo.countReservations).toHaveBeenCalledTimes(1);
         expect(repo.countReservations).toHaveBeenCalledWith({user_id: USER_ACTOR.user_id, reservation_state_id: Not('EXPIRED')});
-        expect(repo.findMyReservationRows).toHaveBeenCalledWith(USER_ACTOR.user_id, 20, 20);
+        expect(repo.findMyReservationRows).toHaveBeenCalledTimes(1);
+        expect(repo.findMyReservationRows).toHaveBeenCalledWith(USER_ACTOR.user_id, null, 20, 20);
         expect(res.body.list[0]).toEqual({
             reservation_id: RESERVATION_ID,
             store_id: STORE_ID,
@@ -62,5 +64,45 @@ describe('GET /internal/v1/user-service/reservation — 내 예약 목록 (동�
 
         expect(res.status).toBe(200);
         expect(res.body.list[0].is_room_disabled).toBe(expected);
+    });
+
+    describe('상태 거르기', () => {
+        it('[SUCCESS] 상태를 주면 개수 · 목록이 같은 상태 조건 — pagination 은 거른 결과 기준', async () => {
+            repo.countReservations.mockResolvedValueOnce(3);
+            repo.findMyReservationRows.mockResolvedValueOnce([listRow({reservation_state_id: 'CANCELED', reservation_state_name: '취소'})]);
+
+            const res = await request(app.getHttpServer()).get(PATH).query({reservation_state_id: 'CANCELED'}).set(internalHeaders(USER_ACTOR));
+
+            expect(res.status).toBe(200);
+            expect(repo.countReservations).toHaveBeenCalledTimes(1);
+            expect(repo.countReservations).toHaveBeenCalledWith({user_id: USER_ACTOR.user_id, reservation_state_id: 'CANCELED'});
+            expect(repo.findMyReservationRows).toHaveBeenCalledTimes(1);
+            expect(repo.findMyReservationRows).toHaveBeenCalledWith(USER_ACTOR.user_id, 'CANCELED', 20, 0);
+            expect(res.body.list[0].reservation_state_id).toBe('CANCELED');
+            expect(res.body.pagination).toMatchObject({total_count: 3});
+        });
+
+        it('[SUCCESS] PENDING — 결제 대기 상태만(만료 EXPIRED 는 다른 상태라 섞이지 않는다)', async () => {
+            repo.countReservations.mockResolvedValueOnce(1);
+            repo.findMyReservationRows.mockResolvedValueOnce([listRow({reservation_state_id: 'PENDING', reservation_state_name: '결제 대기'})]);
+
+            const res = await request(app.getHttpServer()).get(PATH).query({reservation_state_id: 'PENDING'}).set(internalHeaders(USER_ACTOR));
+
+            expect(res.status).toBe(200);
+            expect(repo.countReservations).toHaveBeenCalledWith({user_id: USER_ACTOR.user_id, reservation_state_id: 'PENDING'});
+            expect(repo.findMyReservationRows).toHaveBeenCalledWith(USER_ACTOR.user_id, 'PENDING', 20, 0);
+        });
+
+        it.each([
+            ['결제 대기 만료(EXPIRED) — 고를 수 없는 상태', 'EXPIRED'],
+            ['소문자', 'confirmed'],
+        ])('[FAIL:validation] %s → 400 validation_errors.reservation_state_id, 조회 없음', async (_label, reservation_state_id) => {
+            const res = await request(app.getHttpServer()).get(PATH).query({reservation_state_id}).set(internalHeaders(USER_ACTOR));
+
+            expect(res.status).toBe(400);
+            expect(res.body.validation_errors).toContainEqual({property: 'reservation_state_id', message: '예약 상태가 올바르지 않습니다.'});
+            expect(repo.countReservations).not.toHaveBeenCalled();
+            expect(repo.findMyReservationRows).not.toHaveBeenCalled();
+        });
     });
 });

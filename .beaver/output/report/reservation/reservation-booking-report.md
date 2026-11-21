@@ -63,3 +63,10 @@
 - `reservation.util.ts` `mergeWindows` 정렬을 dayjs `diff` 로(`valueOf()` 빼기 제거) — plan 블록도 같이.
 - docs/testing.md Smoke 적용 목록에 room · 예약 · scheduler 예약 추가 + find 조건 고정 방법, AGENTS.md 목록 갱신.
 - 확인: typecheck · lint · build · db:check 통과, 전체 94파일 873건 통과.
+
+## Change - 261122-1 (내 예약 목록 상태 거르기 — 프론트 요청, revision `reservation-booking-revision-261122-1.md`)
+- 변경 요약: `GET /api/v1/user-service/reservation` query 에 `reservation_state_id`(선택 — PENDING · CONFIRMED · CHECKED_IN · COMPLETED · CANCELED). 개수 · 목록이 같은 상태 조건이라 `pagination` 은 거른 결과 기준, 결제 대기 만료(`EXPIRED`)는 늘 빠진다. 목록 밖 값 400 `validation_errors.reservation_state_id`. 정렬 · 응답 · 상세 그대로.
+- 바뀐 파일: `libs/contracts/src/reservation/dto/reservation-list.dto.ts`(필드 · 생성자) · `apps/user-service/src/reservation/reservation.service.ts`(`getMyReservations` — 개수 조건 `dto.reservation_state_id ?? Not(EXPIRED)`, 목록에 상태 전달) · `interfaces/reservation.repository.interface.ts` · `repositories/reservation.repository.ts`(`findMyReservationRows(user_id, reservation_state_id, limit, offset)` · `buildMyReservationsQuery(user_id, reservation_id, reservation_state_id)` — 상태 조건 동적, 상세는 null) · `README.md`(user-service 설명) · `.beaver/output/frontend/changes/2026-11-22-reservation-list-state.md` + 목록 줄.
+- 테스트: `reservation-list.spec.ts` — 기존 사례 인자(`null`) · 호출 횟수, `[SUCCESS]` 상태 거르기(CANCELED — 개수 · 목록 같은 조건 · total_count) · PENDING, `[FAIL:validation]` EXPIRED · 소문자(조회 없음). `reservation.repository.spec.ts` — Smoke 상태 거르기 SQL(기존 목록 SQL + `AND "r"."reservation_state_id" = $3`) · 내 예약 수 상태 같음(관계 컬럼).
+- 확인: typecheck 0, 관련 spec 2파일 46건 통과(전체 실행은 discovery 리비전과 함께).
+- 남은 일: 없음 — 마이그레이션 없음, 백엔드 배포 먼저(거르기 없으면 지금과 같다).

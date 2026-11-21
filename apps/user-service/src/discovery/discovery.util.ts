@@ -7,15 +7,17 @@ import type {
     DiscoveryStoreImageResultDto,
     DiscoveryStorePlanResultDto,
 } from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
+import type {DiscoveryRoomGroupDetailFilterItemResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
 import type {DiscoveryStoreItemResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
 import type {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
 import type {RoomGroupPlanEntity} from '@app/database/entities/room/room-group-plan.entity.js';
-import type {RoomGroupEntity} from '@app/database/entities/room/room-group.entity.js';
+import {ROOM_GROUP_DETAIL_DEFAULTS, ROOM_GROUP_DETAIL_FILTERS} from '@app/database/entities/room/room-group.entity.js';
+import type {RoomGroupDetail, RoomGroupEntity} from '@app/database/entities/room/room-group.entity.js';
 import type {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.js';
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
-import {DISCOVERY_DATE_FORMAT, DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE_ORDER} from './discovery.constants.js';
-import type {DiscoveryRoomCountRow, DiscoveryStorePlanRow, DiscoveryStoreRow} from './interfaces/discovery.repository.interface.js';
+import {DISCOVERY_DATE_FORMAT, DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE_ORDER, DISCOVERY_RADIUS_ALL} from './discovery.constants.js';
+import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow} from './interfaces/discovery.repository.interface.js';
 
 /** 반경을 덮는 위경도 사각형 — 인덱스로 먼저 거를 범위 */
 export interface RadiusBox {
@@ -74,6 +76,58 @@ export function toRadiusBox(latitude: number, longitude: number, radius_km: numb
     const latitude_delta = toDegrees(angle);
     const longitude_delta = Math.abs(latitude) + latitude_delta >= 90 ? 180 : toDegrees(Math.asin(Math.min(1, Math.sin(angle) / Math.cos(toRadians(latitude)))));
     return {min_latitude: latitude - latitude_delta, max_latitude: latitude + latitude_delta, min_longitude: longitude - longitude_delta, max_longitude: longitude + longitude_delta};
+}
+
+/**
+ * 추가정보 필터 쉼표 목록 → 항목 키(중복 제거 · 순서 유지)
+ *
+ * @param detail_filter 쉼표 목록 — 없으면 null
+ * @returns 항목 키, 없으면 []
+ */
+export function splitDetailFilter(detail_filter: string | null): string[] {
+    return detail_filter ? [...new Set(detail_filter.split(','))] : [];
+}
+
+/**
+ * 객실 그룹 상세의 필터 항목인지 — 정의(ROOM_GROUP_DETAIL_FILTERS)에 있는 키만
+ *
+ * @param key 항목 키
+ * @returns 필터 항목이면 true
+ */
+export function isRoomGroupDetailFilterKey(key: string): key is keyof RoomGroupDetail {
+    return Object.hasOwn(ROOM_GROUP_DETAIL_FILTERS, key);
+}
+
+/**
+ * 반경 업체 조건 — 거리 제한 없음(ALL)이면 반경 · 사각형 null, 추가정보는 항목 정의의 조건 · 비교 값 + 빠진 항목의 기본값
+ *
+ * @param latitude 중심 위도
+ * @param longitude 중심 경도
+ * @param radius_km 반경(km 문자열) 또는 ALL
+ * @param detail_keys 추가정보 항목 키(정의에 있는 것만)
+ * @returns repository 조건
+ */
+export function toStoreFilter(latitude: number, longitude: number, radius_km: string, detail_keys: (keyof RoomGroupDetail)[]): DiscoveryStoreFilter {
+    const detail_conditions = detail_keys.map((key) => ({
+        key,
+        operator: ROOM_GROUP_DETAIL_FILTERS[key].operator,
+        value: ROOM_GROUP_DETAIL_FILTERS[key].value,
+        default_value: ROOM_GROUP_DETAIL_DEFAULTS[key],
+    }));
+    if (radius_km === DISCOVERY_RADIUS_ALL) {
+        return {latitude, longitude, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions};
+    }
+    const km = Number(radius_km);
+    return {latitude, longitude, radius_m: km * 1000, ...toRadiusBox(latitude, longitude, km), detail_conditions};
+}
+
+/**
+ * 추가정보 필터 항목 목록 — 정의 순서
+ *
+ * @returns 항목(키 · 체크박스 이름)
+ */
+export function toRoomGroupDetailFilterItems(): DiscoveryRoomGroupDetailFilterItemResultDto[] {
+    return Object.entries(ROOM_GROUP_DETAIL_FILTERS).map(([key, filter]) => ({key, name: filter.name}));
 }
 
 /**

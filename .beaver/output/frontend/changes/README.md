@@ -13,6 +13,8 @@
 | 2026-11-19 | [문 열림 · 닫힘 상태 없앰, 마지막으로 연 시각만](2026-11-19-door-state-removed.md) | M4 호실 — 문 상태 칸 → 마지막으로 연 시각(door_opened_at), 문 열기 응답 {room_id, door_opened_at}(프론트와 함께 배포) | 2026.11.19 커밋 |
 | 2026-11-20 | [객실 그룹 상세 · 호실 목록에 값 추가](2026-11-20-room-group-detail-floors.md) | M5 객실 그룹 상세(상품마다 기간 가격 수 · 호실 수 · 호실 목록) · M4 호실(층 거르기 선택지 floors) | 2026.11.20 커밋 |
 | 2026-11-22 | [프로젝트 이름 바꿈(deskless → Deskless · 바로방)](2026-11-22-project-rename.md) | 세 영역의 서비스 이름 · SMS 머리말 `[바로방]` · 테스트 데이터 업체 이름 — API 변화 없음 | 2026.11.22 커밋 |
+| 2026-11-22 | [내 예약 목록 상태 거르기](2026-11-22-reservation-list-state.md) | U6 내 예약(상태 칩 — query `reservation_state_id`, pagination 은 거른 결과 기준) | 2026.11.22 커밋 |
+| 2026-11-22 | [업체 검색 거리 제한 없음 · 추가정보 필터](2026-11-22-discovery-filter.md) | 이용자 지도 · 업체 목록(반경 "제한 없음" — `radius_km=ALL`, 추가정보 필터 팝업 체크박스 — 새 항목 목록 API · `detail_filter`) | 2026.11.22 커밋 |
 
 ## 문서 틀 — `changes/<YYYY-MM-DD>-<기능>.md`
 

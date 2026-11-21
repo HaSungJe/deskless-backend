@@ -604,16 +604,18 @@ export class ReservationService {
     }
 
     /**
-     * 내 예약 목록 — 결제 대기 만료 건 제외, 입실 최근순. (내부 HTTP: GET /internal/v1/user-service/reservation)
+     * 내 예약 목록 — 상태 거르기(선택), 결제 대기 만료 건 제외, 입실 최근순. (내부 HTTP: GET /internal/v1/user-service/reservation)
      *
      * @param user_id 이용자 ID
-     * @param dto 페이지
-     * @returns 목록 · 페이지 정보
+     * @param dto 상태(선택) · 페이지
+     * @returns 목록 · 페이지 정보(거른 결과 기준)
      */
     async getMyReservations(user_id: string, dto: ReservationListDto): Promise<ReservationListResultDto> {
-        const total_count = await this.reservationRepository.countReservations({user_id, reservation_state_id: Not(RESERVATION_STATE.EXPIRED)});
+        // ① 개수 — 거르기가 있으면 그 상태, 없으면 결제 대기 만료가 아닌 것
+        const total_count = await this.reservationRepository.countReservations({user_id, reservation_state_id: dto.reservation_state_id ?? Not(RESERVATION_STATE.EXPIRED)});
+        // ② 페이지 → ③ 같은 조건의 목록
         const pagination = new Pagination({...dto, total_count});
-        const rows = await this.reservationRepository.findMyReservationRows(user_id, pagination.limit, pagination.offset);
+        const rows = await this.reservationRepository.findMyReservationRows(user_id, dto.reservation_state_id, pagination.limit, pagination.offset);
         return {list: rows.map(toReservationListItem), pagination: pagination.getPagination()};
     }
 

@@ -301,7 +301,7 @@ describe('[SMOKE:data-access] 예약 가능 호실 · 최근 만료 · 내 예�
         [null, ['u1', 'EXPIRED']],
         ['v1', ['u1', 'EXPIRED', 'v1']],
     ])('내 예약 (예약 %s) — 업체 · 호실(상태 — 사용중지 표시) · 그룹 · 상품 종류 · 상태 조인, 결제 대기 만료 제외, 별칭 = ReservationListRow 키', (reservation_id, expectedParameters) => {
-        const [sql, parameters] = repository.buildMyReservationsQuery('u1', reservation_id).getQueryAndParameters();
+        const [sql, parameters] = repository.buildMyReservationsQuery('u1', reservation_id, null).getQueryAndParameters();
         const flat = sql.replace(/\s+/g, ' ');
 
         expect(parameters).toEqual(expectedParameters);
@@ -309,6 +309,16 @@ describe('[SMOKE:data-access] 예약 가능 호실 · 최근 만료 · 내 예�
         expect(flat).toContain('"rm"."room_state_id" AS "room_state_id"');
         expect(selectAliases(flat)).toHaveLength(20);
         expect(flat).toBe(reservation_id === null ? MY_RESERVATIONS_SQL : MY_RESERVATION_SQL);
+    });
+
+    it('내 예약 목록 (상태 거르기) — 결제 대기 만료 제외 위에 그 상태만, 별칭 그대로', () => {
+        const [sql, parameters] = repository.buildMyReservationsQuery('u1', null, 'CONFIRMED').getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual(['u1', 'EXPIRED', 'CONFIRMED']);
+        expect(flat).toContain('"r"."reservation_state_id" <> $2 AND "r"."reservation_state_id" = $3');
+        expect(selectAliases(flat)).toHaveLength(20);
+        expect(flat).toBe(`${MY_RESERVATIONS_SQL} AND "r"."reservation_state_id" = $3`);
     });
 
     it('예약 구간 — 종류 · 결제 · 결제 상태 조인, 시작 순, 별칭 = ReservationSegmentRow 키', () => {
@@ -466,6 +476,15 @@ describe('[SMOKE:data-access] find · update 조건(관계 필드 In · LessThan
         expect(parameters).toEqual(['u1', 'EXPIRED']);
         expect(sql).toContain('WHERE (("ReservationEntity"."user_id" = $1) AND ("ReservationEntity"."reservation_state_id" != $2))');
         expect(sql).toBe(COUNT_RESERVATIONS_SQL);
+    });
+
+    it('내 예약 수 (상태 거르기) — 이용자 · 그 상태(관계 컬럼 같음)', async () => {
+        await repository.countReservations({user_id: 'u1', reservation_state_id: RESERVATION_STATE.CONFIRMED});
+        const [sql, parameters] = buildFindQuery(dataSource, count.mock.calls[0]);
+
+        expect(count).toHaveBeenCalledTimes(1);
+        expect(parameters).toEqual(['u1', 'CONFIRMED']);
+        expect(sql).toContain('WHERE (("ReservationEntity"."user_id" = $1) AND ("ReservationEntity"."reservation_state_id" = $2))');
     });
 
     it('마지막 이용 중 취소 요청 — findOne 에 넘긴 조건(관계 컬럼 예약) · 등록 최근순', async () => {

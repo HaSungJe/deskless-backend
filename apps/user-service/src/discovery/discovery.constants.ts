@@ -13,6 +13,9 @@ export const DISCOVERY_PLAN_TYPE = {HOURLY: 'HOURLY', NIGHT: 'NIGHT', LONG: 'LON
 /** 상품 종류 나열 순서 — 시간 이용 → 1박 → 연박 */
 export const DISCOVERY_PLAN_TYPE_ORDER: string[] = [DISCOVERY_PLAN_TYPE.HOURLY, DISCOVERY_PLAN_TYPE.NIGHT, DISCOVERY_PLAN_TYPE.LONG];
 
+/** 반경 — 거리 제한 없음(사용자 결정 2026-11-22) */
+export const DISCOVERY_RADIUS_ALL = 'ALL';
+
 /** 반경 업체 조회 최대 개수 — 넘으면 is_truncated (사용자 결정 2026-11-06) */
 export const DISCOVERY_STORE_LIMIT = 300;
 
@@ -24,3 +27,6 @@ export const DISCOVERY_DATE_FORMAT = 'YYYY-MM-DD';
 
 /** 업체 없음 — 상세 · 그룹 목록 두 곳 */
 export const DISCOVERY_STORE_NOT_FOUND_MESSAGE = '업체를 찾을 수 없습니다.';
+
+/** 추가정보 필터에 정의에 없는 항목이 있다 — DTO 모양 검사와 같은 문구 */
+export const DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE = '추가정보 필터가 올바르지 않습니다.';

@@ -7,6 +7,8 @@ const DISCOVERY_INTERNAL_BASE = '/internal/v1/user-service/discovery';
 export const DISCOVERY_INTERNAL_PATH = {
     /** 반경 업체 조회 (GET, 인증 없음) */
     STORE_LIST: `${DISCOVERY_INTERNAL_BASE}/store`,
+    /** 업체 검색 추가정보 필터 항목 (GET, 인증 없음) */
+    ROOM_GROUP_DETAIL_FILTER: `${DISCOVERY_INTERNAL_BASE}/room-group-detail-filter`,
     /** 업체 상세 (GET, 인증 없음) */
     storeDetail: (store_id: string) => `${DISCOVERY_INTERNAL_BASE}/store/${encodeURIComponent(store_id)}`,
     /** 업체의 객실 그룹 목록 (GET, 인증 없음) */

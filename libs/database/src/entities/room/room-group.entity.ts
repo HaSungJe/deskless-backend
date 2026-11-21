@@ -19,6 +19,27 @@ export interface RoomGroupDetail {
 /** 객실 그룹 상세정보 기본값 — 저장된 JSON 에 없는 항목은 조회 뒤 이 값으로 채운다(@AfterLoad). 엔티티로 읽지 않는 곳(raw select)도 이 상수로 채운다 */
 export const ROOM_GROUP_DETAIL_DEFAULTS: RoomGroupDetail = {room_count: 1, has_shower: 1, has_tv: 1, has_pc: 1};
 
+/** 객실 그룹 상세 항목 하나의 검색 필터 — 체크박스 1개 */
+export interface RoomGroupDetailFilter {
+    /** 체크박스 이름 */
+    name: string;
+    /** 조건 — EQ: 값과 같다(있음 = 1), GTE: 값 이상 */
+    operator: 'EQ' | 'GTE';
+    /** 비교 값 */
+    value: number;
+}
+
+/**
+ * 객실 그룹 상세 검색 필터 — 항목마다 체크박스 1개(이 순서로 보인다). 업체 검색의 detail_filter · 필터 항목 API 가 이 정의만 쓴다.
+ * RoomGroupDetail 의 모든 항목을 키로 가져야 한다(Record — 항목을 더하고 여기를 빼먹으면 타입 검사가 실패한다).
+ */
+export const ROOM_GROUP_DETAIL_FILTERS: Record<keyof RoomGroupDetail, RoomGroupDetailFilter> = {
+    room_count: {name: '방 2개 이상', operator: 'GTE', value: 2},
+    has_shower: {name: '샤워실', operator: 'EQ', value: 1},
+    has_tv: {name: 'TV', operator: 'EQ', value: 1},
+    has_pc: {name: 'PC', operator: 'EQ', value: 1},
+};
+
 /**
  * 객실 그룹 — 객실의 유형. 같은 상품 · 가격을 쓰는 호실 묶음이고, 유형별 상세정보는 JSON(room_group_detail) 하나로 관리한다.
  * 상품 설정은 업체 공통(t_room_plan), 가격 · 사용 여부는 그룹 상품(t_room_group_plan).

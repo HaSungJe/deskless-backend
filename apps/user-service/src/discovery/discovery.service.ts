@@ -1,13 +1,27 @@
-import {Inject, Injectable, NotFoundException} from '@nestjs/common';
+import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
 import {In, MoreThanOrEqual} from 'typeorm';
+import {createValidationError} from '@app/common/utils/validation.js';
+import type {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
 import type {DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import type {DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import type {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
 import {STORAGE_GATEWAY} from '@app/integration/integration.symbols.js';
 import type {StorageGatewayInterface} from '@app/integration/interfaces/integration.interface.js';
-import {DISCOVERY_STORE_IMAGE_PURPOSE, DISCOVERY_STORE_LIMIT, DISCOVERY_STORE_NOT_FOUND_MESSAGE, DISCOVERY_STORE_STATE_ACTIVE} from './discovery.constants.js';
+import {DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE, DISCOVERY_STORE_IMAGE_PURPOSE, DISCOVERY_STORE_LIMIT, DISCOVERY_STORE_NOT_FOUND_MESSAGE, DISCOVERY_STORE_STATE_ACTIVE} from './discovery.constants.js';
 import {DISCOVERY_REPOSITORY} from './discovery.symbols.js';
-import {isRoomGroupPlanOnSale, isStorePlanUsed, todayKst, toDiscoveryImage, toDiscoveryRoomGroups, toDiscoveryStoreDetail, toDiscoveryStoreItem, toRadiusBox} from './discovery.util.js';
+import {
+    isRoomGroupDetailFilterKey,
+    isRoomGroupPlanOnSale,
+    isStorePlanUsed,
+    splitDetailFilter,
+    todayKst,
+    toDiscoveryImage,
+    toDiscoveryRoomGroups,
+    toDiscoveryStoreDetail,
+    toDiscoveryStoreItem,
+    toRoomGroupDetailFilterItems,
+    toStoreFilter,
+} from './discovery.util.js';
 import type {DiscoveryRepositoryInterface} from './interfaces/discovery.repository.interface.js';
 
 /**
@@ -26,26 +40,42 @@ export class DiscoveryService {
     ) {}
 
     /**
-     * 반경 업체 조회 — 중심 위경도 + 반경(5 · 10 · 20 · 50km)의 활성 업체를 가까운 순으로 최대 300개(넘으면 is_truncated 1). 지도 마커 · 목록 카드 공용.
+     * 반경 업체 조회 — 중심 위경도 + 반경(5 · 10 · 20 · 50km, ALL 은 거리 제한 없음)의 활성 업체를 가까운 순으로 최대 300개(넘으면 is_truncated 1).
+     * 추가정보 필터를 주면 고른 조건을 모두 갖춘 이용자에게 보이는 객실 그룹이 있는 업체만. 지도 마커 · 목록 카드 공용.
      * (내부 HTTP: GET /internal/v1/user-service/discovery/store)
      *
-     * @param dto 위도 · 경도 · 반경
+     * @param dto 위도 · 경도 · 반경 · 추가정보 필터
      * @returns 업체 목록 · 잘림 여부
+     * @throws BadRequestException 추가정보 필터에 정의에 없는 항목이 있을 때
      */
     async getStores(dto: DiscoveryStoreListDto): Promise<DiscoveryStoreListResultDto> {
-        // 1. 중심 · 반경 → 사각형(인덱스로 먼저 거른다) + 거리 조건, 잘림 판단용으로 1개 더
-        const latitude = Number(dto.latitude);
-        const longitude = Number(dto.longitude);
-        const radius_km = Number(dto.radius_km);
-        const rows = await this.discoveryRepository.findStoreRows({latitude, longitude, radius_m: radius_km * 1000, ...toRadiusBox(latitude, longitude, radius_km)}, DISCOVERY_STORE_LIMIT + 1);
+        // 1. 추가정보 필터 — 정의(ROOM_GROUP_DETAIL_FILTERS)에 있는 항목만
+        const detail_keys = splitDetailFilter(dto.detail_filter);
+        if (!detail_keys.every(isRoomGroupDetailFilterKey)) {
+            throw new BadRequestException({message: DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE, validation_errors: createValidationError('detail_filter', DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE)});
+        }
 
-        // 2. 대표 사진 공개 주소
+        // 2. 중심 · 반경 → 사각형(인덱스로 먼저 거른다) + 거리 조건(제한 없음이면 둘 다 없음) + 추가정보 조건, 잘림 판단용으로 1개 더
+        const filter = toStoreFilter(Number(dto.latitude), Number(dto.longitude), dto.radius_km, detail_keys);
+        const rows = await this.discoveryRepository.findStoreRows(filter, DISCOVERY_STORE_LIMIT + 1);
+
+        // 3. 대표 사진 공개 주소
         return {
             list: rows
                 .slice(0, DISCOVERY_STORE_LIMIT)
                 .map((row) => toDiscoveryStoreItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl({file_key: row.cover_file_key, file_storage: row.cover_file_storage}) : null)),
             is_truncated: rows.length > DISCOVERY_STORE_LIMIT ? 1 : 0,
         };
+    }
+
+    /**
+     * 추가정보 필터 항목 — 객실 그룹 상세 항목마다 체크박스 1개(정의 순서). 항목이 늘면 저절로 늘어난다.
+     * (내부 HTTP: GET /internal/v1/user-service/discovery/room-group-detail-filter)
+     *
+     * @returns 항목 목록
+     */
+    getRoomGroupDetailFilters(): DiscoveryRoomGroupDetailFilterListResultDto {
+        return {list: toRoomGroupDetailFilterItems()};
     }
 
     /**

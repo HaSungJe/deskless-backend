@@ -2,6 +2,7 @@ import {Controller, Get, HttpCode, Param, Query} from '@nestjs/common';
 import {ApiBadRequestResponse, ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags} from '@nestjs/swagger';
 import {ApiFailResultDto} from '@app/common/dto/global.result.dto.js';
 import {DISCOVERY_INTERNAL_PATH} from '@app/contracts/discovery/discovery.commands.js';
+import {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
 import {DiscoveryRoomGroupListParamDto, DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import {DiscoveryStoreDetailParamDto, DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
@@ -20,7 +21,7 @@ export class DiscoveryController {
     constructor(private readonly internalHttp: InternalHttpClient) {}
 
     /**
-     * 반경 업체 조회 (로그인 없음) — 지도 중심(처음엔 내 위치) + 반경 5 · 10 · 20 · 50km, 가까운 순 최대 300개. 지도 마커 · 목록 카드 공용
+     * 반경 업체 조회 (로그인 없음) — 지도 중심(처음엔 내 위치) + 반경 5 · 10 · 20 · 50km · ALL(거리 제한 없음), 추가정보 필터(선택), 가까운 순 최대 300개. 지도 마커 · 목록 카드 공용
      */
     @Get('/store')
     @HttpCode(200)
@@ -32,6 +33,19 @@ export class DiscoveryController {
     async getStores(@Query() query: DiscoveryStoreListDto): Promise<DiscoveryStoreListResultDto> {
         const dto = new DiscoveryStoreListDto(query);
         return this.internalHttp.request<DiscoveryStoreListResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.STORE_LIST, {query: dto});
+    }
+
+    /**
+     * 업체 검색 추가정보 필터 항목 (로그인 없음) — 객실 그룹 상세 항목마다 체크박스 1개, 고른 키를 업체 검색 detail_filter 에 쉼표로 넣는다
+     */
+    @Get('/room-group-detail-filter')
+    @HttpCode(200)
+    @ApiOperation({summary: '업체 검색 추가정보 필터 항목'})
+    @ApiOkResponse({type: DiscoveryRoomGroupDetailFilterListResultDto})
+    @ApiServiceUnavailableResponse({type: ApiFailResultDto})
+    @ApiInternalServerErrorResponse({type: ApiFailResultDto})
+    async getRoomGroupDetailFilters(): Promise<DiscoveryRoomGroupDetailFilterListResultDto> {
+        return this.internalHttp.request<DiscoveryRoomGroupDetailFilterListResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.ROOM_GROUP_DETAIL_FILTER);
     }
 
     /**

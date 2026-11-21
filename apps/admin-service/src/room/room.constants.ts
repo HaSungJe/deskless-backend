@@ -23,7 +23,7 @@ export const ROOM_PLAN_TYPE_ORDER: string[] = [ROOM_PLAN_TYPE.HOURLY, ROOM_PLAN_
 /** 그룹 사진 한도 — 그룹 1개 기준 */
 export const ROOM_GROUP_IMAGE_LIMIT = 5;
 
-/** 객실 그룹 상세정보의 알려진 항목 — 입력에서 이 항목만 남긴다(선언 안 된 키는 버린다). 항목을 더하면 RoomGroupDetail · ROOM_GROUP_DETAIL_DEFAULTS 와 함께 고친다 */
+/** 객실 그룹 상세정보의 알려진 항목 — 입력에서 이 항목만 남긴다(선언 안 된 키는 버린다). 항목을 더하면 RoomGroupDetail · ROOM_GROUP_DETAIL_DEFAULTS · ROOM_GROUP_DETAIL_FILTERS(이용자 검색 필터 — 빠지면 typecheck 실패) 와 함께 고친다 */
 export const ROOM_GROUP_DETAIL_KEYS: (keyof RoomGroupDetail)[] = ['room_count', 'has_shower', 'has_tv', 'has_pc'];
 
 /** 그룹 사진 MIME 타입 → 확장자 */
