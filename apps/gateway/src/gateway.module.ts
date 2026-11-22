@@ -1,6 +1,8 @@
 import {MiddlewareConsumer, Module, NestModule} from '@nestjs/common';
 import {DoorStoreModule} from '@app/integration/door/door-store.module.js';
 import {MessagingModule} from '@app/messaging/messaging.module.js';
+import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
+import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {PassportJwtAuthModule} from './guards/passport.jwt.auth/passport.jwt.auth.module.js';
 import {ApiLogMiddleware} from './modules/api-log/api-log.middleware.js';
 import {ApiLogModule} from './modules/api-log/api-log.module.js';
@@ -39,6 +41,7 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
  */
 @Module({
     imports: [
+        MonitoringModule.forRoot(toMonitoringOptions('gateway', process.env.GATEWAY_METRICS_PORT, 9464, true)),
         MessagingModule.forGateway(),
         TransportModule,
         DoorStoreModule,

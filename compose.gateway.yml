@@ -19,11 +19,15 @@
 #   deskless-service : user-service-lb · admin-service-lb 로 내부 HTTP (internal)
 #   deskless-broker  : 브로커로 나가는 길
 #   deskless-data    : Redis(문 소켓의 서버 명령 구독) · PostgreSQL(API 로그 적재 — 로그 전용 연결, t_api_log 만)로 나가는 길
+#   deskless-monitoring : Prometheus 가 gateway 인스턴스의 지표 포트(9464)를 긁는 길 (internal — compose.monitoring.yml)
 #   볼륨 deskless-files : 내부 파일 저장소(AWS_S3_BUCKET 이 빌 때 — gateway · user-service · admin-service 가 /app/storage/files 로 같이 본다), npm run docker:network 가 만든다
 #
 # 문 소켓(/ws/v1/door): gateway-lb 의 /ws/ 가 WebSocket 업그레이드를 넘긴다. 연결 목록은 인스턴스 메모리라 어느 인스턴스에 붙어도 되고,
 #   바로 열기 명령은 Redis 채널을 인스턴스마다 구독해 자기 연결에만 보낸다 → sticky session 이 필요 없다
 name: deskless-gateway
+# 공용 네트워크 · 볼륨(edge · service · broker · data · monitoring · files) — 선언은 compose.shared.yml 한곳(npm run docker:network 가 그 파일로 만든다)
+include:
+    - compose.shared.yml
 
 x-logging: &logging
     driver: json-file
@@ -62,6 +66,12 @@ services:
             # 인스턴스마다 달라야 한다 — 비워 두면 컨테이너 호스트명으로 정한다(.env 에 값이 있어도 덮는다)
             GATEWAY_INSTANCE_ID: ''
             TZ: Asia/Seoul
+            # 지표 전용 포트 — 모니터링 내부망(deskless-monitoring)의 Prometheus 만 닿는다(서버 구성 — .env 값과 무관, docs/monitoring.md)
+            GATEWAY_METRICS_PORT: 9464
+            METRICS_HOST: 0.0.0.0
+            # 모니터링 비밀값은 앱이 쓰지 않는다
+            GRAFANA_ADMIN_PASSWORD: ''
+            MONITORING_DATABASE_URL: ''
             # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 공용 볼륨 deskless-files 를 붙인 자리(서버 구성 — .env 값과 무관)
             FILE_STORAGE_DIR: /app/storage/files
             # ── 쓰지 않는 비밀값은 전달하지 않는다 (게이트웨이는 비밀번호 해시 · 토큰 암호화 · AWS · 토스를 쓰지 않는다 — DB 는 API 로그 적재만) ──
@@ -81,7 +91,7 @@ services:
             replicas: ${GATEWAY_REPLICAS:-2}
         expose:
             - '3000'
-        networks: [edge, service, broker, data]
+        networks: [edge, service, broker, data, monitoring]
         logging: *logging
         restart: unless-stopped
 
@@ -98,22 +108,3 @@ services:
             - gateway
         logging: *logging
         restart: unless-stopped
-
-networks:
-    edge:
-        name: deskless-edge
-        external: true
-    service:
-        name: deskless-service
-        external: true
-    broker:
-        name: deskless-broker
-        external: true
-    data:
-        name: deskless-data
-        external: true
-
-volumes:
-    files:
-        name: deskless-files
-        external: true

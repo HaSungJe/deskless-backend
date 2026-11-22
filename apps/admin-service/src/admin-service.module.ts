@@ -9,6 +9,8 @@ import {SmsModule} from '@app/integration/sms/sms.module.js';
 import {StorageModule} from '@app/integration/storage/storage.module.js';
 import {BROKER_USER} from '@app/messaging/messaging.constants.js';
 import {MessagingModule} from '@app/messaging/messaging.module.js';
+import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
+import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {AdminModule} from './admin/admin.module.js';
 import {ManagerModule} from './manager/manager.module.js';
 import {ReservationModule} from './reservation/reservation.module.js';
@@ -30,6 +32,7 @@ import {UserModule} from './user/user.module.js';
  */
 @Module({
     imports: [
+        MonitoringModule.forRoot(toMonitoringOptions('admin-service', process.env.ADMIN_SERVICE_METRICS_PORT, 9466, true)),
         DatabaseModule,
         MessagingModule.forService({queue: ADMIN_COMMAND_QUEUE, binding_keys: [ADMIN_COMMAND_BINDING], broker_user: BROKER_USER.ADMIN_SERVICE}),
         SmsModule,

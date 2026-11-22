@@ -1,4 +1,4 @@
-import {Inject, Injectable, OnModuleDestroy, OnModuleInit} from '@nestjs/common';
+import {Inject, Injectable, OnModuleDestroy, OnModuleInit, Optional} from '@nestjs/common';
 import type {Response} from 'express';
 import type {Actor} from '@app/contracts/actor.js';
 import {COMMAND_STREAM_EVENT} from '@app/contracts/message-envelope.js';
@@ -6,6 +6,7 @@ import type {CommandPublisherInterface, ResultEnvelope, ResultSubscriberInterfac
 import {COMMAND_PUBLISHER, GATEWAY_INSTANCE_ID, RESULT_SUBSCRIBER} from '@app/messaging/messaging.symbols.js';
 import {buildCommandEnvelope} from '@app/messaging/messaging.util.js';
 import {readPositiveInt} from '@app/common/utils/env.js';
+import {MetricsService} from '@app/monitoring/metrics.service.js';
 import {COMMAND_PENDING_MESSAGE, DEFAULT_COMMAND_STREAM_TIMEOUT_MS, formatSseEvent} from './transport.util.js';
 
 /** 큐 경로 명령 1건의 입력 */
@@ -47,18 +48,28 @@ export class CommandStreamService implements OnModuleInit, OnModuleDestroy {
      * @param publisher 명령 발행 포트
      * @param subscriber 결과 수신 포트
      * @param instanceId 이 게이트웨이 인스턴스 ID (결과 회신 주소)
+     * @param metrics 지표 레지스트리(모니터링 모듈이 없으면 없음)
      */
     constructor(
         @Inject(COMMAND_PUBLISHER) private readonly publisher: CommandPublisherInterface,
         @Inject(RESULT_SUBSCRIBER) private readonly subscriber: ResultSubscriberInterface,
         @Inject(GATEWAY_INSTANCE_ID) private readonly instanceId: string,
+        @Optional() private readonly metrics?: MetricsService,
     ) {}
 
     /**
-     * 결과 수신 시 complete 를 호출하도록 연결한다.
+     * 결과 수신 시 complete 를 호출하도록 연결하고, 결과를 기다리는 스트림 수를 지표로 내놓는다.
      */
     onModuleInit(): void {
         this.subscriber.setListener((envelope) => this.complete(envelope));
+        const streams = this.streams;
+        this.metrics?.gauge({
+            name: 'gateway_command_streams_pending',
+            help: '큐 명령 결과를 기다리는 SSE 스트림 수',
+            collect() {
+                this.set(streams.size);
+            },
+        });
     }
 
     /**

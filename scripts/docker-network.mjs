@@ -4,21 +4,65 @@
  *
  * 실행: `npm run docker:network` (이미 있으면 건너뛴다 — 몇 번을 돌려도 같다)
  *
- * compose 파일 7개는 이 네트워크 · 볼륨을 `external: true` 로 쓴다. 한 묶음을 내려도(`down`) 지워지지 않아
- * 다른 묶음이 계속 동작한다.
+ * 무엇을 만들지는 compose.shared.yml 한곳에서 읽는다 — 묶음(compose.*.yml)은 그 파일을 include 해 같은 이름을 `external: true` 로 쓴다.
+ * 한 묶음을 내려도(`down`) 지워지지 않아 다른 묶음이 계속 동작한다. 새 공용 네트워크 · 볼륨은 compose.shared.yml 에만 더한다.
  */
 import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 
-/** 공용 네트워크 — internal 이면 외부로 나가는 길도, 호스트 포트도 없다 */
-const NETWORKS = [
-    {name: 'deskless-edge', internal: false, purpose: 'gateway-lb · gateway (외부 포트는 gateway-lb 만)'},
-    {name: 'deskless-service', internal: true, purpose: 'gateway → user-service-lb → user-service 내부 HTTP'},
-    {name: 'deskless-broker', internal: false, purpose: 'rabbitmq · gateway · user-service'},
-    {name: 'deskless-data', internal: false, purpose: 'postgres · redis · migrate · user-service · admin-service · scheduler'},
-];
+/** 공용 네트워크 · 볼륨 선언 파일(저장소 루트) */
+const SHARED_FILE = fileURLToPath(new URL('../compose.shared.yml', import.meta.url));
 
-/** 공용 볼륨 — 묶음끼리 같은 파일을 본다 */
-const VOLUMES = [{name: 'deskless-files', purpose: '내부 파일 저장소(AWS_S3_BUCKET 이 빌 때) — gateway · user-service · admin-service 의 /app/storage/files'}];
+/**
+ * compose.shared.yml 의 공용 네트워크 · 볼륨 — 이 파일의 정해진 모양(들여쓰기 4칸 · 항목마다 name · x-internal · x-purpose 한 줄씩)만 읽는다.
+ * YAML 파서 없이 읽는 이유: 이 스크립트는 Node 내장만으로 돌아야 한다(서버에서 npm install 전에도 쓴다). 못 읽으면 멈춘다(빈 목록으로 넘어가지 않는다).
+ *
+ * @returns {{networks: {key: string, name: string, internal: boolean, purpose: string}[], volumes: {key: string, name: string, internal: boolean, purpose: string}[]}} 네트워크 · 볼륨
+ */
+function readSharedResources() {
+    const result = {networks: [], volumes: []};
+    let section = null;
+    let item = null;
+    for (const line of readFileSync(SHARED_FILE, 'utf8').split(/\r?\n/)) {
+        if (/^\s*(#|$)/.test(line)) {
+            continue;
+        }
+        const top = /^(networks|volumes):\s*$/.exec(line);
+        if (top) {
+            section = top[1];
+            item = null;
+            continue;
+        }
+        if (/^\S/.test(line)) {
+            section = null;
+            item = null;
+            continue;
+        }
+        const key = /^ {4}([a-z][\w-]*):\s*$/.exec(line);
+        if (section && key) {
+            item = {key: key[1], name: '', internal: false, purpose: ''};
+            result[section].push(item);
+            continue;
+        }
+        const field = /^ {8}(name|x-internal|x-purpose):\s*(.+?)\s*$/.exec(line);
+        if (item && field) {
+            const value = field[2].replace(/^'(.*)'$/, '$1');
+            if (field[1] === 'name') {
+                item.name = value;
+            } else if (field[1] === 'x-internal') {
+                item.internal = value === 'true';
+            } else {
+                item.purpose = value;
+            }
+        }
+    }
+    const missing = [...result.networks, ...result.volumes].filter((entry) => !entry.name);
+    if (result.networks.length === 0 || missing.length > 0) {
+        throw new Error(`compose.shared.yml 을 읽지 못함 — 형식(파일 머리 주석)을 확인하세요${missing.length > 0 ? `: name 없는 항목 ${missing.map((entry) => entry.key).join(', ')}` : ''}`);
+    }
+    return result;
+}
 
 /**
  * docker CLI 를 실행하고 표준 출력을 돌려준다. 실패하면 null.
@@ -37,7 +81,7 @@ function docker(args) {
 /**
  * 네트워크를 확인하고 없으면 만든다. 이미 있는데 internal 설정이 다르면 경고만 한다(연결된 컨테이너가 있을 수 있어 지우지 않는다).
  *
- * @param network NETWORKS 항목
+ * @param network compose.shared.yml 의 네트워크 항목
  * @returns 문제가 없으면 true
  */
 function ensure(network) {
@@ -62,7 +106,7 @@ function ensure(network) {
 /**
  * 볼륨을 확인하고 없으면 만든다.
  *
- * @param volume VOLUMES 항목
+ * @param volume compose.shared.yml 의 볼륨 항목
  * @returns 문제가 없으면 true
  */
 function ensureVolume(volume) {
@@ -82,6 +126,7 @@ if (docker(['version', '--format', '{{.Server.Version}}']) === null) {
     console.log('✗ Docker 에 연결할 수 없습니다 — Docker Desktop 이 실행 중인지 확인하세요.');
     process.exitCode = 1;
 } else {
-    const results = [...NETWORKS.map(ensure), ...VOLUMES.map(ensureVolume)];
+    const shared = readSharedResources();
+    const results = [...shared.networks.map(ensure), ...shared.volumes.map(ensureVolume)];
     process.exitCode = results.every(Boolean) ? 0 : 1;
 }

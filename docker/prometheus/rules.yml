@@ -1,0 +1,27 @@
+# 기록 규칙 — 서비스별 부하율 · 요청률 · 응답 시간을 미리 계산한다. 대시보드와 나중의 쿠버네티스 HPA(prometheus-adapter)가 같은 이름을 쓴다.
+#
+# 부하율 = 이벤트 루프 사용률(ELU) — 앱은 이벤트 루프가 일한 · 쉰 누적 시간(nodejs_eventloop_time_seconds{state})을 내고 여기서 rate 로 나눈다.
+# Node 는 인스턴스 하나가 주로 코어 하나를 쓰므로 1.0(100%)이면 그 인스턴스는 더 받을 수 없다. 증설 기준선은 0.7(docs/monitoring.md).
+groups:
+    - name: deskless-service-load
+      rules:
+          # 인스턴스 부하율 (0 ~ 1)
+          - record: instance:eventloop_utilization:ratio
+            expr: sum without (state) (rate(nodejs_eventloop_time_seconds{state="active"}[1m])) / sum without (state) (rate(nodejs_eventloop_time_seconds[1m]))
+          # 서비스 평균 · 가장 바쁜 인스턴스 부하율
+          - record: job:eventloop_utilization:avg
+            expr: avg by (job) (instance:eventloop_utilization:ratio)
+          - record: job:eventloop_utilization:max
+            expr: max by (job) (instance:eventloop_utilization:ratio)
+          # 서비스 CPU(코어 수 단위 — 인스턴스 합계)
+          - record: job:process_cpu:rate1m
+            expr: sum by (job) (rate(process_cpu_seconds_total[1m]))
+          # 서비스 초당 HTTP 요청
+          - record: job:http_requests:rate1m
+            expr: sum by (job) (rate(http_server_request_duration_seconds_count[1m]))
+          # 서비스 95% 응답 시간(초)
+          - record: job:http_request_duration_seconds:p95
+            expr: histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_seconds_bucket[5m])))
+          # 서비스 5xx 비율 (0 ~ 1)
+          - record: job:http_errors:ratio
+            expr: sum by (job) (rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m])) / sum by (job) (rate(http_server_request_duration_seconds_count[5m]))

@@ -6,8 +6,12 @@
 # 실제 운영 브로커(Amazon MQ 등)를 쓰면 이 묶음은 띄우지 않는다 — 그 브로커에 init.sh 와 같은 계정 · 권한을 만들고
 # .env 의 RABBITMQ_HOST · RABBITMQ_PORT 를 그 주소로 둔다. 앱 쪽 설정은 그대로다.
 #
-# deskless-broker 네트워크에 붙는다. 관리 화면 http://localhost:15672 (관리자 계정 RABBITMQ_USER/PASSWORD)
+# deskless-broker 네트워크에 붙는다. deskless-monitoring 에도 붙어 Prometheus 가 이미지에 든 Prometheus 플러그인(15692 — 큐 적체 · 소비자)을 긁는다.
+# 관리 화면 http://localhost:15672 (관리자 계정 RABBITMQ_USER/PASSWORD)
 name: deskless-rabbitmq
+# 공용 네트워크 · 볼륨(edge · service · broker · data · monitoring · files) — 선언은 compose.shared.yml 한곳(npm run docker:network 가 그 파일로 만든다)
+include:
+    - compose.shared.yml
 
 x-logging: &logging
     driver: json-file
@@ -30,7 +34,7 @@ services:
             - '127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672'
         volumes:
             - rabbitmq-data:/var/lib/rabbitmq
-        networks: [broker]
+        networks: [broker, monitoring]
         healthcheck:
             test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
             interval: 10s
@@ -58,11 +62,6 @@ services:
                 condition: service_healthy
         logging: *logging
         restart: 'no'
-
-networks:
-    broker:
-        name: deskless-broker
-        external: true
 
 volumes:
     rabbitmq-data:

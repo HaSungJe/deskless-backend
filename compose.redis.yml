@@ -7,6 +7,9 @@
 #
 # deskless-data 네트워크에만 붙고, 호스트 포트는 127.0.0.1 에만 연다. 세팅 · 확인: docs/guides/redis-setup.md
 name: deskless-redis
+# 공용 네트워크 · 볼륨(edge · service · broker · data · monitoring · files) — 선언은 compose.shared.yml 한곳(npm run docker:network 가 그 파일로 만든다)
+include:
+    - compose.shared.yml
 
 x-logging: &logging
     driver: json-file
@@ -35,11 +38,6 @@ services:
             retries: 10
         logging: *logging
         restart: unless-stopped
-
-networks:
-    data:
-        name: deskless-data
-        external: true
 
 volumes:
     redis-data:

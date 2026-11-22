@@ -11,6 +11,8 @@ import {PaymentModule} from '@app/integration/payment/payment.module.js';
 import {SmsModule} from '@app/integration/sms/sms.module.js';
 import {StorageModule} from '@app/integration/storage/storage.module.js';
 import {MessagingModule} from '@app/messaging/messaging.module.js';
+import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
+import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {DiscoveryModule} from './discovery/discovery.module.js';
 import {DoorModule} from './door/door.module.js';
 import {ReservationModule} from './reservation/reservation.module.js';
@@ -32,6 +34,7 @@ import {UserModule} from './user/user.module.js';
  */
 @Module({
     imports: [
+        MonitoringModule.forRoot(toMonitoringOptions('user-service', process.env.USER_SERVICE_METRICS_PORT, 9465, true)),
         DatabaseModule,
         MessagingModule.forService({queue: USER_COMMAND_QUEUE, binding_keys: [USER_COMMAND_BINDING], broker_user: BROKER_USER.USER_SERVICE}),
         SmsModule,

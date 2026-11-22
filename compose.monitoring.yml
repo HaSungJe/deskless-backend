@@ -1,0 +1,95 @@
+# 모니터링 — Prometheus(지표 수집 · 보관) + Grafana(대시보드) + PostgreSQL · Redis 수집기. 단독 실행
+#   npm run docker:monitoring   (docker compose -f compose.monitoring.yml up -d)
+#   내리기: docker compose -f compose.monitoring.yml down   (docker:up · docker:down 에는 넣지 않는다 — 모니터링 env 가 없어도 앱 묶음 명령이 막히지 않게)
+#   접속: Grafana http://localhost:${GRAFANA_PORT:-3001} (Deskless 폴더 — 서비스 부하 · 인프라), Prometheus http://localhost:${PROMETHEUS_PORT:-9090} (확인용)
+#
+# 설정은 .env 를 그대로 쓴다(compose 가 값을 바꾸지 않는다). 비밀값 · 접속정보는 필수(비어 있으면 띄우지 않는다).
+#   GRAFANA_ADMIN_PASSWORD · MONITORING_DATABASE_URL(수집기용 — 앱 DATABASE_URL 의 ?schema=public 을 수집기가 읽지 못한다) · REDIS_URL(앱과 같은 값)
+#   실제 운영(RDS · ElastiCache)은 .env 의 MONITORING_DATABASE_URL · REDIS_URL 만 그 주소로 — compose 는 그대로다.
+#
+# 네트워크
+#   deskless-monitoring (internal) : Prometheus 가 앱 인스턴스(지표 포트 9464 — Docker DNS 로 모두 찾는다) · rabbitmq(15692) · 수집기를 긁는 길
+#   deskless-data                  : 수집기가 PostgreSQL · Redis 로 나가는 길
+#   default(이 묶음 전용)          : 호스트 포트(127.0.0.1 만) — internal 망에서는 포트를 열 수 없다
+#   다른 프로젝트(프론트 web 등)도 deskless-monitoring 에 붙으면 같은 방식으로 모은다 — docs/guides/monitoring-integration.md
+name: deskless-monitoring
+# 공용 네트워크 · 볼륨(edge · service · broker · data · monitoring · files) — 선언은 compose.shared.yml 한곳(npm run docker:network 가 그 파일로 만든다)
+include:
+    - compose.shared.yml
+
+x-logging: &logging
+    driver: json-file
+    options:
+        max-size: '10m'
+        max-file: '5'
+
+services:
+    # 지표 수집 · 보관 — 15초마다 긁고 기록 규칙(서비스별 부하율 등)을 미리 계산한다. 설정 · 규칙은 docker/prometheus/
+    prometheus:
+        image: prom/prometheus:v3.16.0
+        container_name: deskless-prometheus
+        command:
+            - '--config.file=/etc/prometheus/prometheus.yml'
+            - '--storage.tsdb.path=/prometheus'
+            # 보존 기간 — 어제 · 지난주 같은 시각 비교 + 한 달 추이
+            - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}'
+        volumes:
+            - ./docker/prometheus:/etc/prometheus:ro
+            - prometheus-data:/prometheus
+        ports:
+            - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+        networks: [monitoring, default]
+        logging: *logging
+        restart: unless-stopped
+
+    # 대시보드 — 데이터 원본(Prometheus)과 대시보드 2개를 파일로 미리 넣는다(docker/grafana/). 화면에서 고쳐도 파일이 원본이다
+    grafana:
+        image: grafana/grafana:13.2.6
+        container_name: deskless-grafana
+        environment:
+            GF_SECURITY_ADMIN_USER: '${GRAFANA_ADMIN_USER:-admin}'
+            GF_SECURITY_ADMIN_PASSWORD: '${GRAFANA_ADMIN_PASSWORD:?.env 에 GRAFANA_ADMIN_PASSWORD 가 필요합니다}'
+            GF_USERS_ALLOW_SIGN_UP: 'false'
+            GF_AUTH_ANONYMOUS_ENABLED: 'false'
+            GF_DATE_FORMATS_DEFAULT_TIMEZONE: 'Asia/Seoul'
+            TZ: Asia/Seoul
+        volumes:
+            - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+            - grafana-data:/var/lib/grafana
+        ports:
+            - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
+        networks: [default]
+        depends_on: [prometheus]
+        logging: *logging
+        restart: unless-stopped
+
+    # PostgreSQL 수집기 — 연결 수 · 커밋 · 캐시 적중 · 교착 · DB 크기 (읽기 전용 계정 권장 — pg_monitor 역할)
+    postgres-exporter:
+        image: prometheuscommunity/postgres-exporter:v0.20.1
+        container_name: deskless-postgres-exporter
+        environment:
+            DATA_SOURCE_NAME: '${MONITORING_DATABASE_URL:?.env 에 MONITORING_DATABASE_URL 이 필요합니다}'
+        networks: [monitoring, data]
+        logging: *logging
+        restart: unless-stopped
+
+    # Redis 수집기 — 메모리 · 명령 · 연결 · 키 적중 · AOF
+    redis-exporter:
+        image: oliver006/redis_exporter:v1.97.0-alpine
+        container_name: deskless-redis-exporter
+        environment:
+            REDIS_ADDR: '${REDIS_URL:?.env 에 REDIS_URL 이 필요합니다}'
+        networks: [monitoring, data]
+        logging: *logging
+        restart: unless-stopped
+
+networks:
+    # 이 묶음 전용 — 호스트 포트용(internal 망에서는 포트를 열 수 없다)
+    default: {}
+
+volumes:
+    prometheus-data:
+        name: deskless-prometheus-data
+    grafana-data:
+        name: deskless-grafana-data

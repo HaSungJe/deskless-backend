@@ -4,6 +4,8 @@ import {DatabaseModule} from '@app/database/database.module.js';
 import {DoorStoreModule} from '@app/integration/door/door-store.module.js';
 import {PaymentModule} from '@app/integration/payment/payment.module.js';
 import {SmsModule} from '@app/integration/sms/sms.module.js';
+import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
+import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {ApiLogModule} from './api-log/api-log.module.js';
 import {ReservationModule} from './reservation/reservation.module.js';
 import {UserModule} from './user/user.module.js';
@@ -18,5 +20,17 @@ import {UserModule} from './user/user.module.js';
  * - 기본 데이터 시드 · 마이그레이션은 DB 를 소유한 user-service 가 맡는다
  * 도메인: UserModule(탈퇴 자동처리) · ReservationModule(결제 대기 만료 · 늦은 승인 · 환불 · QR 맞추기 · 이용 시작 · 종료 · QR 링크 SMS) · ApiLogModule(API 로그 월 파티션 미리 만들기 — 이번 달 + 3개월, 지우지 않음)
  */
-@Module({imports: [DatabaseModule, ScheduleModule.forRoot(), PaymentModule, DoorStoreModule, SmsModule, UserModule, ReservationModule, ApiLogModule]})
+@Module({
+    imports: [
+        MonitoringModule.forRoot(toMonitoringOptions('scheduler', process.env.SCHEDULER_METRICS_PORT, 9467, false)),
+        DatabaseModule,
+        ScheduleModule.forRoot(),
+        PaymentModule,
+        DoorStoreModule,
+        SmsModule,
+        UserModule,
+        ReservationModule,
+        ApiLogModule,
+    ],
+})
 export class SchedulerModule {}

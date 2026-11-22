@@ -23,7 +23,7 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 | `apps/gateway` | 유일한 진입점. JWT · DTO 검증, 경로 선택(동기 / 큐), 요청 단위 SSE, Swagger, 문 소켓(`/ws/v1/door` — 문 쪽 타 업체 프로그램, [realtime.md](realtime.md)), API 로그(모든 HTTP 요청 → 로그 전용 연결로 `t_api_log`) | O (GATEWAY_PORT) |
 | `apps/user-service` | 이용자 서버(이용자가 쓰는 기능) — `user`(회원) · `store`(입점 신청 · 취소 · 업체 정보 파일 · 내 신청) · `door`(문 소켓 접속 확인 · QR 확인 · 잠금 — 게이트웨이 문 소켓의 내부 HTTP) · `discovery`(업체 둘러보기 — 반경 업체 · 업체 상세 · 객실 그룹 목록, 로그인 없음 · 공유 DB 읽기만) · `reservation`(예약 — 공유 DB 의 업체 · 객실 · 상품 · 영업시간을 읽는다, 그룹 → 시간대 → 호수 예약 가능 시간 · 지금 바로, 내 예약 QR — 이력은 `t_room_qr` · 현재 QR 은 Redis). DB(PostgreSQL) 소유, 룩업 시드 · 마이그레이션 | X (내부망, INTERNAL_API_TOKEN) |
 | `apps/admin-service` | 업체 관리자 · 업체 총관리자 · 관리자 · 총관리자 전용 기능 — 매니저(`manager`) · 관리자(`admin`) · 업체(`store` — 입점 신청 관리 · 승인 · 업체 관리 · 내 업체 설정 · 문 소켓 시크릿) · 객실(`room` — 상품 · 그룹 · 호실 · 문을 마지막으로 연 시각 · 바로 열기) · 업체 예약(`reservation` — 예약 현황 · 업체 취소 · 호실 이동) · 이용자 관리(`user` — 총관리자 · 관리자의 이용자 목록 · 상세 · 예약 이력 · 이용 제한) · 통계(`stats` — 총관리자 · 관리자 전체 · 업체별, 업체 관리자 내 업체, 조회만) 도메인. 공유 DB 를 직접 쓴다(마이그레이션 · 시드는 user-service 묶음) | X (내부망, INTERNAL_API_TOKEN) |
-| `apps/scheduler` | crontab 전용(`user` 탈퇴 자동처리 · `reservation` 결제 대기 만료 · 늦은 승인 재확인 · 환불 — 토스, 이용 시작 · 종료 전환 · QR 동기화 — Redis, QR 확인 링크 — SNS). 들어오는 연결 없음 — listen · 큐 소비 · 컨트롤러가 없고 DB · Redis · 토스 · SNS 에만 붙는다 | X (연결을 받지 않음) |
+| `apps/scheduler` | crontab 전용(`user` 탈퇴 자동처리 · `reservation` 결제 대기 만료 · 늦은 승인 재확인 · 환불 — 토스, 이용 시작 · 종료 전환 · QR 동기화 — Redis, QR 확인 링크 — SNS). 들어오는 연결 없음 — listen · 큐 소비 · 컨트롤러가 없고 DB · Redis · 토스 · SNS 에만 붙는다(지표 전용 포트만 예외 — [monitoring.md](monitoring.md)) | X (연결을 받지 않음) |
 
 - **기능은 쓰는 사람(행위자)으로 서버를 고른다** — 이용자 기능은 user-service, 관리자 쪽 기능은 admin-service. 같은 데이터라도 행위자가 다르면 그 서버에 같은 이름 도메인을 따로 둔다(`store` · `reservation` · `user` 가 두 서비스에 있다 — 사용자 결정 2026-11-07).
 - **서버 안 도메인은 권한이 아니라 기능 대상으로 나눈다** — 같은 대상을 다루는 기능은 권한이 달라도 한 도메인에 두고 라우트마다 그 그룹의 가드로 가른다(admin-service: 관리자 계정 `admin` · 매니저 계정 `manager`(업체 총관리자의 업체 관리자 관리 + 총관리자의 업체 관리자 관리) · 이용자 `user` · 업체 `store` · 객실 `room` · 예약 `reservation` — 사용자 결정 2026-11-09).
@@ -41,6 +41,7 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 | `libs/database` | `entities/<domain>/` · `entities.ts`(ENTITIES) · `migrations/` · `migrations.ts`(MIGRATIONS) · `typeorm.config.ts` · `DatabaseModule`(TypeORM + 트랜잭션, 전역) · `JobLockService`(`job-lock/`) · `isUniqueViolation`/`isForeignKeyViolation` · `notDeleted`(소프트 삭제 조건) · seeder · `data-source`(마이그레이션 실행용) | DB 소유 서비스 |
 | `libs/integration` | 외부 연동 포트 `SMS_SENDER`(Amazon SNS) · `STORAGE_GATEWAY`(Amazon S3, presigned URL) · `DOOR_STORE`(Redis — 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 · 연결 끊기 명령 채널, 열림 · 닫힘 상태는 두지 않는다) · `PAYMENT_GATEWAY`(토스페이먼츠 — 조회 검증 · 환불) · `SmsModule` · `StorageModule` · `RedisModule` · `DoorStoreModule` · `PaymentModule`(전역) — [integration.md](integration.md) · [guides/aws-setup.md](guides/aws-setup.md) · [guides/redis-setup.md](guides/redis-setup.md) · [guides/toss-setup.md](guides/toss-setup.md) | 포트를 쓰는 서비스(SMS: user-service 휴대폰 인증 · 아이디 찾기, admin-service 매니저 아이디 찾기 · 비밀번호 초기화 · 입점 승인 · 업체 취소 · 호실 이동 · 이용 중 취소 요청 안내, scheduler QR 확인 링크 / 파일: user-service 입점 신청 업체 정보 파일 · 업체 둘러보기 공개 주소, admin-service 업체 정보 파일 · 객실 그룹 사진 / 문 정보: gateway 명령 구독 · user-service 문 소켓 QR 확인 · 잠금 · 내 예약 QR · 취소 때 QR 지우기 · admin-service 문 상태 · 바로 열기 · scheduler 이용 시작 · QR 동기화 / 결제: user-service 예약 · scheduler 결제 대기 만료 · 환불) |
 | `libs/messaging` | `RabbitMqConnection` · 명령 발행 · 결과 구독 · 명령 소비 · `@OnCommand` · `CommandDispatcher` · `MessagingModule.forGateway()/forService()`(둘 다 전역) | 게이트웨이 · 서비스 |
+| `libs/monitoring` | `MonitoringModule.forRoot`(전역 — 앱마다 지표 전용 포트 `/metrics`) · `MetricsService`(레지스트리 · gauge · histogram — 부품이 `@Optional` 로) · `HttpMetricsMiddleware` · `MetricsServer` · `toRouteLabel` · `toMonitoringOptions` — [monitoring.md](monitoring.md) | 모든 앱 |
 
 - import 는 `@app/<lib>/<경로>.js` (barrel 없음). 앱 · 도메인 내부는 상대경로. 라이브러리 안의 import 방식은 [conventions.md](conventions.md).
 - 라이브러리 의존 방향: `messaging` → `contracts` · `common`, `common` → `contracts`, `contracts` 는 외부 패키지만, `database` → `common`(시더의 bcrypt — 첫 총관리자 비밀번호 해시 · typeorm.config 의 env 파서 `readPositiveInt`), `integration` 은 다른 lib 를 쓰지 않는다, `account` → `common` · `database`(SMS 인증 기록 엔티티). 앱끼리는 서로 import 하지 않고(0건), 게이트웨이는 `@app/database` · `@app/account` 를 쓰지 않는다.
@@ -147,7 +148,7 @@ apps/gateway/src/
 
 **admin-service** — `AdminServiceModule` = `DatabaseModule`(user-service 와 같은 DB · 엔티티) + `MessagingModule.forService({queue: ADMIN_COMMAND_QUEUE, binding_keys: [ADMIN_COMMAND_BINDING], broker_user: BROKER_USER.ADMIN_SERVICE})`(`q.admin.cmd` ← `admin.#`) + `SmsModule` · `StorageModule` · `DoorStoreModule` + `ManagerModule` · `AdminModule` · `StoreModule` · `RoomModule`(객실 — 업체 관리자) · `ReservationModule`(업체 예약 — 예약 현황 · 업체 취소 · 호실 이동, SMS · DOOR_STORE) · `UserModule`(이용자 관리 — 총관리자 · 관리자) · `StatsModule`(통계 — 조회만, 내부 HTTP 컨트롤러 하나) + providers `{provide: APP_GUARD, useClass: InternalAuthGuard}` · `{provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}`. migrate · `SeederService` 가 없다(user-service 몫). `main.ts` 는 user-service 와 같은 모양 — `listen(ADMIN_SERVICE_PORT ?? 3020, ADMIN_SERVICE_HOST || '127.0.0.1')`.
 
-**scheduler** — `SchedulerModule` = `DatabaseModule` + `ScheduleModule.forRoot()` + `PaymentModule` · `DoorStoreModule` · `SmsModule` + `UserModule`(crontab + scheduler 의 회원 repository) · `ReservationModule`(결제 대기 만료 · 늦은 승인 · 환불 · QR 동기화 · 이용 전환 · QR 확인 링크 SMS crontab + scheduler 의 예약 repository) · `ApiLogModule`(t_api_log 월 파티션 미리 만들기 crontab + DDL repository). APP_GUARD · MessagingModule · 컨트롤러 · 시드가 없다.
+**scheduler** — `SchedulerModule` = `DatabaseModule` + `ScheduleModule.forRoot()` + `PaymentModule` · `DoorStoreModule` · `SmsModule` + `UserModule`(crontab + scheduler 의 회원 repository) · `ReservationModule`(결제 대기 만료 · 늦은 승인 · 환불 · QR 동기화 · 이용 전환 · QR 확인 링크 SMS crontab + scheduler 의 예약 repository) · `ApiLogModule`(t_api_log 월 파티션 미리 만들기 crontab + DDL repository) + `MonitoringModule.forRoot`(지표 포트만 — HTTP 지표 없음). APP_GUARD · MessagingModule · 컨트롤러 · 시드가 없다. 모든 앱 루트 모듈이 `MonitoringModule.forRoot` 를 들인다(monitoring.md).
 `main.ts`: `dotenv/config` → `NestFactory.createApplicationContext(SchedulerModule)`(listen 하지 않는다) → 종료 훅. 등록된 `@Cron` 타이머가 프로세스를 살려 둔다.
 `main.ts`: `dotenv/config` → 전역 필터 → 전역 ValidationPipe → 종료 훅 → `listen(USER_SERVICE_PORT ?? 3010, USER_SERVICE_HOST || '127.0.0.1')`. CORS · Swagger 없음.
 `migrate.ts`(별도 진입점): `retry` 로 DB 연결을 기다린 뒤(30회 × 2초) `runMigrations` 또는 `revert` 인자면 `undoLastMigration`, 둘 다 `{transaction: 'each'}`. DataSource 설정은 앱과 같다(`synchronize: false`, 목록 테이블 `t_migration`).
@@ -182,7 +183,7 @@ postgres · rabbitmq · redis · user-service · admin-service · scheduler · g
 
 ```bash
 npm run docker:up            # 아래 1~8 을 순서대로
-npm run docker:network       # 1. 공용 네트워크 4개 · 볼륨 1개 (이미 있으면 건너뜀)
+npm run docker:network       # 1. 공용 네트워크 5개 · 볼륨 1개 — compose.shared.yml 을 읽어 만든다 (이미 있으면 건너뜀)
 npm run docker:postgres      # 2. compose.postgres.yml — healthy 까지 기다림
 npm run docker:rabbitmq      # 3. compose.rabbitmq.yml — healthy 후 브로커 계정 초기화 1회
 npm run docker:redis         # 4. compose.redis.yml — healthy 까지 기다림 (AOF 영속)
@@ -239,15 +240,18 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 
 ### 네트워크 (공용 · external)
 
+공용 네트워크 · 볼륨의 선언은 [compose.shared.yml](../compose.shared.yml) 한곳이다 — 각 묶음은 맨 위 `include: [compose.shared.yml]` 로 불러와 서비스에서 키(`edge` · `service` · `broker` · `data` · `monitoring` · `files`)로만 쓰고(묶음 파일에 같은 키를 다시 선언하면 충돌한다), 묶음 전용 네트워크 · 볼륨(DB 데이터 · 모니터링 `default`)만 그 묶음 파일에 둔다. 새 공용 리소스는 이 파일에만 더한다(`x-internal` · `x-purpose` 확장 필드 — 형식은 파일 머리 주석).
+
 | 네트워크 | 붙는 컨테이너 |
 |---|---|
 | `deskless-edge` | gateway-lb · gateway (외부 포트는 gateway-lb 만) |
 | `deskless-service` (internal) | gateway · user-service-lb · user-service · admin-service-lb · admin-service |
 | `deskless-broker` | rabbitmq · rabbitmq-init · gateway · user-service · admin-service |
-| `deskless-data` | postgres · redis · migrate · user-service · admin-service · scheduler |
+| `deskless-data` | postgres · redis · migrate · gateway(API 로그) · user-service · admin-service · scheduler · postgres-exporter · redis-exporter |
+| `deskless-monitoring` (internal) | prometheus · 앱 인스턴스 4종(지표 포트 9464) · rabbitmq(15692) · postgres-exporter · redis-exporter — 다른 프로젝트(프론트 web)도 — [monitoring.md](monitoring.md) |
 
 - 공용 볼륨 `deskless-files` — 내부 파일 저장소(`AWS_S3_BUCKET` 이 빌 때)를 gateway · user-service · admin-service 가 `/app/storage/files` 로 같이 본다(compose 가 `FILE_STORAGE_DIR` 고정). 이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다.
-- [docker-network.mjs](../scripts/docker-network.mjs) 가 네트워크 · 볼륨을 만든다. 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
+- [docker-network.mjs](../scripts/docker-network.mjs) 가 compose.shared.yml 을 읽어 네트워크 · 볼륨을 만든다(Node 내장만 — 정해진 형식만 읽고 못 읽으면 멈춘다). 묶음끼리는 이 네트워크에서 서비스 이름(`postgres` · `rabbitmq` · `user-service-lb`)으로 찾는다. 한 묶음을 내려도 네트워크는 남아 나머지가 계속 돈다.
 - 서비스의 HTTP 에 닿는 컨테이너는 gateway · 그 서비스의 LB 뿐이고, 게이트웨이는 DB 에 닿지 않는다.
 - 이미지: Node 24 LTS slim — `node:24.22.3-slim`(패치까지 고정 — 보안 패치가 나오면 Dockerfile `NODE_IMAGE` 와 package.json `engines` 하한을 같이 올린다, bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행.
 - user-service · gateway 묶음은 같은 Docker 호스트의 공용 네트워크를 전제로 한다(게이트웨이 → user-service-lb). DB · 브로커는 `.env` 의 주소라 다른 서버(RDS · Amazon MQ)여도 된다. 앱 묶음까지 서로 다른 서버에 나누려면 Swarm overlay 네트워크 · Kubernetes 로 옮긴다.

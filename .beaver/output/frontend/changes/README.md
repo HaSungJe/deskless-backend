@@ -15,6 +15,7 @@
 | 2026-11-22 | [프로젝트 이름 바꿈(deskless → Deskless · 바로방)](2026-11-22-project-rename.md) | 세 영역의 서비스 이름 · SMS 머리말 `[바로방]` · 테스트 데이터 업체 이름 — API 변화 없음 | 2026.11.22 커밋 |
 | 2026-11-22 | [내 예약 목록 상태 거르기](2026-11-22-reservation-list-state.md) | U6 내 예약(상태 칩 — query `reservation_state_id`, pagination 은 거른 결과 기준) | 2026.11.22 커밋 |
 | 2026-11-22 | [업체 검색 거리 제한 없음 · 추가정보 필터](2026-11-22-discovery-filter.md) | 이용자 지도 · 업체 목록(반경 "제한 없음" — `radius_km=ALL`, 추가정보 필터 팝업 체크박스 — 새 항목 목록 API · `detail_filter`) | 2026.11.22 커밋 |
+| 2026-11-22 | [프론트(Next.js 서버) 모니터링 연결](2026-11-22-monitoring-web.md) | 없음(서버 설정 — `instrumentation.ts` 지표 서버 · 서비스 이름 `web` · 내부망 `deskless-monitoring`, 코드 · compose · 확인 모두 문서 안) | 2026.11.23 커밋 |
 
 ## 문서 틀 — `changes/<YYYY-MM-DD>-<기능>.md`
 

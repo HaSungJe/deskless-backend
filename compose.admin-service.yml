@@ -15,8 +15,12 @@
 # 네트워크 — "admin-service 는 게이트웨이만 닿는다"
 #   deskless-service (internal) : gateway · admin-service-lb · admin-service (user-service 와 같은 내부망)
 #   deskless-broker / deskless-data : 브로커 / DB · Redis 로 나가는 길 (DB · Redis 는 user-service 와 같다)
+#   deskless-monitoring (internal) : Prometheus 가 앱 인스턴스의 지표 포트(9464)를 긁는 길 — compose.monitoring.yml
 #   볼륨 deskless-files : 내부 파일 저장소(AWS_S3_BUCKET 이 빌 때 — gateway · user-service · admin-service 가 /app/storage/files 로 같이 본다), npm run docker:network 가 만든다
 name: deskless-admin-service
+# 공용 네트워크 · 볼륨(edge · service · broker · data · monitoring · files) — 선언은 compose.shared.yml 한곳(npm run docker:network 가 그 파일로 만든다)
+include:
+    - compose.shared.yml
 
 x-logging: &logging
     driver: json-file
@@ -51,6 +55,12 @@ services:
             # 컨테이너 안에서는 0.0.0.0 — 닿을 수 있는 상대는 deskless-service 의 admin-service-lb · gateway 뿐이다
             ADMIN_SERVICE_HOST: 0.0.0.0
             TZ: Asia/Seoul
+            # 지표 전용 포트 — 모니터링 내부망(deskless-monitoring)의 Prometheus 만 닿는다(서버 구성 — .env 값과 무관, docs/monitoring.md)
+            ADMIN_SERVICE_METRICS_PORT: 9464
+            METRICS_HOST: 0.0.0.0
+            # 모니터링 비밀값은 앱이 쓰지 않는다
+            GRAFANA_ADMIN_PASSWORD: ''
+            MONITORING_DATABASE_URL: ''
             # 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 공용 볼륨 deskless-files 를 붙인 자리(서버 구성 — .env 값과 무관)
             FILE_STORAGE_DIR: /app/storage/files
             # ── 쓰지 않는 비밀값은 전달하지 않는다 ──
@@ -65,7 +75,7 @@ services:
             replicas: ${ADMIN_SERVICE_REPLICAS:-1}
         expose:
             - '3020'
-        networks: [service, broker, data]
+        networks: [service, broker, data, monitoring]
         logging: *logging
         restart: unless-stopped
 
@@ -82,19 +92,3 @@ services:
             - admin-service
         logging: *logging
         restart: unless-stopped
-
-networks:
-    service:
-        name: deskless-service
-        external: true
-    broker:
-        name: deskless-broker
-        external: true
-    data:
-        name: deskless-data
-        external: true
-
-volumes:
-    files:
-        name: deskless-files
-        external: true

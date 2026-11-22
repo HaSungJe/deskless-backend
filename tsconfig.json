@@ -39,6 +39,9 @@
       ],
       "@app/messaging/*": [
         "./libs/messaging/src/*"
+      ],
+      "@app/monitoring/*": [
+        "./libs/monitoring/src/*"
       ]
     }
   },

@@ -67,7 +67,7 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 
 | 순서 | 묶음 | 명령 | 하는 일 |
 |---|---|---|---|
-| 1 | 공용 네트워크 · 볼륨 | `npm run docker:network` | 묶음끼리 이름으로 찾는 네트워크 4개 + 내부 파일 저장소 볼륨 `deskless-files` (이미 있으면 건너뜀) |
+| 1 | 공용 네트워크 · 볼륨 | `npm run docker:network` | 묶음끼리 이름으로 찾는 네트워크 5개(모니터링 내부망 `deskless-monitoring` 포함) + 내부 파일 저장소 볼륨 `deskless-files` — 선언은 `compose.shared.yml` 한곳(각 묶음이 include, 이 명령도 그 파일을 읽어 만든다), 이미 있으면 건너뜀 |
 | 2 | postgres | `npm run docker:postgres` | DB (127.0.0.1:5432) |
 | 3 | rabbitmq | `npm run docker:rabbitmq` | 브로커 + 앱별 계정 초기화 (관리 화면 http://localhost:15672) |
 | 4 | redis | `npm run docker:redis` | 문 정보 저장소 (127.0.0.1:6379, AOF 영속 — gateway · user-service · admin-service · scheduler 가 쓴다) — [docs/guides/redis-setup.md](docs/guides/redis-setup.md) |
@@ -75,11 +75,13 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 | 6 | admin-service | `npm run docker:admin-service` | 매니저 · 관리자 인스턴스 → 로드밸런서 |
 | 7 | scheduler | `npm run docker:scheduler` | crontab 전용 (포트 없음) |
 | 8 | gateway | `npm run docker:gateway` | 외부 진입점 http://localhost:3000 · Swagger http://localhost:3000/swagger (Authorize 왼쪽 도메인 선택 상자로 한 도메인만 보기) |
+| (선택) | monitoring | `npm run docker:monitoring` | Prometheus · Grafana(http://localhost:3001 — 서비스 부하 · 인프라 대시보드) · PostgreSQL · Redis 수집기 — `docker:up` 에는 들어 있지 않다, `.env` 의 `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL` 필요 — [docs/monitoring.md](docs/monitoring.md) |
 
 - 묶음마다 compose 파일이 따로 있어 하나씩 띄우고 내릴 수 있다(`npm run docker:<묶음>`). 로그는 `npm run docker:logs:<앱>`.
 - gateway · user-service 는 여러 대(`GATEWAY_REPLICAS` · `USER_SERVICE_REPLICAS`, 기본 2), admin-service 는 `ADMIN_SERVICE_REPLICAS`(기본 1)로 뜨고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 `SCHEDULER_REPLICAS`(기본 1)이고 포트 · 로드밸런서가 없다.
 - user-service · admin-service 는 게이트웨이만 닿는다(전역 내부 토큰 가드 + internal 네트워크). 큐 명령도 gateway 브로커 계정이 발행한 것만 처리한다.
 - 마이그레이션은 `migrate` 컨테이너(user-service 묶음)가 인스턴스보다 먼저 1회 적용한다. 적용 계정에는 PostgreSQL 확장 `btree_gist`(기간 가격 · 예약 점유 겹침 배타 제약) 생성 권한이 필요하다(RDS PostgreSQL 13+ 는 DB 의 CREATE 권한). admin-service 는 같은 DB 를 쓰므로 user-service 묶음 뒤에 띄운다.
+- **모니터링** — 앱 인스턴스마다 지표 전용 포트(Docker 안 9464 · `/metrics`, 모니터링 내부망에서만)를 열고, Prometheus 가 Docker DNS 로 인스턴스를 모두 찾아 모은다(`--scale` 을 저절로 따라감). Grafana "서비스 부하" 에서 서비스별 부하율(이벤트 루프 사용률)을 시간대별로 보고 인스턴스 수를 정한다(증설 기준 — [docs/monitoring.md](docs/monitoring.md)). 다른 프로젝트(프론트 등)를 붙일 때는 [docs/guides/monitoring-integration.md](docs/guides/monitoring-integration.md) 를 넘긴다. 내리기 `docker compose -f compose.monitoring.yml down`.
 - 같은 휴대폰 번호의 하루 인증 SMS 수는 `SMS_VERIFICATION_DAILY_LIMIT`(기본 10), DB 연결 풀 대기 최대 시간은 `DATABASE_CONNECTION_TIMEOUT_MS`(기본 30000ms — 넘기면 500).
 
 ### 3. 로컬 개발 — 인프라만 Docker, 앱은 watch
@@ -115,11 +117,12 @@ npm run start:scheduler     # crontab (포트 없음)
 | `npm run db:migrate` · `db:revert` | 마이그레이션 적용 · 마지막 1건 되돌리기 (실제 DB) |
 | `npm run db:generate -- <Name>` · `db:check` | 엔티티 변경분 마이그레이션 생성 · 일치 검사 (DB 없이 PGlite) |
 | `npm run docker:up` · `docker:down` | 모든 묶음 실행 · 종료 |
-| `npm run docker:network` | 공용 Docker 네트워크 4개 · 파일 볼륨 만들기 (이미 있으면 건너뜀) |
+| `npm run docker:network` | 공용 Docker 네트워크 5개 · 파일 볼륨 만들기 (이미 있으면 건너뜀) |
 | `npm run sample:images` | 테스트 데이터 사진(PNG 70개) 다시 그리기 → `apps/gateway/src/assets/sample/` |
 | `npm run docker:postgres` · `docker:rabbitmq` · `docker:redis` · `docker:user-service` · `docker:admin-service` · `docker:scheduler` · `docker:gateway` | 묶음 하나만 실행 |
 | `npm run docker:infra` | 공용 네트워크 · postgres · rabbitmq(+계정 초기화) · redis 만 실행 (앱 로컬 개발용) |
 | `npm run docker:logs:gateway` · `docker:logs:user-service` · `docker:logs:admin-service` · `docker:logs:scheduler` | 앱 · 로드밸런서 로그 |
+| `npm run docker:monitoring` · `docker:logs:monitoring` | 모니터링 묶음(Prometheus · Grafana · 수집기) 실행 · 로그 |
 | `npm run broker:check` | 브로커 계정 권한 점검 (gateway 만 명령 발행 · user_id 위조 거부) |
 
 ## 구조
@@ -129,11 +132,14 @@ apps/gateway   apps/user-service   apps/admin-service   apps/scheduler   # 진�
 apps/gateway/src/modules/door-socket/   # 문 소켓(표준 WebSocket /ws/v1/door)
 apps/gateway/src/modules/local-file/    # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때, 읽기는 늘)
 apps/gateway/src/assets/sample/         # 테스트 데이터 사진(/sample/ — scripts/sample-images.mjs 가 그림)
-libs/account  libs/common  libs/contracts  libs/database  libs/integration  libs/messaging
+libs/account  libs/common  libs/contracts  libs/database  libs/integration  libs/messaging  libs/monitoring
+compose.<묶음>.yml  compose.shared.yml   # 묶음 8개(따로 띄움) · 공용 네트워크 · 볼륨 선언 한곳(include — 새 공용 리소스는 여기에만)
 libs/database/src/entities/<domain>/   libs/database/src/migrations/
 libs/integration/src/sms/  libs/integration/src/storage/  libs/integration/src/redis/  libs/integration/src/door/  libs/integration/src/payment/   # SMS(SNS — 키가 비면 로그) · 파일 저장(S3 — 버킷이 비면 내부 파일 저장소, 읽기 · 삭제는 파일 행의 저장소) · Redis 연결 · 문 정보(Redis) · 결제(토스) 포트 · 어댑터
 libs/database/src/seeder/                # 기본 데이터 시드 · 테스트 데이터(sample-seed.* — SEED_SAMPLE_DATA=1)
-docs/  docs/guides/        # 규약 · AWS · Redis · 토스 세팅 · 테스트 데이터 가이드
+libs/monitoring/src/       # 지표 모듈(MonitoringModule — 앱마다 지표 전용 포트 /metrics, prom-client)
+docker/prometheus/  docker/grafana/   # 모니터링 설정 — 수집 대상 · 기록 규칙, 데이터 원본 · 대시보드 JSON(파일이 원본)
+docs/  docs/guides/        # 규약 · AWS · Redis · 토스 세팅 · 테스트 데이터 · 모니터링 연결 규격 가이드
 storage/                   # 내부 파일 저장소(로컬 실행의 업로드 파일 — git 제외)
 .beaver/output/frontend/   # 프론트 인계(아티팩트 링크 · screens · api · dto · design 원본 · changes 수정 요청)
 .back/              # NestJS 11 시절 코드 (이식 참고용, git 제외 · 로컬 전용)
