@@ -6,7 +6,7 @@
 
 - **mock · 가짜 어댑터를 두지 않는다** — 외부 연동은 처음부터 실제 서비스에 붙는 코드다. 서비스를 만드는 방법은 `docs/guides/` 에 가이드로 남긴다. 세팅 전에는 `.env` 값이 비어 있어 요청만 실패한다(부팅은 된다).
 - **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: AWS 값이 비면 AWS 없이 돈다([guides/aws-setup.md](guides/aws-setup.md) "AWS 없이 돌리기").
-  - **SMS 생략** — `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 가 비면 `SnsSmsSender` 가 SNS 를 부르지 않고 받는 번호 · 본문을 경고 로그로 남긴 뒤 성공으로 끝난다(인증번호 · 임시 비밀번호는 로그에서 본다). 서비스는 그대로 마지막 단계에서 `send` 를 부른다.
+  - **SMS 생략** — `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 가 비면 `SnsSmsSender` 가 SNS 를 부르지 않고 받는 번호 · 본문을 경고 로그로 남긴 뒤 성공으로 끝난다(인증번호는 DB `t_sms_verification.code` 에도 남는다 — 임시 비밀번호는 로그에서 본다). 서비스는 그대로 마지막 단계에서 `send` 를 부른다.
   - **내부 파일 저장소** — `AWS_S3_BUCKET` 이 비면 저장소 포트(`RoutingStorageGateway`)가 새 업로드를 `LocalStorageGateway` 로 보낸다(`isS3StorageConfigured`). 실제로 저장 · 제공하는 두 번째 어댑터다(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명 — 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(`private/` 는 공개 경로로 안 나간다). 받기 · 내주기는 게이트웨이 인프라 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR`, 기본 `storage/files` · 쿠버네티스는 deskless 차트의 공용 파일 볼륨). 키 · DB 행 모양은 S3 와 같다.
   - S3 일 때 "파일 본문은 게이트웨이 · 브로커를 거치지 않는다" 는 그대로이고, 내부 저장소일 때는 게이트웨이가 저장소다(브로커 · 서비스는 거치지 않는다).
 - **파일 행마다 저장소를 적는다(`file_storage` — `S3` · `LOCAL`, 사용자 결정 2026-11-18)** — S3 로 바꾼 뒤에도 그 전에 내부 저장소에 올린 파일을 계속 열기 위해서다. 저장소 포트 `STORAGE_GATEWAY` = `RoutingStorageGateway` 가 두 어댑터(`S3StorageGateway` · `LocalStorageGateway` — 어댑터 인터페이스 `StorageBackendInterface`)를 둘 다 들고 나눠 보낸다.

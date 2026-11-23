@@ -74,7 +74,7 @@ npm run start:scheduler
 ```
 
 - 첫 총관리자는 `admin` / `1234`(user-service 가 부팅 때 넣는다 — 로그인 후 바로 바꾼다). 테스트 데이터 계정 · 업체코드는 [docs/guides/sample-data.md](docs/guides/sample-data.md).
-- AWS · 토스 키가 비어도 뜬다 — AWS 가 비면 인증번호 · 임시 비밀번호는 서버 로그에서 보고 파일은 게이트웨이 내부 저장소에 올라가며, 토스 키가 비면 예약 생성 · 결제 확인 · 환불만 503 이다. 실제로 붙이려면 [aws-setup](docs/guides/aws-setup.md) · [toss-setup](docs/guides/toss-setup.md) · [redis-setup](docs/guides/redis-setup.md).
+- AWS · 토스 키가 비어도 뜬다 — AWS 가 비면 인증번호는 DB `t_sms_verification.code`(또는 서버 로그), 임시 비밀번호는 서버 로그에서 보고 파일은 게이트웨이 내부 저장소에 올라가며, 토스 키가 비면 예약 생성 · 결제 확인 · 환불만 503 이다. 실제로 붙이려면 [aws-setup](docs/guides/aws-setup.md) · [toss-setup](docs/guides/toss-setup.md) · [redis-setup](docs/guides/redis-setup.md).
 
 ### 3. 배포 · 운영
 

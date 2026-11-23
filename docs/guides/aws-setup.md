@@ -9,7 +9,7 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 | 비운 값 | 동작 |
 |---|---|
-| `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | SMS 를 보내지 않고 `SMS 생략(AWS 키 미설정) — <번호>: <본문>` 경고 로그를 남긴 뒤 성공 처리 — 휴대폰 인증번호 · 매니저 임시 비밀번호는 로그에서 본다(로컬은 `npm run start:*` 터미널, 쿠버네티스는 그 파드 로그 — user-service · admin-service · scheduler) |
+| `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | SMS 를 보내지 않고 `SMS 생략(AWS 키 미설정) — <번호>: <본문>` 경고 로그를 남긴 뒤 성공 처리 — 인증번호는 DB `t_sms_verification.code` 에도 남고(사용자 결정 2026-11-24), 매니저 임시 비밀번호는 로그에서 본다(로컬은 `npm run start:*` 터미널, 쿠버네티스는 그 파드 로그 — user-service · admin-service · scheduler) |
 | `AWS_S3_BUCKET` | 파일은 **내부 파일 저장소** — 업로드 주소 API 가 게이트웨이 `GATEWAY_PUBLIC_URL/files/upload?…`(서명 · 10분)를 주고, 프론트는 S3 때와 똑같이 같은 `Content-Type` 으로 PUT 한다(10MB 까지). 공개 사진은 `GATEWAY_PUBLIC_URL/files/<키>`, 사업자등록증은 서명된 10분 주소. 키 · DB 행 모양은 S3 와 같다 |
 
 - 필요한 값: `GATEWAY_PUBLIC_URL`(브라우저가 게이트웨이에 닿는 주소) · `INTERNAL_API_TOKEN`(서명 — 이미 필수)

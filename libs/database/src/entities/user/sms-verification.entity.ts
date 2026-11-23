@@ -3,7 +3,7 @@ import {SmsPurposeEntity} from './sms-purpose.entity.js';
 import {UserEntity} from './user.entity.js';
 
 /**
- * SMS 인증 발송 · 확인 기록 — 발송 1건 = 1행. 인증번호는 해시로만 남기고, 확인 시도 · 완료 시각을 쌓는다.
+ * SMS 인증 발송 · 확인 기록 — 발송 1건 = 1행. 인증번호는 해시(확인에 쓴다)와 원문(테스트 때 SMS 없이 번호를 보려고 — 사용자 결정 2026-11-24)을 함께 남기고, 확인 시도 · 완료 시각을 쌓는다.
  * 같은 번호 하루 발송 수를 (phone, created_at) 으로 센다.
  */
 @Entity({name: 't_sms_verification', comment: 'SMS 인증 발송 · 확인 기록'})
@@ -25,6 +25,9 @@ export class SmsVerificationEntity {
 
     @Column({name: 'code_hash', length: 64, nullable: false, comment: '인증번호 SHA-256 해시'})
     code_hash: string;
+
+    @Column({name: 'code', type: 'varchar', length: 6, nullable: true, comment: '인증번호 원문(확인은 해시로 — 이 컬럼이 생기기 전 행은 NULL)'})
+    code: string | null;
 
     @Column({name: 'attempt_count', type: 'smallint', nullable: false, default: 0, comment: '확인 시도 횟수'})
     attempt_count: number;

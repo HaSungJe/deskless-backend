@@ -81,6 +81,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
                 user_id: ACTOR.user_id,
                 phone: PHONE,
                 code_hash: sha256Hex('123456'),
+                code: '123456',
                 attempt_count: 0,
                 expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000),
                 verified_at: null,

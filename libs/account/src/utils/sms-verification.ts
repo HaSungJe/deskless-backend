@@ -13,7 +13,7 @@ export interface SmsVerificationInput {
     sms_purpose_id: string;
     user_id: string;
     phone: string;
-    /** 인증번호 원문 — 해시로만 저장한다 */
+    /** 인증번호 원문 — 해시(확인용)와 원문(테스트 때 보려고)을 함께 저장한다 */
     code: string;
     ip: string;
     now: Date;
@@ -56,7 +56,7 @@ export function checkSmsVerification(verification: SmsVerificationEntity, now: D
 }
 
 /**
- * SMS 인증 발송 기록 — 인증번호는 SHA-256 해시로만, 만료는 발송 + 5분.
+ * SMS 인증 발송 기록 — 인증번호는 SHA-256 해시(확인에 쓴다) + 원문(SMS 없이 테스트할 때 DB 에서 보려고 — 사용자 결정 2026-11-24), 만료는 발송 + 5분.
  *
  * @param input 용도 · 회원 · 번호 · 인증번호 · IP · 기준 시각
  * @returns 저장할 엔티티
@@ -68,6 +68,7 @@ export function buildSmsVerification(input: SmsVerificationInput): SmsVerificati
     entity.user_id = input.user_id;
     entity.phone = input.phone;
     entity.code_hash = sha256Hex(input.code);
+    entity.code = input.code;
     entity.attempt_count = 0;
     entity.expires_at = dayjs(input.now).add(SMS_CODE_TTL_MINUTES, 'minute').toDate();
     entity.verified_at = null;

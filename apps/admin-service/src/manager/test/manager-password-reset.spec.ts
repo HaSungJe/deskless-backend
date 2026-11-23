@@ -79,7 +79,7 @@ describe('매니저 비밀번호 초기화 (큐 경로)', () => {
             expect(repo.findManagerStore).toHaveBeenCalledWith({store_code: STORE_CODE});
             expect(repo.findManager).toHaveBeenCalledWith({login_id: 'manager_01', phone: PHONE, login_scope: 'MANAGER', store_id: STORE_ID, state_id: RECOVERY_STATES});
             const inserted = repo.insertSmsVerification.mock.calls[0][0];
-            expect(inserted).toMatchObject({sms_purpose_id: 'PASSWORD_RESET', user_id: USER_ID, phone: PHONE});
+            expect(inserted).toMatchObject({sms_purpose_id: 'PASSWORD_RESET', user_id: USER_ID, phone: PHONE, code_hash: sha256Hex('123456'), code: '123456'});
             expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(result).toEqual({result: {sms_verification_id: inserted.sms_verification_id, expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000).toISOString()}, error: null});
         });
