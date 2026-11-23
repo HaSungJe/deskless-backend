@@ -31,7 +31,7 @@ services:
         command:
             - '--config.file=/etc/prometheus/prometheus.yml'
             - '--storage.tsdb.path=/prometheus'
-            # 보존 기간 — 어제 · 지난주 같은 시각 비교 + 한 달 추이
+            # 보존 기간 — 7일 판정 · 7일 시간대 칸 + 한 달 추이
             - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}'
         volumes:
             - ./docker/prometheus:/etc/prometheus:ro
@@ -52,6 +52,8 @@ services:
             GF_USERS_ALLOW_SIGN_UP: 'false'
             GF_AUTH_ANONYMOUS_ENABLED: 'false'
             GF_DATE_FORMATS_DEFAULT_TIMEZONE: 'Asia/Seoul'
+            GF_USERS_DEFAULT_LANGUAGE: 'ko-KR' # 화면 한국어(개인 설정이 없는 사용자)
+            GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: '/var/lib/grafana/dashboards/deskless-service-load.json' # 홈 = 서비스 부하
             TZ: Asia/Seoul
         volumes:
             - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro

@@ -12,17 +12,23 @@ rule_files:
 
 scrape_configs:
     # ── 앱 (지표 전용 포트 9464 · /metrics) ──
+    # display_name = 대시보드에 보이는 한국어 이름 — 이 job 의 모든 지표 · up 에 붙는다. 새 앱도 같은 모양으로 한 줄(이름 포함)
     - job_name: gateway
       dns_sd_configs: [{names: [gateway], type: A, port: 9464, refresh_interval: 15s}]
+      relabel_configs: [{target_label: display_name, replacement: '게이트웨이'}]
     - job_name: user-service
       dns_sd_configs: [{names: [user-service], type: A, port: 9464, refresh_interval: 15s}]
+      relabel_configs: [{target_label: display_name, replacement: '이용자 서버'}]
     - job_name: admin-service
       dns_sd_configs: [{names: [admin-service], type: A, port: 9464, refresh_interval: 15s}]
+      relabel_configs: [{target_label: display_name, replacement: '관리자 서버'}]
     - job_name: scheduler
       dns_sd_configs: [{names: [scheduler], type: A, port: 9464, refresh_interval: 15s}]
+      relabel_configs: [{target_label: display_name, replacement: '스케줄러'}]
     # 프론트 Next.js 서버(별도 저장소 — 같은 서버의 Docker, 서비스 이름 web). 아직 붙지 않았으면 대상 0개 — 오류 아님
     - job_name: web
       dns_sd_configs: [{names: [web], type: A, port: 9464, refresh_interval: 15s}]
+      relabel_configs: [{target_label: display_name, replacement: '프론트'}]
 
     # ── RabbitMQ (이미지에 든 rabbitmq_prometheus 플러그인) ──
     # 큐별 지표(적체 · 처리 중 · 소비자) — detailed 엔드포인트에서 필요한 묶음만

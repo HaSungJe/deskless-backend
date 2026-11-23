@@ -75,7 +75,7 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 | 6 | admin-service | `npm run docker:admin-service` | 매니저 · 관리자 인스턴스 → 로드밸런서 |
 | 7 | scheduler | `npm run docker:scheduler` | crontab 전용 (포트 없음) |
 | 8 | gateway | `npm run docker:gateway` | 외부 진입점 http://localhost:3000 · Swagger http://localhost:3000/swagger (Authorize 왼쪽 도메인 선택 상자로 한 도메인만 보기) |
-| 9 | monitoring | `npm run docker:monitoring` | Prometheus · Grafana(http://localhost:3001 — 서비스 부하 · 인프라 대시보드) · PostgreSQL · Redis 수집기 — `.env` 의 `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL` 필요(비면 `docker:up` 이 이 단계에서 멈춘다 — 앞의 묶음은 이미 떠 있다) — [docs/monitoring.md](docs/monitoring.md) |
+| 9 | monitoring | `npm run docker:monitoring` | Prometheus · Grafana(http://localhost:3001 — 한국어 화면 · 홈이 서비스 부하 대시보드, 인프라 대시보드) · PostgreSQL · Redis 수집기 — `.env` 의 `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL` 필요(비면 `docker:up` 이 이 단계에서 멈춘다 — 앞의 묶음은 이미 떠 있다) — [docs/monitoring.md](docs/monitoring.md) |
 
 - 묶음마다 compose 파일이 따로 있어 하나씩 띄우고 내릴 수 있다(`npm run docker:<묶음>`). 로그는 `npm run docker:logs:<앱>`.
 - gateway · user-service 는 여러 대(`GATEWAY_REPLICAS` · `USER_SERVICE_REPLICAS`, 기본 2), admin-service 는 `ADMIN_SERVICE_REPLICAS`(기본 1)로 뜨고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 `SCHEDULER_REPLICAS`(기본 1)이고 포트 · 로드밸런서가 없다.

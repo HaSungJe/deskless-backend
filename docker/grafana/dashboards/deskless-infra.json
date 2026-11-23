@@ -1,7 +1,7 @@
 {
   "uid": "deskless-infra",
   "title": "인프라",
-  "description": "PostgreSQL · Redis · RabbitMQ · crontab 상태",
+  "description": "DB · Redis · 큐 · 예약 작업은 괜찮나?",
   "tags": [
     "deskless"
   ],
@@ -24,195 +24,55 @@
       "15m"
     ]
   },
-  "templating": {
-    "list": []
-  },
   "annotations": {
     "list": []
   },
-  "links": [],
+  "links": [
+    {
+      "title": "다른 대시보드",
+      "type": "dashboards",
+      "tags": [
+        "deskless"
+      ],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
-      "type": "row",
-      "title": "PostgreSQL",
-      "collapsed": false,
+      "type": "stat",
+      "title": "실패한 작업",
+      "description": "큐 작업 중 3번 시도해도 처리하지 못해 따로 모아 둔 것(q.dead). 자동으로 다시 처리하지 않는다 — 1건이라도 있으면 RabbitMQ 관리 화면(http://localhost:15672 → Queues → q.dead → Get messages)에서 내용을 본다. 입력 오류 같은 업무 실패는 여기 쌓이지 않는다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
       "gridPos": {
-        "h": 1,
-        "w": 24,
+        "h": 4,
+        "w": 4,
         "x": 0,
         "y": 0
       },
-      "panels": []
-    },
-    {
-      "id": 2,
-      "type": "stat",
-      "title": "연결 수 / 최대",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 1
-      },
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum(pg_stat_activity_count)",
-          "legendFormat": "연결",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "max(pg_settings_max_connections)",
-          "legendFormat": "최대",
-          "refId": "B"
+          "expr": "sum(rabbitmq_detailed_queue_messages_ready{queue=\"q.dead\"}) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "-"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
-      }
-    },
-    {
-      "id": 3,
-      "type": "stat",
-      "title": "캐시 적중률",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 1
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum(rate(pg_stat_database_blks_hit[5m])) / (sum(rate(pg_stat_database_blks_hit[5m])) + sum(rate(pg_stat_database_blks_read[5m])))",
-          "legendFormat": "적중률",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percentunit",
-          "decimals": 1,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 0.9
-              },
-              {
-                "color": "green",
-                "value": 0.99
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "-"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
-      }
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "교착 (24시간)",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 12,
-        "y": 1
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum(increase(pg_stat_database_deadlocks[24h]))",
-          "legendFormat": "교착",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
+          "unit": "suffix:건",
           "decimals": 0,
           "thresholds": {
             "mode": "absolute",
@@ -227,10 +87,21 @@
               }
             ]
           },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "없음",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "-"
+          "noValue": "수집 전"
         },
         "overrides": []
       },
@@ -242,27 +113,29 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
-      "id": 5,
+      "id": 2,
       "type": "stat",
-      "title": "DB 크기",
-      "description": "",
+      "title": "밀린 작업",
+      "description": "서버가 아직 꺼내 가지 않은 큐 작업(이용자 서버 · 관리자 서버 합). 잠깐 쌓였다 줄면 정상, 10건 넘게 계속 있으면 노랑 · 100건 넘으면 빨강 — 처리하는 서버를 늘린다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 1
+        "w": 4,
+        "x": 4,
+        "y": 0
       },
       "targets": [
         {
@@ -270,14 +143,172 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum(pg_database_size_bytes)",
-          "legendFormat": "크기",
-          "refId": "A"
+          "expr": "sum(rabbitmq_detailed_queue_messages_ready{queue=~\"q.user.cmd|q.admin.cmd\"}) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:건",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 100
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "없음",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "수집 전"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "DB 연결 사용률",
+      "description": "DB 최대 연결 중 지금 열린 연결 비율. 60% 노랑 · 80% 빨강 — 넘으면 새 연결이 거부될 수 있다. 서버를 늘리면 연결도 같이 늘어난다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "sum(pg_stat_activity_count) / max(pg_settings_max_connections)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.6
+              },
+              {
+                "color": "red",
+                "value": 0.8
+              }
+            ]
+          },
+          "mappings": [],
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "수집 전"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Redis 메모리",
+      "description": "Redis 가 쓰는 메모리. 문 정보(현재 QR · 문 연 시각)만 두어 작게 유지된다 — 계속 커지면 지워지지 않는 키가 있다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "sum(redis_memory_used_bytes)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "decimals": 1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -287,10 +318,11 @@
               }
             ]
           },
+          "mappings": [],
           "color": {
             "mode": "thresholds"
           },
-          "noValue": "-"
+          "noValue": "수집 전"
         },
         "overrides": []
       },
@@ -302,25 +334,204 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
       }
     },
     {
-      "id": 6,
-      "type": "timeseries",
-      "title": "연결 — 상태별 (최대의 80% 를 넘으면 주의)",
-      "description": "",
+      "id": 5,
+      "type": "stat",
+      "title": "Redis 저장(AOF)",
+      "description": "Redis 가 디스크에 기록(AOF)을 남기고 있는지. \"꺼짐 · 실패\" 면 재시작 때 문을 연 시각이 사라진다 — 디스크 공간 · 권한을 본다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "min(redis_aof_enabled * redis_aof_last_write_status)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "꺼짐 · 실패",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "정상",
+                  "color": "green",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "수집 전"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "예약 작업 실패 (24시간)",
+      "description": "스케줄러 작업(결제 대기 만료 · 환불 등)이 최근 24시간에 실패한 횟수. 1건이라도 있으면 아래 표에서 어느 작업인지 보고 스케줄러 로그(npm run docker:logs:scheduler)를 본다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "round(sum(increase(scheduler_job_duration_seconds_count{result=\"failed\"}[24h]))) or vector(0)",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix:건",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "없음",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "noValue": "수집 전"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "wideLayout": true,
+        "showPercentChange": false
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "큐 — 서버가 처리할 작업",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "서버별 밀린 작업",
+      "description": "쓰기 요청(예약 · 결제 확인 등)이 서버별 큐에서 차례를 기다리는 수. 잠깐 솟았다 바로 0 으로 내려오면 정상, 줄지 않고 계속 늘면 그 서버가 모자라다. 게이트웨이 응답 큐는 바로 비워져 넣지 않았다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
         "x": 0,
         "y": 5
       },
@@ -330,25 +541,15 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum by (state) (pg_stat_activity_count)",
-          "legendFormat": "{{state}}",
+          "expr": "label_replace(label_replace(label_replace(label_replace(sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue=~\"q.user.cmd|q.admin.cmd\"}), \"queue_name\", \"$1\", \"queue\", \"(.*)\"), \"queue_name\", \"이용자 서버 작업\", \"queue\", \"q\\\\.user\\\\.cmd\"), \"queue_name\", \"관리자 서버 작업\", \"queue\", \"q\\\\.admin\\\\.cmd\"), \"queue_name\", \"실패한 작업\", \"queue\", \"q\\\\.dead\")",
+          "legendFormat": "{{queue_name}}",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "max(pg_settings_max_connections) * 0.8",
-          "legendFormat": "최대의 80%",
-          "refId": "B"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "none",
           "min": 0,
-          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -363,8 +564,8 @@
           },
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 0,
             "showPoints": "never",
             "spanNulls": true,
             "stacking": {
@@ -380,14 +581,9 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -396,19 +592,32 @@
       }
     },
     {
-      "id": 7,
+      "id": 9,
+      "type": "row",
+      "title": "DB (PostgreSQL)",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
       "type": "timeseries",
-      "title": "초당 커밋 · 롤백",
-      "description": "",
+      "title": "연결 수 — 상태별",
+      "description": "DB 에 열린 연결. \"트랜잭션 열고 멈춤\" 이 오래 쌓이면 트랜잭션을 닫지 않는 코드가 있다. 합이 빨간 주의선에 닿으면 DB 최대 연결을 늘리거나 서버의 연결 풀을 줄인다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 8,
-        "x": 8,
-        "y": 5
+        "x": 0,
+        "y": 13
       },
       "targets": [
         {
@@ -416,8 +625,8 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum(rate(pg_stat_database_xact_commit[1m]))",
-          "legendFormat": "커밋",
+          "expr": "label_replace(label_replace(label_replace(label_replace(sum by (state) (pg_stat_activity_count{state=~\"active|idle|idle in transaction\"}), \"state_name\", \"$1\", \"state\", \"(.*)\"), \"state_name\", \"쿼리 실행 중\", \"state\", \"active\"), \"state_name\", \"쉬는 중\", \"state\", \"idle\"), \"state_name\", \"트랜잭션 열고 멈춤\", \"state\", \"idle in transaction\")",
+          "legendFormat": "{{state_name}}",
           "refId": "A"
         },
         {
@@ -425,8 +634,114 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum(rate(pg_stat_database_xact_rollback[1m]))",
-          "legendFormat": "롤백",
+          "expr": "max(pg_settings_max_connections) * 0.8",
+          "legendFormat": "주의선 (최대의 80%)",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "주의선 (최대의 80%)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    10,
+                    10
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "초당 처리 — 커밋 · 롤백",
+      "description": "DB 가 1초에 끝낸 트랜잭션 수. 롤백이 갑자기 늘면 오류가 난 요청이 많다는 뜻 — 서비스 부하 대시보드의 오류 비율과 같이 본다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 13
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "sum(rate(pg_stat_database_xact_commit[5m]))",
+          "legendFormat": "커밋(저장)",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "sum(rate(pg_stat_database_xact_rollback[5m]))",
+          "legendFormat": "롤백(취소)",
           "refId": "B"
         }
       ],
@@ -448,8 +763,8 @@
           },
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 0,
             "showPoints": "never",
             "spanNulls": true,
             "stacking": {
@@ -465,14 +780,9 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -481,19 +791,19 @@
       }
     },
     {
-      "id": 8,
+      "id": 12,
       "type": "timeseries",
-      "title": "앱 커넥션 풀 — 서비스별",
-      "description": "",
+      "title": "서버별 DB 연결",
+      "description": "앱 서버마다 열어 둔 DB 연결(연결 풀). 서버를 늘리면 이 합도 늘어난다 — DB 최대 연결을 넘지 않게 본다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 8,
         "x": 16,
-        "y": 5
+        "y": 13
       },
       "targets": [
         {
@@ -501,8 +811,8 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum by (job, state) (db_client_connections)",
-          "legendFormat": "{{job}} {{state}}",
+          "expr": "sum by (job, display_name) (db_client_connections{state=\"total\"})",
+          "legendFormat": "{{display_name}}",
           "refId": "A"
         }
       ],
@@ -510,7 +820,6 @@
         "defaults": {
           "unit": "none",
           "min": 0,
-          "decimals": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -525,8 +834,8 @@
           },
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 0,
             "showPoints": "never",
             "spanNulls": true,
             "stacking": {
@@ -542,14 +851,9 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -558,7 +862,7 @@
       }
     },
     {
-      "id": 9,
+      "id": 13,
       "type": "row",
       "title": "Redis",
       "collapsed": false,
@@ -566,24 +870,24 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 20
       },
       "panels": []
     },
     {
-      "id": 10,
+      "id": 14,
       "type": "timeseries",
       "title": "메모리",
-      "description": "",
+      "description": "Redis 가 쓰는 메모리. 문 정보만 두어 평평해야 정상이다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
+        "h": 7,
+        "w": 8,
         "x": 0,
-        "y": 14
+        "y": 21
       },
       "targets": [
         {
@@ -591,7 +895,7 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "redis_memory_used_bytes",
+          "expr": "sum(redis_memory_used_bytes)",
           "legendFormat": "사용",
           "refId": "A"
         }
@@ -614,8 +918,8 @@
           },
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 0,
             "showPoints": "never",
             "spanNulls": true,
             "stacking": {
@@ -631,14 +935,9 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -647,19 +946,19 @@
       }
     },
     {
-      "id": 11,
+      "id": 15,
       "type": "timeseries",
-      "title": "초당 명령",
-      "description": "",
+      "title": "연결 수",
+      "description": "앱 인스턴스마다 연결 1 ~ 2개(게이트웨이는 구독 연결 하나 더). 인스턴스 수와 같이 움직이면 정상이다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 6,
-        "y": 14
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 21
       },
       "targets": [
         {
@@ -667,7 +966,78 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "rate(redis_commands_processed_total[1m])",
+          "expr": "sum(redis_connected_clients)",
+          "legendFormat": "연결",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "초당 명령",
+      "description": "Redis 가 1초에 처리한 명령. QR 확인 · 문 열기 · QR 동기화가 쓴다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "deskless-prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 21
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "sum(rate(redis_commands_processed_total[5m]))",
           "legendFormat": "명령",
           "refId": "A"
         }
@@ -690,8 +1060,8 @@
           },
           "custom": {
             "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "lineWidth": 2,
+            "fillOpacity": 0,
             "showPoints": "never",
             "spanNulls": true,
             "stacking": {
@@ -707,346 +1077,9 @@
       },
       "options": {
         "legend": {
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "연결 수",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 12,
-        "y": 14
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "redis_connected_clients",
-          "legendFormat": "연결",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0,
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 13,
-      "type": "stat",
-      "title": "키 적중률 · AOF",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 18,
-        "y": 14
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))",
-          "legendFormat": "키 적중률",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "redis_aof_enabled",
-          "legendFormat": "AOF 켜짐(1)",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "redis_aof_last_write_status",
-          "legendFormat": "AOF 마지막 쓰기 정상(1)",
-          "refId": "C"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 2,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "-"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
-      }
-    },
-    {
-      "id": 14,
-      "type": "row",
-      "title": "RabbitMQ",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 22
-      },
-      "panels": []
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "큐별 대기 메시지",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 23
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_ready)",
-          "legendFormat": "{{queue}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0,
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "timeseries",
-      "title": "큐별 처리 중 · 소비자",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 23
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum by (queue) (rabbitmq_detailed_queue_messages_unacked)",
-          "legendFormat": "{{queue}} 처리 중",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum by (queue) (rabbitmq_detailed_queue_consumers)",
-          "legendFormat": "{{queue}} 소비자",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0,
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -1056,181 +1089,31 @@
     },
     {
       "id": 17,
-      "type": "timeseries",
-      "title": "초당 발행 · 전달",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 23
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum(rate(rabbitmq_global_messages_received_total[1m]))",
-          "legendFormat": "발행",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum(rate(rabbitmq_global_messages_delivered_total[1m]))",
-          "legendFormat": "전달",
-          "refId": "B"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 18,
-      "type": "stat",
-      "title": "DLQ (q.dead) 대기",
-      "description": "처리하지 못하고 버려진 명령 — 0 이 아니면 로그를 본다",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 0,
-        "y": 31
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum(rabbitmq_detailed_queue_messages_ready{queue=\"q.dead\"})",
-          "legendFormat": "q.dead",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "noValue": "-"
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
-      }
-    },
-    {
-      "id": 19,
       "type": "row",
-      "title": "scheduler (crontab)",
+      "title": "예약 작업 (스케줄러)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 28
       },
       "panels": []
     },
     {
-      "id": 20,
-      "type": "stat",
-      "title": "실패 (24시간)",
-      "description": "",
+      "id": 18,
+      "type": "table",
+      "title": "작업별 실행 — 최근 24시간",
+      "description": "스케줄러가 돌린 작업의 최근 24시간 회차. 실패 칸이 빨가면 스케줄러 로그(npm run docker:logs:scheduler)를 본다. 운영(NODE_ENV=production)에서만 돌아 개발 환경에서는 비어 있다.",
       "datasource": {
         "type": "prometheus",
         "uid": "deskless-prometheus"
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
+        "w": 24,
         "x": 0,
-        "y": 36
+        "y": 29
       },
       "targets": [
         {
@@ -1238,202 +1121,165 @@
             "type": "prometheus",
             "uid": "deskless-prometheus"
           },
-          "expr": "sum(increase(scheduler_job_duration_seconds_count{result=\"failed\"}[24h]))",
-          "legendFormat": "실패",
-          "refId": "A"
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(round(sum by (task) (increase(scheduler_job_duration_seconds_count{result=\"done\"}[24h])) or sum by (task) (increase(scheduler_job_duration_seconds_count[24h])) * 0), \"task_name\", \"$1\", \"task\", \"(.*)\"), \"task_name\", \"결제 대기 만료\", \"task\", \"reservation\\\\.payment-expire\"), \"task_name\", \"늦은 결제 승인 확인\", \"task\", \"reservation\\\\.payment-recheck\"), \"task_name\", \"환불\", \"task\", \"reservation\\\\.refund\"), \"task_name\", \"QR 맞추기\", \"task\", \"reservation\\\\.qr-sync\"), \"task_name\", \"이용 시작 · 종료 전환\", \"task\", \"reservation\\\\.usage\"), \"task_name\", \"QR 확인 링크 문자\", \"task\", \"reservation\\\\.qr-link\"), \"task_name\", \"탈퇴 처리\", \"task\", \"user\\\\.leave-cleanup\"), \"task_name\", \"API 로그 월 파티션 만들기\", \"task\", \"api-log\\\\.partition\")",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "deskless-prometheus"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(label_replace(round(sum by (task) (increase(scheduler_job_duration_seconds_count{result=\"failed\"}[24h])) or sum by (task) (increase(scheduler_job_duration_seconds_count[24h])) * 0), \"task_name\", \"$1\", \"task\", \"(.*)\"), \"task_name\", \"결제 대기 만료\", \"task\", \"reservation\\\\.payment-expire\"), \"task_name\", \"늦은 결제 승인 확인\", \"task\", \"reservation\\\\.payment-recheck\"), \"task_name\", \"환불\", \"task\", \"reservation\\\\.refund\"), \"task_name\", \"QR 맞추기\", \"task\", \"reservation\\\\.qr-sync\"), \"task_name\", \"이용 시작 · 종료 전환\", \"task\", \"reservation\\\\.usage\"), \"task_name\", \"QR 확인 링크 문자\", \"task\", \"reservation\\\\.qr-link\"), \"task_name\", \"탈퇴 처리\", \"task\", \"user\\\\.leave-cleanup\"), \"task_name\", \"API 로그 월 파티션 만들기\", \"task\", \"api-log\\\\.partition\")",
+          "legendFormat": "",
+          "refId": "B",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "task_name": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            },
+            "renameByName": {
+              "task_name": "작업",
+              "Value #A": "성공",
+              "Value #B": "실패"
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "작업",
+                "성공",
+                "실패"
+              ]
+            }
+          }
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
           },
           "color": {
             "mode": "thresholds"
           },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
           "noValue": "-"
         },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name",
-        "justifyMode": "auto",
-        "orientation": "auto"
-      }
-    },
-    {
-      "id": 21,
-      "type": "timeseries",
-      "title": "작업별 회차 — 실행 · 실패 · 건너뜀 (1시간)",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 10,
-        "x": 6,
-        "y": 36
-      },
-      "interval": "1h",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "sum by (task, result) (increase(scheduler_job_duration_seconds_count[1h]))",
-          "legendFormat": "{{task}} {{result}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "min": 0,
-          "decimals": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "작업"
+            },
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "custom.align",
+                "value": "left"
               }
             ]
           },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 80,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "성공"
             },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      }
-    },
-    {
-      "id": 22,
-      "type": "timeseries",
-      "title": "작업별 걸린 시간 p95",
-      "description": "",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "deskless-prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 36
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "deskless-prometheus"
-          },
-          "expr": "histogram_quantile(0.95, sum by (task, le) (rate(scheduler_job_duration_seconds_bucket{result=\"done\"}[1h])))",
-          "legendFormat": "{{task}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
+            "properties": [
               {
-                "color": "green",
-                "value": null
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "unit",
+                "value": "suffix:회"
               }
             ]
           },
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "showPoints": "never",
-            "spanNulls": true,
-            "stacking": {
-              "mode": "none",
-              "group": "A"
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "실패"
             },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "unit",
+                "value": "suffix:회"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "basic"
+                }
+              }
+            ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true,
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ]
+        "showHeader": true,
+        "cellHeight": "lg",
+        "footer": {
+          "show": false
         },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "sortBy": [
+          {
+            "displayName": "실패",
+            "desc": true
+          }
+        ]
       }
     }
   ]

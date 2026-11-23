@@ -58,3 +58,21 @@
 - 바뀐 파일: `compose.shared.yml`(새) · `compose.{postgres,rabbitmq,redis,user-service,admin-service,scheduler,gateway,monitoring}.yml` · `scripts/docker-network.mjs` · `README.md` · `AGENTS.md` · `docs/architecture.md` · `docs/monitoring.md`.
 - 확인: 바꾸기 전 · 후 `docker compose -f compose.<묶음>.yml config --format json` 의 네트워크 · 볼륨(이름 · external) · 서비스별 네트워크 · 볼륨이 8개 묶음 모두 같음. `readSharedResources()` 만 따로 돌려(네트워크를 만들지 않고) 네트워크 5개(internal: service · monitoring 만 true) · 볼륨 1개 · 설명 모두 — 지운 상수와 같음, name 이 빠진 파일은 오류로 멈춤. `node --check` · prettier 통과.
 - 남은 일: 없음 — Compose 2.20 이상이 필요하다(`include`, 이 PC v2.34). 운영 서버의 Docker Compose 버전을 확인한다.
+
+## Modification - 261123-1 (대시보드 재설계 — 판정 표 중심 · 한국어 이름 — revision `monitoring-dashboard-revision-261123-1.md`, 사용자 요청)
+- 변경 요약: 띄워 보니 증설 기준이 안 보이고 패널 · 원문 이름이 많아 읽기 어렵다는 피드백(2026-11-23)으로 두 대시보드를 다시 짰다.
+  - **서비스 부하**: 맨 위 판정 표(서비스 · 대수 · 지금 · 24시간 최고 · 7일 중 70% 넘은 날 · 판정 — 3일 이상 1대 늘리기 · 1~2일 지켜보기 · 0일 여유, 사용자 결정) + 읽는 법 → 시간대별 부하율(15분 평균 · 70% 선) → 최근 7일 × 시간대 칸 → 접힌 "늘리기 전에 확인" 8개. 13 패널(전 28).
+  - **인프라**: 상태 카드 6개 → 큐 · DB · Redis · 예약 작업 표. 18 패널(전 22).
+  - 이름: 서비스는 Prometheus relabel `display_name`(한곳 — 새 서비스도 그 한 줄), 큐 · 작업 · DB 연결 상태는 쿼리의 `label_replace`. 게이트웨이 응답 큐 숨김, 스케줄러는 판정에서 뺌(늘려도 1대만 실행).
+  - Grafana 한국어 화면 · 홈 = 서비스 부하, 모든 패널 설명(ⓘ), 범례는 이름만.
+  - 기록 규칙: `+ job:eventloop_utilization:avg15m`, `− :max` · `− job:process_cpu:rate1m`(쓰는 패널 없음), 서비스 집계 `by (job, display_name)`.
+- 바뀐 파일: `docker/grafana/dashboards/deskless-service-load.json` · `deskless-infra.json`(생성기로 다시 만듦) · `docker/prometheus/prometheus.yml` · `rules.yml` · `compose.monitoring.yml`(Grafana 언어 · 홈, 보존 기간 주석) · `docs/monitoring.md` · `docs/guides/monitoring-integration.md` · `AGENTS.md` · `README.md`.
+- 확인:
+  - 대시보드 JSON — 패널 ID 겹침 없음 · 폭 24 이내 · 데이터 원본 uid 일치 · 행 · 글 패널 말고 모두 설명 있음.
+  - 모든 쿼리(32개)를 로컬 Prometheus API 로 조회 — 문법 오류 0(`$job` → `.*`, `$__interval` → `1h` 로 바꿔). 이름 바꾸기 결과(이용자 서버 작업 · 쿼리 실행 중 · 결제 대기 만료 …)가 실제 응답에 나옴.
+  - `promtool check rules`(6개) · `promtool check config` 통과(실행 중 컨테이너의 `/tmp` 에서 — 적용 · 재시작 안 함). `docker compose -f compose.monitoring.yml config -q` 통과, Grafana 환경 값 2개 확인.
+  - YAML 3개 prettier 통과. 대시보드 JSON 은 생성기 출력 형식(들여쓰기 2) 그대로 — 바꾸기 전과 같다.
+  - 가짜 지표 스크립트(작업용 — 커밋 안 함)에 `display_name` · `avg15m` · DB · Redis · `q.dead` · crontab 8개(환불 실패 2회) 값을 더하고, 1일치를 `promtool tsdb create-blocks-from openmetrics` 로 컨테이너 `/tmp` 에 만들어 읽히는 것까지 확인(지움).
+- revision 과 달라진 점: 지난 변경 머리글 `## Change - 261122-1` 이름 바꾸기는 하지 않았다 — spec 보드는 머리글이 아니라 파일 수정 시각(revision 이 report 보다 새로운지)으로 미반영을 판단해, 이 report 갱신으로 해소된다.
+- 그대로 둔 것: 대시보드에서 뺀 지표(이벤트 루프 지연 · 처리 중인 요청 · SSE 대기 · 큐 명령 처리량)는 앱이 계속 내고 Prometheus 에서 조회된다 — `docs/monitoring.md` 지표 목록 그대로.
+- 남은 일(사용자 — 배포): `npm run docker:monitoring`(Grafana 새 환경 값) → `docker compose -f compose.monitoring.yml restart prometheus`(relabel · 규칙). 가짜 데이터로 보려면 Prometheus 볼륨을 지우고 바뀐 스크립트를 다시 실행(지난 가짜 데이터에는 `display_name` · `avg15m` 이 없다).

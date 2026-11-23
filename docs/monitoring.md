@@ -29,6 +29,7 @@ redis-exporter ─────┘
 - **지표 정의는 그 지표를 내는 부품 안에** — `MetricsService.gauge()` · `.histogram()` 으로 만들고, 부품은 `MetricsService` 를 `@Optional()` 로 받는다(모듈이 없으면 — 테스트 · 마이그레이션 실행기 — 아무것도 하지 않는다). 지표 목록은 아래 표 한 곳에 모은다.
 - **라벨에는 개수가 정해진 값만** — 라우트 틀(`/reservation/:reservation_id` — `toRouteLabel`, 틀이 없으면 `UNMATCHED`) · 명령 type · crontab 잠금 키 · 상태 코드처럼. ID · 주소 · 사용자 입력은 라벨에 넣지 않는다(값마다 시계열이 생겨 Prometheus 가 터진다).
 - **`job` · `instance` 라벨은 쓰지 않는다** — Prometheus 가 붙이는 수집 대상 이름 · 주소라 앱 라벨과 부딪히면 `exported_job` 으로 바뀐다(crontab 은 `task`). 앱 라벨은 `service`(= 서비스 이름, 모든 지표에 기본으로 붙는다).
+- **`display_name` 은 Prometheus 가 붙인다**(`prometheus.yml` 앱 job 의 `relabel_configs`) — 대시보드 표시용 한국어 이름. 앱은 이 라벨을 내지 않는다(`job` · `instance` 와 같은 취급).
 - **비율은 앱이 누적값을 내고 Prometheus 가 계산한다** — 부하율은 앱이 이벤트 루프 누적 시간(`nodejs_eventloop_time_seconds{state}`)을 내고 기록 규칙이 `rate` 로 나눈다(긁는 쪽이 여럿이어도 맞고, 쿠버네티스 HPA 가 같은 이름을 쓴다).
 - **이름 · 단위** — Prometheus 규칙(`snake_case`, 단위 접미사 `_seconds` · `_bytes`, 누적은 `_total`), 표준이 있으면 표준 이름(prom-client 기본 지표 · `http_server_request_duration_seconds`).
 - **새 지표를 더할 때** — 부품 안에서 만들고 → 아래 지표 목록에 한 줄 → 필요하면 기록 규칙(`docker/prometheus/rules.yml`)과 대시보드 JSON(`docker/grafana/dashboards/`)에 패널. 대시보드 JSON 은 파일이 원본이다(Grafana 화면에서 고친 것은 저장되지 않는다).
@@ -56,18 +57,27 @@ redis-exporter ─────┘
 | 이름 | 뜻 |
 |---|---|
 | `instance:eventloop_utilization:ratio` | 인스턴스 부하율(0 ~ 1) |
-| `job:eventloop_utilization:avg` · `:max` | 서비스 평균 · 가장 바쁜 인스턴스 부하율 — **증설 판단 기준** |
-| `job:process_cpu:rate1m` | 서비스 CPU(코어 수 단위, 인스턴스 합계) |
+| `job:eventloop_utilization:avg` | 서비스 평균 부하율 — HPA 기준 |
+| `job:eventloop_utilization:avg15m` | 서비스 평균 부하율의 15분 평균 — **증설 판정 기준**(판정 표 · 시간대별 부하 · 7일 칸) |
 | `job:http_requests:rate1m` · `job:http_request_duration_seconds:p95` · `job:http_errors:ratio` | 서비스 초당 요청 · 95% 응답 시간 · 5xx 비율 |
+
+서비스 집계는 `by (job, display_name)` — `display_name` 은 `prometheus.yml` 이 앱 job 마다 붙이는 한국어 표시 이름이다.
 
 ## 대시보드 · 증설 판단
 
-- **서비스 부하**(`deskless-service-load`) — 서비스 목록은 Prometheus 에서 읽는다(`label_values(nodejs_eventloop_time_seconds, job)` — 붙은 서비스가 저절로 나온다). 지금 상태(인스턴스 수 · 평균 · 최대 부하율 · 초당 요청 · 95% 응답 시간 · 5xx · 큐 적체 · SSE 대기), 부하 추이(인스턴스별 · 평균 · CPU · 메모리 · 지연), 요청(인스턴스별 분배 · 응답 시간 · 라우트 상위 10), 큐 · DB, 시간대 비교(지금 · 어제 · 지난주 같은 시각 겹치기, 최근 7일 1시간 단위 최대 부하 막대).
-- **인프라**(`deskless-infra`) — PostgreSQL(연결 · 최대의 80% · 커밋 · 캐시 · 교착 · 크기 · 앱 풀) · Redis(메모리 · 명령 · 연결 · 적중 · AOF) · RabbitMQ(큐별 대기 · 처리 중 · 소비자 · 발행 · 전달 · DLQ) · crontab(작업별 회차 · 실패 · 걸린 시간).
-- **증설 판단 기준**(대시보드 안내문과 같다)
+Grafana 화면은 한국어(`GF_USERS_DEFAULT_LANGUAGE=ko-KR`), 홈은 "서비스 부하". 모든 패널에 설명(ⓘ — 무엇 · 어떻게 읽나 · 언제 걱정하나)이 있다.
+
+- **서비스 부하**(`deskless-service-load`) — "인스턴스를 늘려야 하나?"
+  - 맨 위 **판정 표**: 서비스 · 대수 · 지금(5분) · 24시간 최고 · 7일 중 70% 넘은 날 · 판정(여유 · 지켜보기 · 1대 늘리기), 오른쪽에 읽는 법.
+  - 시간대별 부하율(서비스별 15분 평균 · 70% 빨간 점선) · 최근 7일 × 시간대 칸(1시간 한 칸 — 초록 50% 미만 · 노랑 50 ~ 70% · 빨강 70% 이상).
+  - 접힌 행 **"늘리기 전에 확인"**: 초당 요청 · 95% 응답 시간 · 서버 오류 비율 · 밀린 작업 · DB 연결 기다리는 요청 · 인스턴스별 부하율 · CPU · 메모리.
+  - 서비스 목록은 Prometheus 에서 읽는다(`label_values(nodejs_eventloop_time_seconds, job)`) — 붙은 서비스가 저절로 나온다. 스케줄러는 판정 표 · 부하 그래프 · 7일 칸에 없다(늘려도 회차마다 1대만 실행 — JobLockService).
+- **인프라**(`deskless-infra`) — "DB · Redis · 큐는 괜찮나?" 맨 위 상태 카드 6개(실패한 작업 · 밀린 작업 · DB 연결 사용률 · Redis 메모리 · Redis 저장 · 예약 작업 실패 — 0 은 "없음") → 큐(서버별 밀린 작업) · DB(연결 상태별 + 최대의 80% · 초당 커밋 · 롤백 · 서버별 연결) · Redis(메모리 · 연결 · 명령) · 예약 작업(작업별 최근 24시간 성공 · 실패 표).
+- **이름** — 서비스는 Prometheus 가 붙이는 `display_name`(게이트웨이 · 이용자 서버 · 관리자 서버 · 스케줄러 · 프론트), 큐 · 작업 · DB 연결 상태는 대시보드 쿼리의 `label_replace`(모르는 값은 원래 이름). 게이트웨이 응답 큐(`q.gw.result.*`)는 바로 비워지므로 넣지 않는다.
+- **증설 판단 기준**(판정 표와 같다)
   - **부하율 = 이벤트 루프 사용률** — Node 는 인스턴스 하나가 주로 코어 하나를 쓴다. 100% 면 그 인스턴스는 더 받을 수 없다.
-  - 피크 시간대에 서비스 **평균 부하율이 70% 를 자주 넘거나**, **큐 적체가 줄지 않고 늘기만 하거나**, **95% 응답 시간이 평소의 2배를 넘으면** 그 서비스 인스턴스를 1대 늘린다.
-  - 늘리기 전에 — 인스턴스별 초당 요청이 고르지 않으면 분배(nginx)부터, DB 연결 대기가 있으면 풀 · DB 최대 연결부터(늘리면 DB 연결이 더 모자란다). 같은 서버 안에서는 **CPU 코어 수까지만** 효과가 있다.
+  - 하루마다 **15분 평균 부하율의 최고**를 본다(1 ~ 2분 튀는 값은 세지 않는다). 최근 7일 중 70% 이상인 날이 **3일 이상이면 1대 늘린다**, 1 ~ 2일은 지켜보기, 0일은 여유. 하루는 Prometheus 가 UTC 0시로 끊어 한국 시각 오전 9시 ~ 다음 날 오전 9시다(밤 피크가 하루 안에 들어간다).
+  - 늘리기 전에 — 인스턴스별 부하율이 고르지 않으면 분배(nginx)부터, DB 연결 대기가 있으면 풀 · DB 최대 연결부터(늘리면 DB 연결이 더 모자란다). 같은 서버 안에서는 **CPU 코어 수까지만** 효과가 있다.
 
 ## 실행
 

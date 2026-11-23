@@ -224,10 +224,10 @@ docker/           # nginx(로드밸런서) · rabbitmq(init.sh — 계정 · 권
 
 - **지표는 앱마다 전용 포트 `/metrics`**(사용자 결정 2026-11-22) — 앱 루트 모듈이 `MonitoringModule.forRoot(toMonitoringOptions(<서비스 이름>, process.env.<APP>_METRICS_PORT, <기본 포트>, <http>))` 를 한 번 들인다. 공개 · 내부 API 와 포트가 달라 내부 토큰 · 공개 경로 규칙과 섞이지 않는다(로컬 9464 ~ 9467 앱마다, Docker 9464 고정 · 내부망 `deskless-monitoring` 에서만). scheduler 는 이 포트 하나만 연다 — "들어오는 연결 없음" 의 유일한 예외.
 - **지표 정의는 그 지표를 내는 부품 안에** — `MetricsService.gauge()` · `.histogram()`, 부품은 `MetricsService` 를 `@Optional()` 로 받는다(모듈이 없으면 — 테스트 · 마이그레이션 — 아무것도 안 한다). 지금: HTTP(`HttpMetricsMiddleware`) · 큐 명령(`CommandDispatcher`) · crontab(`JobLockService` — 모든 crontab 이 거친다) · DB 풀(`DatabasePoolMetrics`) · SSE 대기(`CommandStreamService`).
-- **라벨은 개수가 정해진 값만** — 라우트 틀(`toRouteLabel`) · 명령 type · 잠금 키 · 상태 코드. ID · 주소 · 사용자 값 ❌(시계열이 터진다), `job` · `instance` ❌(Prometheus 가 붙이는 이름 — crontab 은 `task`). 모든 지표에 `service` 라벨.
+- **라벨은 개수가 정해진 값만** — 라우트 틀(`toRouteLabel`) · 명령 type · 잠금 키 · 상태 코드. ID · 주소 · 사용자 값 ❌(시계열이 터진다), `job` · `instance` · `display_name` ❌(Prometheus 가 붙이는 이름 — crontab 은 `task`, `display_name` 은 대시보드 한국어 표시 이름으로 `prometheus.yml` 이 붙인다). 모든 지표에 `service` 라벨.
 - **비율은 앱이 누적값, Prometheus 기록 규칙이 계산**(`docker/prometheus/rules.yml` — 부하율 `job:eventloop_utilization:avg` 는 증설 판단 · 나중의 HPA 기준).
 - **새 지표** → `docs/monitoring.md` 지표 목록 + 필요하면 기록 규칙 · 대시보드 JSON(`docker/grafana/dashboards/` — 파일이 원본). 모니터링 묶음은 `compose.monitoring.yml`(Prometheus · Grafana · PostgreSQL · Redis 수집기 — `docker:up` 맨 끝 · `docker:down` 맨 앞, 사용자 결정 2026-11-23 · 관리 도구 compose 금지의 예외 — 수집기).
-- **다른 프로젝트(프론트 등)를 붙일 때**는 연결 규격 [docs/guides/monitoring-integration.md](docs/guides/monitoring-integration.md) 를 그 저장소에 넘기고, 백엔드는 `docker/prometheus/prometheus.yml` 수집 대상 한 줄 + 규격의 이름 목록만(대시보드 서비스 목록은 Prometheus 에서 읽는다).
+- **다른 프로젝트(프론트 등)를 붙일 때**는 연결 규격 [docs/guides/monitoring-integration.md](docs/guides/monitoring-integration.md) 를 그 저장소에 넘기고, 백엔드는 `docker/prometheus/prometheus.yml` 수집 대상 하나(+ 표시 이름 `display_name`) + 규격의 이름 목록만(대시보드 서비스 목록은 Prometheus 에서 읽는다).
 - 지표 모듈 · 계측은 라이브러리 · 인프라라 spec 을 두지 않는다.
 
 → 상세: [docs/monitoring.md](docs/monitoring.md)
@@ -299,5 +299,5 @@ docker/           # nginx(로드밸런서) · rabbitmq(init.sh — 계정 · 권
 - [ ] 응답 필드 생략 금지 — 없으면 `null`
 - [ ] 날짜 · 시각: 파싱 · 비교 · 계산 · 시간대는 `@app/common/utils/dayjs.js` 의 dayjs(직접 계산 · `'dayjs'` 직접 import ❌)
 - [ ] 테스트: service 기능 spec(API 1개당 1개, repository · 외부 포트 · JwtService mock) + repository spec(오류 변환 · 매핑 민감 쿼리는 Smoke) 만 — controller · util · 라이브러리 · 인프라 spec 없음, 호출 횟수 · 인자 · 미호출 단언, 한국어 리터럴, `npm test` + `npm run typecheck` 통과
-- [ ] 모니터링: 새 지표는 그 부품 안에서 `MetricsService`(`@Optional`)로 · 라벨은 개수가 정해진 값만(ID · 주소 · `job` · `instance` ❌) · `docs/monitoring.md` 지표 목록 + 필요하면 기록 규칙 · 대시보드 JSON, 다른 프로젝트는 연결 규격 문서를 넘긴다
+- [ ] 모니터링: 새 지표는 그 부품 안에서 `MetricsService`(`@Optional`)로 · 라벨은 개수가 정해진 값만(ID · 주소 · `job` · `instance` · `display_name` ❌) · `docs/monitoring.md` 지표 목록 + 필요하면 기록 규칙 · 대시보드 JSON, 다른 프로젝트는 연결 규격 문서를 넘긴다
 - [ ] 프론트 연계: 공개 API · 사용자 동작이 바뀌면 `.beaver/output/frontend/changes/<날짜>-<기능>.md`(이유 · 영향 화면 · API 변경 · 화면 구성과 쓰는 API 의 변경 · 바뀐 DTO · 반영 순서) + 목록 한 줄

@@ -1,6 +1,6 @@
 # 모니터링 연결 규격 — 다른 프로젝트가 붙을 때
 
-deskless 서버 모니터링(Prometheus · Grafana)에 **별도 저장소의 서비스**(프론트 Next.js · 새 서버 등)를 붙이는 규격이다. 이 문서 하나를 그 저장소에 그대로 넘기면 된다 — 백엔드 내부 구조를 몰라도 된다. 규격대로 붙으면 그 서비스의 인스턴스 수 · 부하율 · CPU · 메모리가 백엔드와 같은 대시보드("서비스 부하")에 시간대별로 나오고, 인스턴스를 늘릴지 판단하는 근거가 된다.
+deskless 서버 모니터링(Prometheus · Grafana)에 **별도 저장소의 서비스**(프론트 Next.js · 새 서버 등)를 붙이는 규격이다. 이 문서 하나를 그 저장소에 그대로 넘기면 된다 — 백엔드 내부 구조를 몰라도 된다. 규격대로 붙으면 그 서비스의 대수 · 부하율 · 판정이 백엔드와 같은 "서비스 부하" 대시보드의 판정 표와 시간대별 부하에, CPU · 메모리가 "늘리기 전에 확인"에 나오고, 인스턴스를 늘릴지 판단하는 근거가 된다.
 
 ## 1. 붙는 조건 (필수)
 
@@ -13,7 +13,7 @@ deskless 서버 모니터링(Prometheus · Grafana)에 **별도 저장소의 서
 | 노출 | 지표는 **전용 포트로만** — 공개 포트 · 공개 라우트(`/api/metrics` 같은)로 열지 않는다. 호스트 포트도 열지 않는다(`ports` 없이 내부망만) |
 | 인스턴스 | 여러 대로 늘려도 된다(`--scale` · replicas) — Prometheus 가 서비스 이름을 DNS 로 풀어 인스턴스를 모두 찾는다 |
 
-**사용 중인 서비스 이름** — `gateway` · `user-service` · `admin-service` · `scheduler` · `web`(프론트 Next.js). 새 이름은 백엔드와 정한 뒤 이 표에 더한다.
+**사용 중인 서비스 이름**(대시보드 표시 이름) — `gateway`(게이트웨이) · `user-service`(이용자 서버) · `admin-service`(관리자 서버) · `scheduler`(스케줄러) · `web`(프론트 — Next.js). 새 이름은 표시 이름과 함께 백엔드와 정한 뒤 여기에 더한다.
 
 ## 2. 내야 하는 지표 (필수)
 
@@ -24,7 +24,7 @@ deskless 서버 모니터링(Prometheus · Grafana)에 **별도 저장소의 서
 | `process_resident_memory_bytes` | gauge | — | 프로세스 메모리 |
 | `nodejs_eventloop_time_seconds` | gauge(누적) | `state` = `active` · `idle` | **Node 면 필수** — 이벤트 루프가 일한 · 쉰 누적 초(`performance.eventLoopUtilization()` 의 `active` · `idle` ÷ 1000). 부하율은 백엔드 Prometheus 가 이 값으로 계산한다 |
 
-Node 는 `prom-client` 의 `collectDefaultMetrics()` 가 위 CPU · 메모리(+ 이벤트 루프 지연 · 힙 · GC)를 이 이름 그대로 낸다. Node 가 아니면 그 언어의 Prometheus 클라이언트로 같은 이름 · 단위를 낸다 — 이벤트 루프가 없는 런타임은 CPU · 메모리만 내고, 부하율은 대시보드의 CPU 패널로 본다.
+Node 는 `prom-client` 의 `collectDefaultMetrics()` 가 위 CPU · 메모리(+ 이벤트 루프 지연 · 힙 · GC)를 이 이름 그대로 낸다. Node 가 아니면 그 언어의 Prometheus 클라이언트로 같은 이름 · 단위를 낸다 — 이벤트 루프가 없는 런타임은 CPU · 메모리만 내고, 판정 표에는 나오지 않는다 — 부하는 "늘리기 전에 확인"의 CPU 패널로 본다.
 
 ## 3. 내면 좋은 지표 (선택)
 
@@ -120,15 +120,15 @@ networks:
 
 1. 그 컨테이너 안에서 `wget -qO- http://127.0.0.1:9464/metrics | grep nodejs_eventloop_time_seconds` — `service="<이름>"` 이 붙어 나온다.
 2. 백엔드 서버에서 Prometheus `http://localhost:9090/targets` — 그 job 의 인스턴스가 모두 **UP**.
-3. Grafana "서비스 부하" 대시보드 맨 위 서비스 목록에 이름이 나오고, 부하율 · CPU · 메모리 패널에 선이 그려진다.
+3. Grafana "서비스 부하" 대시보드 맨 위 판정 표에 표시 이름이 나오고(Node — 이벤트 루프 지표가 있을 때), "늘리기 전에 확인"의 CPU · 메모리 패널에 선이 그려진다.
 
 ## 7. 백엔드가 할 일
 
-1. `docker/prometheus/prometheus.yml` 의 "앱" 에 한 줄 — `- {job_name: <이름>, dns_sd_configs: [{names: [<이름>], type: A, port: 9464, refresh_interval: 15s}]}`.
+1. `docker/prometheus/prometheus.yml` 의 "앱" 에 job 하나 — `dns_sd_configs: [{names: [<이름>], type: A, port: 9464, refresh_interval: 15s}]` 와 `relabel_configs: [{target_label: display_name, replacement: '<표시 이름>'}]`(위 앱들과 같은 모양).
 2. 이 문서 1절의 "사용 중인 서비스 이름" 에 더한다.
 3. `docker compose -f compose.monitoring.yml restart prometheus`.
 
-대시보드는 고치지 않는다 — 서비스 목록을 Prometheus 에서 읽는다(`label_values(nodejs_eventloop_time_seconds, job)`).
+대시보드는 고치지 않는다 — 서비스 목록은 Prometheus 에서 읽고(`label_values(nodejs_eventloop_time_seconds, job)`), 이름은 `display_name` 으로 나온다.
 
 ## 8. 요청 문서 틀
 

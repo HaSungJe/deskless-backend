@@ -2,26 +2,25 @@
 #
 # 부하율 = 이벤트 루프 사용률(ELU) — 앱은 이벤트 루프가 일한 · 쉰 누적 시간(nodejs_eventloop_time_seconds{state})을 내고 여기서 rate 로 나눈다.
 # Node 는 인스턴스 하나가 주로 코어 하나를 쓰므로 1.0(100%)이면 그 인스턴스는 더 받을 수 없다. 증설 기준선은 0.7(docs/monitoring.md).
+# 서비스 집계는 by (job, display_name) — display_name 은 prometheus.yml 이 앱 job 마다 붙이는 한국어 이름(대시보드 표시용).
 groups:
     - name: deskless-service-load
       rules:
           # 인스턴스 부하율 (0 ~ 1)
           - record: instance:eventloop_utilization:ratio
             expr: sum without (state) (rate(nodejs_eventloop_time_seconds{state="active"}[1m])) / sum without (state) (rate(nodejs_eventloop_time_seconds[1m]))
-          # 서비스 평균 · 가장 바쁜 인스턴스 부하율
+          # 서비스 평균 부하율 — HPA 기준
           - record: job:eventloop_utilization:avg
-            expr: avg by (job) (instance:eventloop_utilization:ratio)
-          - record: job:eventloop_utilization:max
-            expr: max by (job) (instance:eventloop_utilization:ratio)
-          # 서비스 CPU(코어 수 단위 — 인스턴스 합계)
-          - record: job:process_cpu:rate1m
-            expr: sum by (job) (rate(process_cpu_seconds_total[1m]))
+            expr: avg by (job, display_name) (instance:eventloop_utilization:ratio)
+          # 서비스 평균 부하율의 15분 평균 — 증설 판정(1~2분 튀는 값은 세지 않는다). 같은 그룹의 앞 규칙을 같은 회차에 쓴다
+          - record: job:eventloop_utilization:avg15m
+            expr: avg_over_time(job:eventloop_utilization:avg[15m])
           # 서비스 초당 HTTP 요청
           - record: job:http_requests:rate1m
-            expr: sum by (job) (rate(http_server_request_duration_seconds_count[1m]))
+            expr: sum by (job, display_name) (rate(http_server_request_duration_seconds_count[1m]))
           # 서비스 95% 응답 시간(초)
           - record: job:http_request_duration_seconds:p95
-            expr: histogram_quantile(0.95, sum by (job, le) (rate(http_server_request_duration_seconds_bucket[5m])))
+            expr: histogram_quantile(0.95, sum by (job, display_name, le) (rate(http_server_request_duration_seconds_bucket[5m])))
           # 서비스 5xx 비율 (0 ~ 1)
           - record: job:http_errors:ratio
-            expr: sum by (job) (rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m])) / sum by (job) (rate(http_server_request_duration_seconds_count[5m]))
+            expr: sum by (job, display_name) (rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m])) / sum by (job, display_name) (rate(http_server_request_duration_seconds_count[5m]))
