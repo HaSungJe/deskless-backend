@@ -11,7 +11,22 @@
 
 | 날짜 | 요청 | 상태 |
 |---|---|---|
-| 2026-11-23 | [Docker 운영 구성 정리 · 모니터링 이전 · 헬스 체크](2026-11-23-k8s-cleanup.md) | 반영(2026-11-23) |
+| 2026-11-23 | [Docker 운영 구성 정리 · 모니터링 이전 · 헬스 체크](2026-11-23-k8s-cleanup.md) | 반영 `43abf2d` |
+| 2026-11-24 | [`.env.example` 을 앱 · 기능 단위로 묶고 주석 줄이기](2026-11-24-env-example-layout.md) | 반영(2026-11-24) |
+
+## 2026-11-24 — 반영 결과 요약
+
+**고침 — `.env.example`** — 절 13개(공통 · gateway · user-service · admin-service · scheduler · PostgreSQL · RabbitMQ · Redis(문 정보) · 로그인 · 암호화 · AWS 공통 · SMS · 파일 저장 · 결제(토스페이먼츠)), 머리 3줄 · 주석은 키 묶음당 한 줄. 131줄 → 105줄. 요청서 제안에서 두 곳을 다듬었다(요청서 3절이 허용):
+- `INTERNAL_HTTP_TIMEOUT_MS` — 공통이 아니라 **gateway 절**(읽는 앱이 gateway 뿐 — `apps/gateway/src/modules/transport/internal-http.client.ts:57`), `COMMAND_STREAM_TIMEOUT_MS` 와 한 줄 주석.
+- `GATEWAY_PUBLIC_URL` — gateway 절에 두되 주석에 "user-service · admin-service 도 쓴다"(파일 · 사진 주소를 만드는 쪽 — `libs/integration`).
+
+**옮김 — 줄인 설명** — [docs/architecture.md](../docs/architecture.md) "설정" 에 `.env.example` 절 순서의 **키 묶음별 뜻 표**(뜻 · 비면 · 주의 · 읽는 앱 · 가이드)와 `.env.example` 모양 규칙(앱 · 기능 단위 절 · 한 줄 주석 · 새 키는 절 + 표에 한 줄)을 더했다. 지운 주석의 내용(앞단 프록시 단 수 · 위조 주의, 공개 주소 기준, SMS 링크 두 종류 · 비면 동작, 테스트 데이터 내용, AWS 키 · IAM 역할 · 리전, 공용 파일 폴더, 연결 대기 초과 500 · 큐 재시도, 브로커 비밀번호 문자 제한, Redis URL 인코딩 · TLS, 토스 키 종류)은 모두 이 표에 있다. 표를 쓰며 코드 기본값과 맞췄다 — `AWS_REGION` 은 코드 기본값이 없다(키를 넣었는데 비면 SMS · S3 실패 — `libs/integration/src/sms/sns-sms.sender.ts:30`).
+
+**고침 — 가리키는 곳** — `AGENTS.md`("`.env` 하나가 곧 서버 설정" — 뜻은 architecture.md 표, 절 · 주석 규칙) · `README.md`(준비 절) · `docs/integration.md`(새 연동 추가 3단계 — 그 기능 절 + 표에 한 줄).
+
+**검색에 걸리지만 그대로 둔 것** — `README.md:50` · `docs/architecture.md` 표의 "만드는 명령은 `.env.example` 주석"(`TOKEN_CIPHER_KEY` 명령 한 줄은 남겼다) · `docs/guides/redis-setup.md:9` "`.env.example` 의 Redis 절"(절 이름 그대로) · `docs/guides/sample-data.md` 제목 "테스트 데이터(샘플 시드)" · `integration.util.ts:124` "게이트웨이 공개 주소"(절 이름이 아니라 일반 표현) · Claude 메모리 `.env` 규칙(일반 표현).
+
+**검증** — 키 · 값 목록이 전과 같다(요청서 5절 명령 — 45개, 차이 없음). 코드는 바뀌지 않아 테스트 · 빌드는 돌리지 않았다.
 
 ## 2026-11-23 — 반영 결과 요약
 

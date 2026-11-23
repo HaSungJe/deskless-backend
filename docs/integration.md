@@ -99,7 +99,7 @@ await this.smsSender.send({to: phone, text: `[바로방] 인증번호 ${code}`})
 
 1. `docs/guides/<서비스>-setup.md` 에 계정 · 리소스 · 권한 · `.env` 키를 적는다.
 2. `<기능>/<서비스>-<기능>.<role>.ts` 로 포트 인터페이스를 구현한다. 외부 실패는 503 으로 바꿔 던진다.
-3. `.env.example` 에 키를 추가한다. 배포에서 그 키를 넣는 일(그 연동을 쓰는 앱에만 비밀값을 준다)은 deskless 차트에 더한다(deskless 저장소 작업).
+3. `.env.example` 의 그 기능 절에 키를 추가하고(한 줄 주석) [architecture.md](architecture.md) "설정" 표에 뜻을 한 줄 더한다. 배포에서 그 키를 넣는 일(그 연동을 쓰는 앱에만 비밀값을 준다)은 deskless 차트에 더한다(deskless 저장소 작업).
 
 ## 테스트
 

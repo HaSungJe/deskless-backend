@@ -194,7 +194,7 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | 앞단 프록시 | `TRUST_PROXY` = 믿을 앞단 단 수(Ingress 1단이면 1) — [trust-proxy.config.ts](../apps/gateway/src/config/trust-proxy.config.ts) |
 | 내부 파일 저장소 | `AWS_S3_BUCKET` 이 빌 때 gateway · user-service · admin-service 가 같은 폴더를 봐야 한다 — 공용 볼륨을 `/app/storage/files` 에 붙이고 `FILE_STORAGE_DIR` 로 넘긴다(이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다). 노드가 여러 대면 S3 모드 |
 | 게이트웨이 앞단(Ingress) | 요청 본문 한도 10MB(`LOCAL_FILE_MAX_BYTES` — integration.constants.ts) · SSE 응답 버퍼링 끔(게이트웨이가 `X-Accel-Buffering: no` 를 보낸다) · 문 소켓 `/ws/` WebSocket 업그레이드 · 읽기 대기 120초([realtime.md](realtime.md)) |
-| 마이그레이션 | `node dist/apps/user-service/apps/user-service/src/migrate.js`(user-service 이미지) — 앱보다 먼저, 한 번만. 적용은 사용자가 실행한다 |
+| 마이그레이션 | `node dist/apps/user-service/apps/user-service/src/migrate.js`(user-service 이미지) — 앱보다 먼저, 한 번만. 적용은 사용자가 실행한다. 적용 계정에는 PostgreSQL 확장 `btree_gist`(기간 가격 · 예약 점유 겹침 배타 제약) 생성 권한이 필요하다(RDS PostgreSQL 13+ 는 DB 의 CREATE 권한) |
 | 프로브 | `GET /health/live` · `GET /health/ready`(지표 · 헬스 체크 포트 — [monitoring.md](monitoring.md)) |
 | 브로커 계정 · 권한 | 앱별 계정(`BROKER_USER`)과 그 권한 — `deskless.cmd` 쓰기는 gateway 만([messaging.md](messaging.md)). `npm run broker:check` 로 설계와 대조한다 |
 | 시각대 | `TZ=Asia/Seoul` |
@@ -203,7 +203,43 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 
 ### 설정 — `.env`
 
-키 이름 · 뜻 · 로컬 기본값은 [.env.example](../.env.example) 하나에 있다. 로컬 실행은 이 파일을 `.env` 로 복사해 쓰고, 쿠버네티스는 deskless 가 같은 키 이름으로 Secret · ConfigMap 을 넣는다. 환경 차이(로컬 · 운영)는 값으로만 두고 코드에 환경별 분기를 두지 않는다.
+키 이름 · 로컬 기본값은 [.env.example](../.env.example) 하나에 있고, 키마다의 뜻은 아래 표다. 로컬 실행은 이 파일을 `.env` 로 복사해 쓰고, 쿠버네티스는 deskless 가 같은 키 이름으로 Secret · ConfigMap 을 넣는다. 환경 차이(로컬 · 운영)는 값으로만 두고 코드에 환경별 분기를 두지 않는다.
+
+- **`.env.example` 모양**(사용자 결정 2026-11-24): 절은 앱 · 기능 단위 — 그 앱 · 기능의 포트 · 바인딩 · 지표 포트 · 주소 · 계정 · 한도를 한 절에 두고, 어느 앱에도 묶이지 않는 값만 "공통" 절. 주석은 키 묶음당 한 줄(길어도 두 줄) — `(필수)` · 비우면 어떻게 되는지 · 세팅 가이드 경로만, 긴 설명은 이 표에. 새 키는 그 절에 한 줄 주석과 함께 넣고 이 표에도 한 줄 더한다.
+- `(필수)` 값이 비면 앱이 제대로 돌지 않는다(부팅은 되고 그 기능이 실패하는 것도 있다 — 표의 "비면").
+
+| 절 | 키 | 뜻 · 비면 · 주의 |
+|---|---|---|
+| 공통 | `NODE_ENV` | `production` 운영 / `development` 로컬 디버깅 전용 — JWT 만료를 검사하지 않는다 |
+| 〃 | `INTERNAL_API_TOKEN` (필수) | 게이트웨이가 서비스 내부 HTTP 에 `x-internal-token` 으로 싣고 서비스 전역 `InternalAuthGuard` 가 시간차 안전 비교한다(비면 전부 거부). 내부 파일 저장소 업로드 · 열람 주소의 HMAC 서명 키도 이 값 — 모든 앱이 같은 값 |
+| 〃 | `METRICS_HOST` | 지표 · 헬스 체크 서버 바인딩(기본 127.0.0.1, 파드는 0.0.0.0) — [monitoring.md](monitoring.md) |
+| gateway | `GATEWAY_PORT` · `GATEWAY_METRICS_PORT` | 게이트웨이 포트(기본 3000) · 지표 · 헬스 체크 포트(로컬 9464) |
+| 〃 | `GATEWAY_PUBLIC_URL` | 브라우저가 게이트웨이에 닿는 주소(끝 `/` 없이, 예: `http://localhost:3000`) — 내부 파일 저장소의 업로드 · 열람 · 사진 주소(`<주소>/files/…`)와 테스트 데이터 사진 주소(`<주소>/sample/…`)의 기준. gateway · user-service · admin-service 가 쓴다. 비면 그 주소를 만드는 요청이 실패한다 |
+| 〃 | `CORS_ORIGINS` | 허용할 프론트 주소(쉼표 구분, `*` = 전체) — 비면 다른 출처의 브라우저 요청을 모두 막는다([cors.config.ts](../apps/gateway/src/config/cors.config.ts)) |
+| 〃 | `TRUST_PROXY` | 믿을 앞단 프록시 단 수 — Ingress 1단이면 1, 그 앞에 클라우드 로드밸런서가 더 있으면 2. 비면 설정하지 않는다(로컬 직접 실행). 앞단이 없는데 값을 주면 클라이언트가 `X-Forwarded-For` 로 IP 를 위조할 수 있다([trust-proxy.config.ts](../apps/gateway/src/config/trust-proxy.config.ts)) |
+| 〃 | `COMMAND_STREAM_TIMEOUT_MS` · `INTERNAL_HTTP_TIMEOUT_MS` | 큐 경로 SSE 가 결과를 기다리는 시간(기본 30000 — 넘기면 `pending`) · 게이트웨이 → 서비스 내부 HTTP 대기(기본 10000) |
+| 〃 | `GATEWAY_INSTANCE_ID` | 결과 큐 이름에 쓰는 인스턴스 ID — 비면 `gw-<호스트 이름>-<pid>`(쿠버네티스는 파드 이름, 인스턴스마다 달라야 한다) |
+| 〃 | `SWAGGER_TITLE` · `SWAGGER_PATH` | Swagger 제목 · 경로(기본 `swagger`) |
+| 〃 | `USER_SERVICE_URL` · `ADMIN_SERVICE_URL` | 게이트웨이가 부르는 서비스 주소 — 로컬 `localhost:3010` · `:3020`, 쿠버네티스는 Service 주소 |
+| user-service | `USER_SERVICE_PORT` · `USER_SERVICE_HOST` · `USER_SERVICE_METRICS_PORT` | 포트(3010) · 바인딩(기본 127.0.0.1 — 같은 머신의 게이트웨이만, 파드는 0.0.0.0) · 지표 포트(로컬 9465) |
+| 〃 | `SEED_SAMPLE_DATA` | 1 이면 user-service 가 부팅할 때 서울 업체 10곳 · 객실 · 업체 총관리자 10명 · 이용자 1명을 고정 ID 로 넣는다(이미 있으면 건너뜀). 운영 DB 는 0 — [guides/sample-data.md](guides/sample-data.md) |
+| admin-service | `ADMIN_SERVICE_PORT` · `ADMIN_SERVICE_HOST` · `ADMIN_SERVICE_METRICS_PORT` | 포트(3020) · 바인딩(user-service 와 같다) · 지표 포트(로컬 9466) |
+| scheduler | `SCHEDULER_METRICS_PORT` | 지표 · 헬스 체크 포트(로컬 9467) — scheduler 가 받는 연결은 이것뿐 |
+| PostgreSQL | `DATABASE_URL` (필수) | 접속 주소 — 네 앱 모두(게이트웨이는 API 로그 적재 전용 연결 풀 5). 로컬은 deskless 로컬 클러스터, 운영은 클러스터 안 DB 또는 RDS 등 |
+| 〃 | `DATABASE_POOL_SIZE` · `DATABASE_CONNECTION_TIMEOUT_MS` | 연결 풀 크기(기본 10) · 풀에서 연결을 기다리는 최대 시간(기본 30000 — 넘기면 그 요청은 500, 큐 경로는 재시도) |
+| RabbitMQ | `RABBITMQ_HOST` · `RABBITMQ_PORT` (필수) | 브로커 주소 — 로컬은 deskless 로컬 클러스터, 운영은 클러스터 안 브로커 또는 Amazon MQ 등 |
+| 〃 | `RABBITMQ_USER` · `RABBITMQ_PASSWORD` | 관리자 계정 — `npm run broker:check`(계정 권한 점검) 전용, 앱은 쓰지 않는다 |
+| 〃 | `RABBITMQ_GATEWAY_PASSWORD` · `RABBITMQ_USER_SERVICE_PASSWORD` · `RABBITMQ_ADMIN_SERVICE_PASSWORD` (필수) | 앱별 브로커 계정 비밀번호 — 키 이름은 계정에서 만든다(`RABBITMQ_<계정>_PASSWORD` — messaging.util.ts), 각 앱은 자기 것만 읽는다. 계정 · 권한은 deskless 인프라 묶음이 만들어 같은 값이어야 한다. 큰따옴표 · 역슬래시 금지(계정 설정에 문자열로 그대로 실린다) |
+| Redis (문 정보) | `REDIS_URL` (필수) | 호실의 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 명령 채널 — 네 앱 모두. 비밀번호에 `@` `:` `/` 가 있으면 URL 인코딩, TLS 면 `rediss://` — [guides/redis-setup.md](guides/redis-setup.md) |
+| 로그인 · 암호화 | `JWT_SECRET` (필수) | 토큰 서명 — user-service · admin-service 가 발급하고 게이트웨이가 검증한다(같은 값) |
+| 〃 | `BCRYPT_CODE` · `BCRYPT_ROUNDS` | 비밀번호 해시 pepper — 가입이 시작된 뒤 바꾸면 기존 비밀번호를 검증할 수 없다 · 라운드(4 ~ 31 정수, 기본 12) |
+| 〃 | `TOKEN_CIPHER_KEY` (필수) | refresh 토큰 암호화 키(hex 64자) — 만드는 명령은 `.env.example` 주석 |
+| AWS 공통 | `AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | 리전(서울 `ap-northeast-2` — 기본값이 없어 키를 넣었는데 비면 SMS · S3 요청이 실패한다) · IAM 사용자 액세스 키. 키가 비면 SMS 를 보내지 않고 받는 번호 · 본문을 로그에 남긴 뒤 성공한다(인증번호 · 임시 비밀번호는 로그에서) — IAM 역할만으로 돌려도 SMS 는 생략되니 보내려면 키를 넣는다(S3 는 역할로도 된다). SMS 는 user-service · admin-service · scheduler, 파일은 user-service · admin-service — [guides/aws-setup.md](guides/aws-setup.md) "AWS 없이 돌리기" |
+| SMS | `SMS_VERIFICATION_DAILY_LIMIT` | 같은 휴대폰 번호로 하루(한국 날짜)에 보낼 수 있는 인증 SMS 수(기본 10) — user-service · admin-service |
+| 〃 | `USER_WEB_URL` | 이용자 프론트 주소(끝 `/` 없이) — SMS 링크의 기준: scheduler 의 QR 확인 링크(`<주소>/reservation/<예약 ID>`) · admin-service 의 이용 중 취소 요청 승인 링크(`<주소>/reservation/<예약 ID>/cancel-request`). 비면 QR 링크는 보내지 않고 이용 중 취소 요청은 503 |
+| 파일 저장 | `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL` | 사진 버킷 — 비면 내부 파일 저장소(게이트웨이 `/files`). CloudFront 배포 주소(`https://<배포>.cloudfront.net`) — S3 를 쓸 때 공개 파일 주소의 기준, 비면 공개 파일 주소 요청이 실패한다 — [guides/aws-setup.md](guides/aws-setup.md) |
+| 〃 | `FILE_STORAGE_DIR` | 내부 파일 저장소 폴더(버킷이 빌 때) — 비면 `storage/files`(실행 위치 기준 — 로컬은 저장소 루트). gateway · user-service · admin-service 가 같은 폴더를 봐야 한다(쿠버네티스는 공용 파일 볼륨 자리) |
+| 결제 (토스페이먼츠) | `TOSS_SECRET_KEY` | 시크릿 키 — 개발 `test_sk_…`(결제 환경 TEST) · 운영 `live_sk_…`. 결제창 · 승인은 프론트, 서버는 토스 조회로 검증 · 환불(user-service · scheduler). 비면 부팅은 되고 예약 생성 · 결제 확인 · 환불만 503 — [guides/toss-setup.md](guides/toss-setup.md) |
 
 - 운영에 올리기 전 값 확인: `NODE_ENV=production`(development 는 JWT 만료를 검사하지 않는다) · 비밀값 새로 생성(내부 토큰 · 브로커 계정 비밀번호 · DB · Redis 비밀번호 · JWT · 토큰 암호화 키) · `CORS_ORIGINS` 를 실제 프론트 주소로 · `TRUST_PROXY` 를 앞단 단 수로 · `BCRYPT_CODE` 확정(가입 시작 후 바꾸면 기존 비밀번호 검증 불가) · `SEED_SAMPLE_DATA=0`.
 
