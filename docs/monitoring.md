@@ -32,7 +32,7 @@ redis-exporter ─────┘
 - **비율은 앱이 누적값을 내고 Prometheus 가 계산한다** — 부하율은 앱이 이벤트 루프 누적 시간(`nodejs_eventloop_time_seconds{state}`)을 내고 기록 규칙이 `rate` 로 나눈다(긁는 쪽이 여럿이어도 맞고, 쿠버네티스 HPA 가 같은 이름을 쓴다).
 - **이름 · 단위** — Prometheus 규칙(`snake_case`, 단위 접미사 `_seconds` · `_bytes`, 누적은 `_total`), 표준이 있으면 표준 이름(prom-client 기본 지표 · `http_server_request_duration_seconds`).
 - **새 지표를 더할 때** — 부품 안에서 만들고 → 아래 지표 목록에 한 줄 → 필요하면 기록 규칙(`docker/prometheus/rules.yml`)과 대시보드 JSON(`docker/grafana/dashboards/`)에 패널. 대시보드 JSON 은 파일이 원본이다(Grafana 화면에서 고친 것은 저장되지 않는다).
-- **모니터링 묶음은 compose 하나** — `compose.monitoring.yml`(Prometheus · Grafana · PostgreSQL · Redis 수집기). 관리 도구를 compose 에 넣지 않는 규칙의 예외(지표를 계속 모으는 수집기 — 사용자 결정 2026-11-22). `docker:up` · `docker:down` 에는 넣지 않는다(모니터링 env 가 없어도 앱 묶음 명령이 막히지 않게).
+- **모니터링 묶음은 compose 하나** — `compose.monitoring.yml`(Prometheus · Grafana · PostgreSQL · Redis 수집기). 관리 도구를 compose 에 넣지 않는 규칙의 예외(지표를 계속 모으는 수집기 — 사용자 결정 2026-11-22). `docker:up` 은 gateway 다음 맨 끝에 띄우고 `docker:down` 은 맨 먼저 내린다(사용자 결정 2026-11-23) — 모니터링 필수값이 비면 `docker:up` 이 이 단계에서 멈춘다(앞의 묶음은 이미 떠 있다). 따로는 `npm run docker:monitoring`.
 
 ## 지표 목록
 
@@ -72,9 +72,9 @@ redis-exporter ─────┘
 ## 실행
 
 1. `.env` — `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL`(필수 — 앱 `DATABASE_URL` 의 `?schema=public` 을 수집기가 읽지 못해 따로, 운영은 `pg_monitor` 역할의 읽기 전용 계정 권장), 선택 `GRAFANA_ADMIN_USER` · `GRAFANA_PORT`(3001) · `PROMETHEUS_PORT`(9090) · `PROMETHEUS_RETENTION`(30d). `REDIS_URL` 은 앱과 같은 값.
-2. `npm run docker:network`(내부망 `deskless-monitoring` — 선언은 `compose.shared.yml`) → 앱 묶음 · RabbitMQ 를 한 번 다시 띄운다(내부망에 붙는다) → `npm run docker:monitoring`.
+2. `npm run docker:network`(내부망 `deskless-monitoring` — 선언은 `compose.shared.yml`) → 앱 묶음 · RabbitMQ 를 한 번 다시 띄운다(내부망에 붙는다) → `npm run docker:monitoring`(`npm run docker:up` 이면 마지막에 함께 뜬다).
 3. Grafana `http://localhost:3001` → Deskless 폴더. Prometheus `http://localhost:9090/targets` 에서 수집 대상이 UP 인지 본다.
-- 내리기: `docker compose -f compose.monitoring.yml down`(데이터는 볼륨 `deskless-prometheus-data` · `deskless-grafana-data` 에 남는다). 로그: `npm run docker:logs:monitoring`.
+- 내리기: `docker compose -f compose.monitoring.yml down` 또는 `npm run docker:down`(데이터는 볼륨 `deskless-prometheus-data` · `deskless-grafana-data` 에 남는다). 로그: `npm run docker:logs:monitoring`.
 - 운영 서버에서는 127.0.0.1 포트만 열려 있어 SSH 터널로 본다(`ssh -L 3001:127.0.0.1:3001 <서버>`).
 - 실제 운영(RDS · ElastiCache)은 `.env` 의 `MONITORING_DATABASE_URL` · `REDIS_URL` 만 바꾼다 — compose 는 그대로.
 

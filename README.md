@@ -75,7 +75,7 @@ npm run docker:down   # 모두 내림 (공용 네트워크 · 데이터 볼륨 �
 | 6 | admin-service | `npm run docker:admin-service` | 매니저 · 관리자 인스턴스 → 로드밸런서 |
 | 7 | scheduler | `npm run docker:scheduler` | crontab 전용 (포트 없음) |
 | 8 | gateway | `npm run docker:gateway` | 외부 진입점 http://localhost:3000 · Swagger http://localhost:3000/swagger (Authorize 왼쪽 도메인 선택 상자로 한 도메인만 보기) |
-| (선택) | monitoring | `npm run docker:monitoring` | Prometheus · Grafana(http://localhost:3001 — 서비스 부하 · 인프라 대시보드) · PostgreSQL · Redis 수집기 — `docker:up` 에는 들어 있지 않다, `.env` 의 `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL` 필요 — [docs/monitoring.md](docs/monitoring.md) |
+| 9 | monitoring | `npm run docker:monitoring` | Prometheus · Grafana(http://localhost:3001 — 서비스 부하 · 인프라 대시보드) · PostgreSQL · Redis 수집기 — `.env` 의 `GRAFANA_ADMIN_PASSWORD` · `MONITORING_DATABASE_URL` 필요(비면 `docker:up` 이 이 단계에서 멈춘다 — 앞의 묶음은 이미 떠 있다) — [docs/monitoring.md](docs/monitoring.md) |
 
 - 묶음마다 compose 파일이 따로 있어 하나씩 띄우고 내릴 수 있다(`npm run docker:<묶음>`). 로그는 `npm run docker:logs:<앱>`.
 - gateway · user-service 는 여러 대(`GATEWAY_REPLICAS` · `USER_SERVICE_REPLICAS`, 기본 2), admin-service 는 `ADMIN_SERVICE_REPLICAS`(기본 1)로 뜨고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 `SCHEDULER_REPLICAS`(기본 1)이고 포트 · 로드밸런서가 없다.
@@ -116,7 +116,7 @@ npm run start:scheduler     # crontab (포트 없음)
 | `npm run start:prod:gateway` · `start:prod:user-service` · `start:prod:scheduler` | 빌드 산출물 실행 |
 | `npm run db:migrate` · `db:revert` | 마이그레이션 적용 · 마지막 1건 되돌리기 (실제 DB) |
 | `npm run db:generate -- <Name>` · `db:check` | 엔티티 변경분 마이그레이션 생성 · 일치 검사 (DB 없이 PGlite) |
-| `npm run docker:up` · `docker:down` | 모든 묶음 실행 · 종료 |
+| `npm run docker:up` · `docker:down` | 모든 묶음(모니터링 포함) 실행 · 종료 — 내릴 때는 모니터링 · gateway 부터 |
 | `npm run docker:network` | 공용 Docker 네트워크 5개 · 파일 볼륨 만들기 (이미 있으면 건너뜀) |
 | `npm run sample:images` | 테스트 데이터 사진(PNG 70개) 다시 그리기 → `apps/gateway/src/assets/sample/` |
 | `npm run docker:postgres` · `docker:rabbitmq` · `docker:redis` · `docker:user-service` · `docker:admin-service` · `docker:scheduler` · `docker:gateway` | 묶음 하나만 실행 |

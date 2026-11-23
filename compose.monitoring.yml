@@ -1,6 +1,6 @@
-# 모니터링 — Prometheus(지표 수집 · 보관) + Grafana(대시보드) + PostgreSQL · Redis 수집기. 단독 실행
-#   npm run docker:monitoring   (docker compose -f compose.monitoring.yml up -d)
-#   내리기: docker compose -f compose.monitoring.yml down   (docker:up · docker:down 에는 넣지 않는다 — 모니터링 env 가 없어도 앱 묶음 명령이 막히지 않게)
+# 모니터링 — Prometheus(지표 수집 · 보관) + Grafana(대시보드) + PostgreSQL · Redis 수집기
+#   npm run docker:monitoring   (docker compose -f compose.monitoring.yml up -d) — docker:up 은 gateway 다음 맨 끝에 띄운다
+#   내리기: docker compose -f compose.monitoring.yml down   (docker:down 은 맨 먼저 내린다)
 #   접속: Grafana http://localhost:${GRAFANA_PORT:-3001} (Deskless 폴더 — 서비스 부하 · 인프라), Prometheus http://localhost:${PROMETHEUS_PORT:-9090} (확인용)
 #
 # 설정은 .env 를 그대로 쓴다(compose 가 값을 바꾸지 않는다). 비밀값 · 접속정보는 필수(비어 있으면 띄우지 않는다).

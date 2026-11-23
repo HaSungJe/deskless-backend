@@ -177,12 +177,12 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 - 관리자 계정(관리 화면)도 `user_id` 를 gateway 로 위조할 수 없다 — RabbitMQ 는 impersonator 태그가 없는 계정의 위조를 거절한다. gateway 비밀번호만 지키면 된다.
 - CORS 는 브라우저만 지키는 규칙이라 서버 간 호출을 막지 못한다. 서비스에는 CORS 를 두지 않고, 게이트웨이에만 `CORS_ORIGINS`(허용할 프론트 주소, 비우면 다른 출처를 모두 차단)로 건다 — [cors.config.ts](../apps/gateway/src/config/cors.config.ts).
 
-## 실행 (Docker) — 묶음 7개를 따로 띄운다
+## 실행 (Docker) — 묶음 8개를 따로 띄운다
 
-postgres · rabbitmq · redis · user-service · admin-service · scheduler · gateway 는 compose 파일이 하나씩 따로 있어 각자 띄우고 내린다. gateway · user-service · admin-service 는 여러 대로 뜰 수 있고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 포트 · 로드밸런서가 없다. 이미지는 [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `deskless/gateway` · `deskless/user-service` · `deskless/admin-service` · `deskless/scheduler` 를 만든다.
+postgres · rabbitmq · redis · user-service · admin-service · scheduler · gateway · monitoring 은 compose 파일이 하나씩 따로 있어 각자 띄우고 내린다. gateway · user-service · admin-service 는 여러 대로 뜰 수 있고 앞에 nginx 로드밸런서가 붙는다. scheduler 는 포트 · 로드밸런서가 없다. 이미지는 [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `deskless/gateway` · `deskless/user-service` · `deskless/admin-service` · `deskless/scheduler` 를 만든다.
 
 ```bash
-npm run docker:up            # 아래 1~8 을 순서대로
+npm run docker:up            # 아래 1~9 를 순서대로
 npm run docker:network       # 1. 공용 네트워크 5개 · 볼륨 1개 — compose.shared.yml 을 읽어 만든다 (이미 있으면 건너뜀)
 npm run docker:postgres      # 2. compose.postgres.yml — healthy 까지 기다림
 npm run docker:rabbitmq      # 3. compose.rabbitmq.yml — healthy 후 브로커 계정 초기화 1회
@@ -191,7 +191,8 @@ npm run docker:user-service  # 5. compose.user-service.yml — 마이그레이�
 npm run docker:admin-service # 6. compose.admin-service.yml — 매니저 · 관리자 인스턴스 N대 → LB
 npm run docker:scheduler     # 7. compose.scheduler.yml — crontab 전용 인스턴스 (포트 없음)
 npm run docker:gateway       # 8. compose.gateway.yml — 인스턴스 N대 → LB (:3000)
-npm run docker:down          # 모두 내림 (공용 네트워크 · 볼륨은 남는다)
+npm run docker:monitoring    # 9. compose.monitoring.yml — Prometheus · Grafana (:3001) · 수집기 (monitoring.md)
+npm run docker:down          # 모두 내림 — 9 → 1 역순 (공용 네트워크 · 볼륨은 남는다)
 npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-service · docker:logs:scheduler
 ```
 
@@ -205,7 +206,7 @@ npm run docker:logs:gateway · docker:logs:user-service · docker:logs:admin-ser
 | `compose.scheduler.yml` | scheduler × `SCHEDULER_REPLICAS`(기본 1) | crontab 전용 — `deskless-data` 네트워크만(DB · Redis), 포트 · LB 없음. 마이그레이션은 user-service 묶음이 먼저 적용한다 |
 | `compose.gateway.yml` | gateway × `GATEWAY_REPLICAS` · gateway-lb | 인스턴스 → 외부 진입점 로드밸런서, 호스트 포트 `GATEWAY_PORT` · Swagger `/swagger` · 문 소켓 `/ws/`(WebSocket 업그레이드, 읽기 대기 120초) ([gateway.conf](../docker/nginx/gateway.conf)). Redis 구독 때문에 `deskless-data` 에도 붙는다 |
 
-- 묶음끼리는 depends_on 으로 묶을 수 없어 기다림을 앱이 맡는다 — migrate 는 DB 연결을 최대 1분 재시도, user-service 는 `@nestjs/typeorm` 기본 재시도(10회 · 3초 간격, 명시 설정 없음), 앱 모두 RabbitMQ 자동 재연결(로그인 거부도 재시도). 그래도 순서는 위 1~7 을 따른다.
+- 묶음끼리는 depends_on 으로 묶을 수 없어 기다림을 앱이 맡는다 — migrate 는 DB 연결을 최대 1분 재시도, user-service 는 `@nestjs/typeorm` 기본 재시도(10회 · 3초 간격, 명시 설정 없음), 앱 모두 RabbitMQ 자동 재연결(로그인 거부도 재시도). 그래도 순서는 위 1~9 를 따른다.
 
 ### 설정 — `.env` 하나가 곧 서버 설정
 

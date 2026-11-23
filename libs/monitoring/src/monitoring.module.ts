@@ -17,7 +17,8 @@ export class MonitoringModule implements NestModule {
      * @returns 동적 모듈
      */
     static forRoot(options: MonitoringOptions): DynamicModule {
-        return {module: MonitoringModule, providers: [{provide: MONITORING_OPTIONS, useValue: options}, MetricsService, MetricsServer, HttpMetricsMiddleware], exports: [MetricsService]};
+        // HttpMetricsMiddleware 는 providers 에 넣지 않는다 — Nest 가 미들웨어 인스턴스를 따로 만들어 두 번 생성되면 같은 지표를 두 번 등록해 부팅이 죽는다
+        return {module: MonitoringModule, providers: [{provide: MONITORING_OPTIONS, useValue: options}, MetricsService, MetricsServer], exports: [MetricsService]};
     }
 
     /**
