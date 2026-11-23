@@ -9,12 +9,12 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 
 | 비운 값 | 동작 |
 |---|---|
-| `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | SMS 를 보내지 않고 `SMS 생략(AWS 키 미설정) — <번호>: <본문>` 경고 로그를 남긴 뒤 성공 처리 — 휴대폰 인증번호 · 매니저 임시 비밀번호는 로그에서 본다(`npm run docker:logs:user-service` · `docker:logs:admin-service` · `docker:logs:scheduler`) |
+| `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` | SMS 를 보내지 않고 `SMS 생략(AWS 키 미설정) — <번호>: <본문>` 경고 로그를 남긴 뒤 성공 처리 — 휴대폰 인증번호 · 매니저 임시 비밀번호는 로그에서 본다(로컬은 `npm run start:*` 터미널, 쿠버네티스는 그 파드 로그 — user-service · admin-service · scheduler) |
 | `AWS_S3_BUCKET` | 파일은 **내부 파일 저장소** — 업로드 주소 API 가 게이트웨이 `GATEWAY_PUBLIC_URL/files/upload?…`(서명 · 10분)를 주고, 프론트는 S3 때와 똑같이 같은 `Content-Type` 으로 PUT 한다(10MB 까지). 공개 사진은 `GATEWAY_PUBLIC_URL/files/<키>`, 사업자등록증은 서명된 10분 주소. 키 · DB 행 모양은 S3 와 같다 |
 
 - 필요한 값: `GATEWAY_PUBLIC_URL`(브라우저가 게이트웨이에 닿는 주소) · `INTERNAL_API_TOKEN`(서명 — 이미 필수)
-- 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), Docker 는 공용 볼륨 `deskless-files`(`npm run docker:network` 가 만든다 — gateway · user-service · admin-service 가 같이 본다)
-- 나중에 S3 를 켜도 **이미 내부 저장소에 올린 사진은 그대로 열린다**(사용자 결정 2026-11-18) — 파일 행마다 올릴 때의 저장소(`file_storage` — `LOCAL` · `S3`)가 적혀 있어, `LOCAL` 행은 계속 게이트웨이(`/files/…` — S3 모드에서는 읽기만, 새 업로드는 S3)로, 새로 올린 `S3` 행은 CloudFront 로 나간다. 삭제도 그 행의 저장소에서 한다. 그래서 S3 로 바꾼 뒤에도 볼륨(`deskless-files`)을 지우지 않는다.
+- 폴더: 로컬 실행은 `storage/files`(저장소 루트 — git 제외, `FILE_STORAGE_DIR` 로 바꿈), 쿠버네티스는 deskless 차트의 공용 파일 볼륨(gateway · user-service · admin-service 가 같이 본다 — 노드가 여러 대면 S3 모드)
+- 나중에 S3 를 켜도 **이미 내부 저장소에 올린 사진은 그대로 열린다**(사용자 결정 2026-11-18) — 파일 행마다 올릴 때의 저장소(`file_storage` — `LOCAL` · `S3`)가 적혀 있어, `LOCAL` 행은 계속 게이트웨이(`/files/…` — S3 모드에서는 읽기만, 새 업로드는 S3)로, 새로 올린 `S3` 행은 CloudFront 로 나간다. 삭제도 그 행의 저장소에서 한다. 그래서 S3 로 바꾼 뒤에도 공용 파일 볼륨을 지우지 않는다.
 - 옛 사진까지 S3 로 옮기고 싶으면 볼륨 내용을 같은 키(경로)로 버킷에 올리고, 그 행의 `file_storage` 를 `S3` 로 바꾼다(`UPDATE t_store_file SET file_storage = 'S3' WHERE file_storage = 'LOCAL' AND file_key NOT LIKE 'sample/%'` — `t_room_group_image` 도 같이). 그 뒤 볼륨에서 지운다. 샘플 사진(`sample/` 키)은 저장소와 상관없이 게이트웨이 `/sample/` 로 나간다.
 - IAM 역할만으로 돌리는 배포는 키가 비어 SMS 가 생략된다 — SMS 를 보내려면 키를 넣는다(S3 는 버킷만 있으면 역할로 된다)
 - 키는 넣었는데 `AWS_REGION` · `AWS_S3_PUBLIC_URL` 이 비면 지금처럼 부팅 경고 후 그 요청만 실패한다(503, 사진 공개 주소는 500)
@@ -22,7 +22,7 @@ AWS 값을 비워 두면 AWS 없이 끝까지 동작한다(사용자 결정 2026
 ## 0. 준비
 
 - AWS 계정. 리전은 서울(`ap-northeast-2`) — SMS · S3 모두 지원한다.
-- 개발용 · 운영용을 나눈다. 버킷 2개(`deskless-dev-files` · `deskless-prod-files`)와 IAM 사용자 또는 역할 2개를 만들고, `.env` 만 바꿔 고른다. compose 는 다시 세팅하지 않는다.
+- 개발용 · 운영용을 나눈다. 버킷 2개(`deskless-dev-files` · `deskless-prod-files`)와 IAM 사용자 또는 역할 2개를 만들고, `.env` 만 바꿔 고른다. 코드 · 배포 구성은 다시 세팅하지 않는다.
 
 ## 1. S3 — 사진 버킷
 
@@ -101,7 +101,7 @@ AWS_S3_BUCKET=deskless-dev-files
 AWS_S3_PUBLIC_URL=https://<배포>.cloudfront.net   # 필수 — CloudFront 배포 주소(공개 파일 주소의 기준)
 ```
 
-Docker 는 `env_file: .env` 로 그대로 받는다. 게이트웨이에는 AWS 비밀값이 전달되지 않는다(compose.gateway.yml).
+쿠버네티스는 deskless 차트가 같은 키로 넣는다 — 게이트웨이는 AWS 를 쓰지 않으므로 AWS 비밀값을 주지 않는다.
 
 ## 5. 확인
 

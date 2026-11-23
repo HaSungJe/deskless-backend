@@ -17,6 +17,4 @@ docs
 **/*.spec.ts
 *.tsbuildinfo
 Dockerfile
-compose.*.yml
-docker
 scripts

@@ -38,7 +38,7 @@ WORKDIR /app
 COPY package.json ./
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist/apps/${APP} ./dist/apps/${APP}
-# 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 빈 공용 볼륨(deskless-files)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
+# 내부 파일 저장소 폴더(AWS_S3_BUCKET 이 빌 때) — 빈 공용 파일 볼륨(deskless 차트)이 처음 붙을 때 이 폴더의 소유자(node)를 물려받는다
 RUN mkdir -p /app/storage/files && chown -R node:node /app/storage
 USER node
 CMD ["sh", "-c", "exec node dist/apps/${APP}/apps/${APP}/src/main.js"]

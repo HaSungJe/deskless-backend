@@ -7,7 +7,7 @@
 - **mock · 가짜 어댑터를 두지 않는다** — 외부 연동은 처음부터 실제 서비스에 붙는 코드다. 서비스를 만드는 방법은 `docs/guides/` 에 가이드로 남긴다. 세팅 전에는 `.env` 값이 비어 있어 요청만 실패한다(부팅은 된다).
 - **예외 — AWS 미설정 개발 모드(사용자 결정 2026-11-15)**: AWS 값이 비면 AWS 없이 돈다([guides/aws-setup.md](guides/aws-setup.md) "AWS 없이 돌리기").
   - **SMS 생략** — `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` 가 비면 `SnsSmsSender` 가 SNS 를 부르지 않고 받는 번호 · 본문을 경고 로그로 남긴 뒤 성공으로 끝난다(인증번호 · 임시 비밀번호는 로그에서 본다). 서비스는 그대로 마지막 단계에서 `send` 를 부른다.
-  - **내부 파일 저장소** — `AWS_S3_BUCKET` 이 비면 저장소 포트(`RoutingStorageGateway`)가 새 업로드를 `LocalStorageGateway` 로 보낸다(`isS3StorageConfigured`). 실제로 저장 · 제공하는 두 번째 어댑터다(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명 — 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(`private/` 는 공개 경로로 안 나간다). 받기 · 내주기는 게이트웨이 인프라 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR`, 기본 `storage/files` · Docker 공용 볼륨 `deskless-files`). 키 · DB 행 모양은 S3 와 같다.
+  - **내부 파일 저장소** — `AWS_S3_BUCKET` 이 비면 저장소 포트(`RoutingStorageGateway`)가 새 업로드를 `LocalStorageGateway` 로 보낸다(`isS3StorageConfigured`). 실제로 저장 · 제공하는 두 번째 어댑터다(가짜 아님). 업로드 · 열람 주소는 게이트웨이 `/files/upload` · `/files/download`(HMAC-SHA256 `INTERNAL_API_TOKEN` 서명 — 업로드는 Content-Type 포함 · 10분 · 10MB), 공개 파일 `/files/<키>`(`private/` 는 공개 경로로 안 나간다). 받기 · 내주기는 게이트웨이 인프라 `modules/local-file`, 확인 · 삭제는 어댑터 — 같은 폴더(`FILE_STORAGE_DIR`, 기본 `storage/files` · 쿠버네티스는 deskless 차트의 공용 파일 볼륨). 키 · DB 행 모양은 S3 와 같다.
   - S3 일 때 "파일 본문은 게이트웨이 · 브로커를 거치지 않는다" 는 그대로이고, 내부 저장소일 때는 게이트웨이가 저장소다(브로커 · 서비스는 거치지 않는다).
 - **파일 행마다 저장소를 적는다(`file_storage` — `S3` · `LOCAL`, 사용자 결정 2026-11-18)** — S3 로 바꾼 뒤에도 그 전에 내부 저장소에 올린 파일을 계속 열기 위해서다. 저장소 포트 `STORAGE_GATEWAY` = `RoutingStorageGateway` 가 두 어댑터(`S3StorageGateway` · `LocalStorageGateway` — 어댑터 인터페이스 `StorageBackendInterface`)를 둘 다 들고 나눠 보낸다.
   - 업로드 주소 · 업로드 확인(`createUploadUrl` · `exists`) — 지금 업로드 저장소(버킷이 있으면 S3, 비면 내부). service 는 등록 때 `getUploadStorage()` 값을 행의 `file_storage` 에 적는다(`t_store_file` · `t_room_group_image`).
@@ -66,7 +66,7 @@
 - **원자적 3동작** — QR 확인(`verify` — 현재 QR 이 같을 때만 연 시각을 쓴다, 아니면 아무것도 바꾸지 않는다) · 바로 열기(`open` — 연 시각을 쓰고 같은 스크립트에서 `door-commands` 채널에 `{store_id, room_id, command: 'open'}` PUBLISH) · QR 지우기(`revokeQr` — 값이 같을 때만)는 Lua 스크립트 1개씩이다. 여러 문의 연 시각은 MGET 1번(`getOpenedAt`), 연결 끊기(`disconnect`)는 PUBLISH, QR 쓰기(`setQr`)는 SET PXAT.
 - **서버 명령은 Redis 채널** — gateway 인스턴스마다 `subscribe` 로 `door-commands` 를 구독해 그 업체의 자기 소켓 연결에 적용한다([realtime.md](realtime.md)) — 바로 열기 `{store_id, room_id, command: 'open'}` → `door.open`, 연결 끊기 `{store_id, command: 'disconnect'}`(`disconnect` — 업체 문 시크릿 변경 뒤 store service 가 마지막 단계에서 보낸다) → 그 업체 연결을 모두 1008 로 끊는다. 구독은 구독 전용 연결이라 명령 연결과 섞이지 않는다.
 - **단일 노드 전제** — QR 확인 스크립트가 두 키(`door-qr:` · `door-opened:`)를 함께 쓰므로 클러스터 모드가 아닌 Redis(ElastiCache 는 클러스터 모드 끔)여야 한다.
-- **영속은 켠다** — 현재 QR 은 DB(`t_room_qr`)에서 다시 만들 수 있지만(scheduler 가 매분 다시 쓴다) 그 사이 이용 중인 문이 안 열리지 않게, 그리고 마지막으로 연 시각은 Redis 에만 있으므로 Docker 묶음은 AOF 영속, 운영은 백업을 켠다([guides/redis-setup.md](guides/redis-setup.md)).
+- **영속은 켠다** — 현재 QR 은 DB(`t_room_qr`)에서 다시 만들 수 있지만(scheduler 가 매분 다시 쓴다) 그 사이 이용 중인 문이 안 열리지 않게, 그리고 마지막으로 연 시각은 Redis 에만 있으므로 AOF 영속(deskless 인프라 묶음)을 켜고, 관리형(ElastiCache 등)은 백업을 켠다([guides/redis-setup.md](guides/redis-setup.md)).
 - 서버는 문을 직접 움직이지 않는다 — 문 쪽 타 업체 프로그램이 읽은 QR 을 문 소켓으로 묻고, `door.verified ok` 면 문을 연다. HTTP 문 열기 · 닫기 API 는 없다.
 
 ## 쓰는 법
@@ -99,7 +99,7 @@ await this.smsSender.send({to: phone, text: `[바로방] 인증번호 ${code}`})
 
 1. `docs/guides/<서비스>-setup.md` 에 계정 · 리소스 · 권한 · `.env` 키를 적는다.
 2. `<기능>/<서비스>-<기능>.<role>.ts` 로 포트 인터페이스를 구현한다. 외부 실패는 503 으로 바꿔 던진다.
-3. `.env.example` 에 키를 추가한다. 쓰지 않는 앱의 compose 에는 비밀값을 빈 값으로 덮는다.
+3. `.env.example` 에 키를 추가한다. 배포에서 그 키를 넣는 일(그 연동을 쓰는 앱에만 비밀값을 준다)은 deskless 차트에 더한다(deskless 저장소 작업).
 
 ## 테스트
 

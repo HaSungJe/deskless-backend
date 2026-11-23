@@ -7,7 +7,7 @@ import {UserServiceModule} from './user-service.module.js';
 
 /**
  * user-service 부트스트랩 — 게이트웨이만 접근한다.
- * USER_SERVICE_HOST 기본값 127.0.0.1 로 같은 머신의 게이트웨이만 닿게 하고, Docker 에서는 0.0.0.0 으로 열되 포트를 공개하지 않는다.
+ * USER_SERVICE_HOST 기본값 127.0.0.1 로 같은 머신의 게이트웨이만 닿게 하고, 쿠버네티스 파드에서는 0.0.0.0(값은 deskless 차트)으로 열되 닿는 범위는 Service · NetworkPolicy 가 게이트웨이로 좁힌다.
  * 전역 예외 필터 → 전역 ValidationPipe → 종료 훅(DB · RabbitMQ 연결 정리) → listen.
  */
 async function bootstrap(): Promise<void> {

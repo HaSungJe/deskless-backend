@@ -9,7 +9,7 @@ const DB_CONNECT_ATTEMPTS = 30;
 const DB_CONNECT_DELAY_MS = 2000;
 
 /**
- * 마이그레이션 실행기 — compose.user-service.yml 의 migrate 서비스와 `npm run db:migrate` 가 실행한다.
+ * 마이그레이션 실행기 — deskless 차트의 마이그레이션 Job 과 `npm run db:migrate` 가 실행한다(둘 다 사용자가 실행).
  * - 인자 없음: 미적용 마이그레이션을 순서대로 적용 (각각 별도 트랜잭션)
  * - `revert`: 마지막 마이그레이션 1건을 되돌림
  * - DB 에 연결될 때까지 최대 1분 기다린다.

@@ -25,7 +25,7 @@ import {createByteLimit, isTooLarge, readPublicKey, readQueryValue, sendFail} fr
  * - `PUT /files/upload?key&expires&signature` — 버킷이 빌 때만. 서명(INTERNAL_API_TOKEN · Content-Type 포함) · 만료 확인 → 임시 파일에 받아(10MB 까지) 이름 바꾸기 → 200
  * - `GET /files/download?key&expires&signature` — 비공개 파일(private/) 열람, 캐시 안 함
  * - `GET /files/<키>` — 공개 파일(업체 · 그룹 사진), private/ 키는 내주지 않는다(다음 처리 → 404), 하루 캐시
- * 폴더는 FILE_STORAGE_DIR(user-service · admin-service 의 LocalStorageGateway 와 같은 폴더 — Docker 공용 볼륨). 공개 API 가 아니라 Swagger 에 없다.
+ * 폴더는 FILE_STORAGE_DIR(user-service · admin-service 의 LocalStorageGateway 와 같은 폴더 — 쿠버네티스는 deskless 차트의 공용 파일 볼륨). 공개 API 가 아니라 Swagger 에 없다.
  */
 @Injectable()
 export class LocalFileServer implements OnModuleInit {

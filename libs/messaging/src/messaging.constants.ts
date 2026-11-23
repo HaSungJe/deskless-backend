@@ -26,7 +26,7 @@ export const RESULT_ROUTING_PREFIX = 'result';
 export const BROKER_UNAVAILABLE_MESSAGE = '일시적으로 요청을 접수할 수 없습니다. 잠시 후 다시 시도해주세요.';
 
 /**
- * 브로커 계정 — 앱마다 다른 계정으로 접속한다. 권한은 docker/rabbitmq/init.sh 가 부여한다.
+ * 브로커 계정 — 앱마다 다른 계정으로 접속한다. 권한은 deskless 저장소의 인프라 묶음(RabbitMQ 계정 · 권한 설정)이 부여한다 — `npm run broker:check` 로 설계와 대조한다.
  * - gateway: deskless.cmd 에만 쓸 수 있다(명령 발행). deskless.event 에는 쓸 수 없다.
  * - user-service · admin-service: deskless.event 에만 쓸 수 있다(결과 회신). deskless.cmd 에는 쓸 수 없다.
  */

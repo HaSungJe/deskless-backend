@@ -24,7 +24,7 @@
 | 예외 | status_code | body |
 |---|---|---|
 | `HttpException`(service · ValidationPipe · guard) | 그대로 | `{message, validation_errors ?? null, ...추가 필드}` — Nest 기본의 `statusCode` · `error` 는 버림, `message` 배열이면 첫 항목 |
-| body-parser 크기 초과 | 413 | `PAYLOAD_TOO_LARGE_MESSAGE` — `'한 요청당 제한된 크기를 초과하였습니다. [최대 15Mb]'` <!-- TODO: 실제 한도와 맞지 않다 — main.ts 에 body 크기 설정이 없고(Express 기본), nginx gateway.conf 는 client_max_body_size 10m --> |
+| body-parser 크기 초과 | 413 | `PAYLOAD_TOO_LARGE_MESSAGE` — `'한 요청당 제한된 크기를 초과하였습니다. [최대 15Mb]'` <!-- TODO: 실제 한도와 맞지 않다 — main.ts 에 body 크기 설정이 없고(Express 기본), 게이트웨이 앞단 Ingress(deskless 차트)의 본문 한도는 10MB --> |
 | 그 밖의 모든 예외 | 500 | `'요청이 실패했습니다. 관리자에게 문의해주세요.'` (내부 메시지 · stack 미노출) |
 
 - HTTP: [CustomErrorFilter](../libs/common/src/exception/custom-error.filter.ts)(`@Catch()`)가 `res.status(status_code).send(body)`.

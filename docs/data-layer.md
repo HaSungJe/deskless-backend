@@ -22,7 +22,7 @@ libs/database/src/
 ├── job-lock/        # JobLockService — 인스턴스 여러 대 중 1대만 실행하는 잠금(scheduler 의 crontab 용)
 └── seeder/          # 룩업 기본 데이터
 scripts/db-schema.mjs   # 오프라인 마이그레이션 생성 · 검사
-apps/user-service/src/migrate.ts   # 마이그레이션 실행기 (db:migrate · Docker migrate)
+apps/user-service/src/migrate.ts   # 마이그레이션 실행기 (db:migrate · deskless 마이그레이션 Job)
 ```
 
 ### 왜 엔티티가 앱이 아니라 libs 에 있나
@@ -106,7 +106,7 @@ export class UserSettingEntity {
 2. `npm run db:generate -- <PascalCase 이름>` — user-service 를 빌드한 뒤 [db-schema.mjs](../scripts/db-schema.mjs) 가 PGlite(WASM PostgreSQL)를 프로세스 안에 띄워 기존 마이그레이션을 적용하고, 엔티티 기준으로 남은 DDL(컬럼 · 제약 · 인덱스 · COMMENT 포함)을 `libs/database/src/migrations/<ts>-<Name>.ts` 로 쓴 뒤 `MIGRATIONS` 에 등록한다. `typeorm migration:generate` 와 같은 계산이다. PGlite 는 `btree_gist` 확장을 실어 띄운다(배타 제약 — db-schema.mjs). 새 PostgreSQL 확장을 쓰면 PGlite contrib 모듈도 함께 싣고, 마이그레이션 맨 앞에 `CREATE EXTENSION IF NOT EXISTS` 를 손으로 더한다(`1793386485207-RoomSchema.ts`).
 3. 생성 파일 상단 JSDoc 의 TODO 를 바꾼 내용 설명으로 고친다.
 4. `npm run db:check` — 엔티티와 마이그레이션이 일치하면 통과, 남은 차이가 있으면 DDL 을 출력하고 실패한다.
-5. 적용(사용자): Docker 로 띄우면 `migrate` 컨테이너가 자동 적용, 로컬은 `npm run db:migrate`, 되돌리기 `npm run db:revert`. 운영은 배포 절차에서 같은 실행기(`migrate.js`)를 돌린다.
+5. 적용(사용자): 로컬은 `npm run db:migrate`, 되돌리기 `npm run db:revert`. 쿠버네티스는 deskless 차트의 마이그레이션 Job 이 같은 실행기(`migrate.js`)를 앱보다 먼저 한 번 돌린다.
 
 - 데이터 이전 · 파티셔닝처럼 엔티티로 표현할 수 없는 작업은 생성된 파일에 `queryRunner.query(...)` 를 직접 추가한다.
 - **기존 행이 있는 테이블에 NOT NULL 컬럼을 더할 때**: 생성된 `ADD ... NOT NULL` 을 `DEFAULT <임시값>` 으로 추가 → `UPDATE` 로 실제 값 채우기 → `ALTER COLUMN ... DROP DEFAULT` 로 고친다(엔티티에 기본값이 없으면 `db:check` 가 일치로 본다). 예: `t_user.login_scope` 를 권한으로 채움(`1792682222497-LoginScopeStoreDetail.ts`). 값을 계산해 채울 때는 NULL 로 더한 뒤 `UPDATE` → `SET NOT NULL` 도 된다 — `t_store.store_code` 를 `replace(gen_random_uuid()::text, '-', '')` 로 채움(`1793027933626-StoreCodeManagerScope.ts`).

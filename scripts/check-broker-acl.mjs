@@ -1,7 +1,7 @@
 /**
  * 브로커 계정 권한 점검 — 계정마다 "허용돼야 할 발행"과 "거부돼야 할 발행"을 실제 RabbitMQ 에 시도해 결과를 대조한다.
  *
- * 실행: `npm run broker:check` (rabbitmq + rabbitmq-init 이 떠 있어야 한다 — `npm run docker:infra` 또는 `docker:up`)
+ * 실행: `npm run broker:check` (RabbitMQ 와 그 계정 · 권한 설정이 떠 있어야 한다 — deskless 저장소의 인프라 묶음, `.env` 의 RABBITMQ_HOST · RABBITMQ_PORT 로 닿는 브로커)
  *
  * - 접속 정보는 앱과 같은 `.env` 키를 쓴다: RABBITMQ_HOST · RABBITMQ_PORT · RABBITMQ_<계정>_PASSWORD · 관리자 RABBITMQ_USER/PASSWORD.
  * - 모든 발행은 어느 큐에도 바인딩되지 않는 라우팅 키(`acl.probe`)로 보낸다. 허용된 발행도 큐에 닿지 않고 버려지므로
@@ -117,8 +117,8 @@ async function ensureExchanges(model) {
  * @returns 설명
  */
 function connectFailureReason(error) {
-    if (String(error.message).includes('ACCESS_REFUSED')) return '로그인 거부 — 계정이 없거나 비밀번호가 다름(docker compose logs rabbitmq-init 확인)';
-    if (error.code === 'ECONNREFUSED') return '브로커에 연결할 수 없음 — RabbitMQ 가 떠 있는지 확인(npm run docker:infra)';
+    if (String(error.message).includes('ACCESS_REFUSED')) return '로그인 거부 — 계정이 없거나 비밀번호가 다름(deskless 인프라 묶음의 RabbitMQ 계정 설정 확인)';
+    if (error.code === 'ECONNREFUSED') return '브로커에 연결할 수 없음 — RabbitMQ 가 떠 있는지 확인(deskless 인프라 묶음 · RABBITMQ_HOST · RABBITMQ_PORT)';
     return error.message || error.code || String(error);
 }
 
@@ -166,7 +166,7 @@ async function main() {
     }
 
     await Promise.all(Object.values(models).map((model) => model.close()));
-    console.log(failures === 0 ? '\n브로커 권한이 설계와 일치합니다.' : `\n${failures}건이 설계와 다릅니다. docker/rabbitmq/init.sh 와 rabbitmq-init 로그를 확인하세요.`);
+    console.log(failures === 0 ? '\n브로커 권한이 설계와 일치합니다.' : `\n${failures}건이 설계와 다릅니다. deskless 인프라 묶음의 RabbitMQ 계정 · 권한 설정을 확인하세요.`);
     process.exitCode = failures === 0 ? 0 : 1;
 }
 

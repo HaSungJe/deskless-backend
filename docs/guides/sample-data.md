@@ -6,7 +6,7 @@
 
 1. `.env`
    - `SEED_SAMPLE_DATA=1`
-   - `GATEWAY_PUBLIC_URL=<게이트웨이 공개 주소>` — 로컬 실행은 `http://localhost:<GATEWAY_PORT>`, Docker 는 gateway-lb 를 연 호스트 주소. 사진 주소가 `<이 주소>/sample/<파일>.png` 가 된다
+   - `GATEWAY_PUBLIC_URL=<게이트웨이 공개 주소>` — 로컬 실행은 `http://localhost:<GATEWAY_PORT>`, 쿠버네티스는 게이트웨이 Ingress 의 공개 주소. 사진 주소가 `<이 주소>/sample/<파일>.png` 가 된다
 2. 마이그레이션이 적용된 DB 로 user-service 를 다시 띄운다(부팅 시드). admin-service · gateway 도 다시 띄운다(사진 주소 · `/sample/` 경로)
 3. user-service 로그에 `t_store: 기본 데이터 10건 입력 (…)` 같은 줄이 찍힌다. 다시 띄워도 늘지 않는다 — 고정 ID 라 이미 있는 행은 건너뛰고, 업체 관리자가 바꾼 값도 덮지 않는다
 
