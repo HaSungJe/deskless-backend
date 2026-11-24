@@ -254,6 +254,7 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | 결제 (토스페이먼츠) | `TOSS_SECRET_KEY` | 시크릿 키 — 개발 `test_sk_…`(결제 환경 TEST) · 운영 `live_sk_…`. 결제창 · 승인은 프론트, 서버는 토스 조회로 검증 · 환불(user-service · scheduler). 비면 부팅은 되고 예약 생성 · 결제 확인 · 환불만 503 — [guides/toss-setup.md](guides/toss-setup.md) |
 | AI 대화형 업체 검색 (Gemini) | `GEMINI_API_KEY` | Google AI Studio API 키 — user-service(요청 읽기 · 답 스트리밍 · 검색 문장 벡터) · scheduler(업체 검색 벡터)만. 비면 부팅은 되고 AI 질문 · 벡터 갱신만 503(부팅 때 한 번 경고) — [guides/gemini-setup.md](guides/gemini-setup.md) |
 | 〃 | `GEMINI_CHAT_MODEL` · `GEMINI_EMBEDDING_MODEL` | 대화 모델(기본 `gemini-3-flash-preview` — Google 검색 그라운딩과 정해진 JSON 응답을 같이 쓰려면 Gemini 3 계열) · 임베딩 모델(기본 `gemini-embedding-001` — 768차원으로 줄여 쓴다, 바꾸면 scheduler 가 모든 업체 벡터를 다시 만든다) |
+| 〃 | `GEMINI_SEARCH_ENABLED` | 웹 검색(Google 검색 그라운딩) — `1`(기본, 비어도 켬) · `0` 끔. 무료 등급 키는 그라운딩을 쓸 수 없어 `0` 으로 둔다(켜 두면 질문마다 503 — 로그 `JSON 응답 실패`), 끄면 지역 · 위치를 모델 지식으로만 잡는다 — user-service |
 | 〃 | `CHAT_DAILY_LIMIT` | 이용자 하루 질문 수(기본 5 — 한국 시각 자정에 다시 채움, 답을 다 받은 질문만 센다) — user-service |
 
 - 운영에 올리기 전 값 확인: `NODE_ENV=production`(development 는 JWT 만료를 검사하지 않는다) · 비밀값 새로 생성(내부 토큰 · 브로커 계정 비밀번호 · DB · Redis 비밀번호 · JWT · 토큰 암호화 키) · `CORS_ORIGINS` 를 실제 프론트 주소로 · `TRUST_PROXY` 를 앞단 단 수로 · `BCRYPT_CODE` 확정(가입 시작 후 바꾸면 기존 비밀번호 검증 불가) · `SEED_SAMPLE_DATA=0`.

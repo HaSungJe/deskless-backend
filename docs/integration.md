@@ -66,6 +66,7 @@
 - **지시문 · 응답 형식은 쓰는 도메인이 들고** 어댑터는 호출 · 실패 분류만 한다(user-service chat 의 요청 읽기 · 답 쓰기, scheduler 의 업체 검색 벡터) — 다른 기능도 같은 포트를 쓸 수 있게.
 - **세 가지 호출** — `generateJson`(정해진 JSON 응답 `responseJsonSchema` · 필요하면 Google 검색 그라운딩 `googleSearch` — 둘을 한 요청에 같이 쓰는 것은 Gemini 3 계열만이라 `GEMINI_CHAT_MODEL` 기본값이 `gemini-3-flash-preview`) · `streamText`(`generateContentStream` 조각) · `embed`(`embedContent` — `outputDimensionality` 768, 업체는 `RETRIEVAL_DOCUMENT` · 질문은 `RETRIEVAL_QUERY`).
 - **실패** — 키(`GEMINI_API_KEY`)가 비면 503(부팅은 된다 — 부팅 때 한 번 경고), 이용자가 연결을 끊어 넘긴 끊기 신호가 울린 것은 그 오류 그대로(503 으로 바꾸지 않는다), 그 밖(한도 · 5xx · 네트워크 · 제한 시간 30초 · JSON 아님 · 벡터 수 · 차원이 다름)은 모두 503 `AI_UNAVAILABLE_MESSAGE` — 이용자가 고칠 것이 없어 400 을 두지 않는다. 글 스트리밍은 전체 60초(`AI_STREAM_TIMEOUT_MS` — 멈춘 스트림이 답하는 중 잠금 3분보다 오래 가지 않게, 넘기면 503). 글이 하나도 오지 않은 답은 쓰는 쪽(user-service chat)이 503 으로 끝낸다(빈 답을 이력에 남기면 다음 요청마다 거절된다).
+- **웹 검색 끄기** — `GEMINI_SEARCH_ENABLED=0` 이면 도메인이 검색을 원해도(`use_search`) 도구 없이 부른다(파일 함수 `isSearchEnabled`, 부팅 때 한 번 알림). 무료 등급 키는 그라운딩을 쓸 수 없어서다(가격표 무료 등급 "Not available") — 끄면 지역 · 위치를 모델 지식으로만 잡는다. 유료 등급은 `1`(비어도 켬).
 - 웹 검색 그라운딩은 모델이 실제로 한 검색만큼 요금이 붙는다(Gemini 3) — 하루 질문 수(`CHAT_DAILY_LIMIT`)로 부르는 횟수를 묶는다. 세팅: [guides/gemini-setup.md](guides/gemini-setup.md)
 
 ## AI 대화 (`CONVERSATION_STORE` · Redis)

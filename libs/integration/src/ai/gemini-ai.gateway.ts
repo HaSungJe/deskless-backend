@@ -55,7 +55,17 @@ function isAborted(signal: AbortSignal): boolean {
 }
 
 /**
- * AI 어댑터 — Google Gemini(공식 SDK @google/genai). 키 GEMINI_API_KEY, 모델 GEMINI_CHAT_MODEL · GEMINI_EMBEDDING_MODEL.
+ * 웹 검색(Google 검색 그라운딩)을 쓸 수 있는지 — GEMINI_SEARCH_ENABLED 가 '0' 이면 끈다(무료 등급 키는 그라운딩을 쓸 수 없다), 비거나 그 밖의 값이면 켠다.
+ * 꺼져 있으면 도메인이 검색을 원해도 도구 없이 부른다 — 지역 · 위치를 모델이 아는 지식으로만 답한다.
+ *
+ * @returns 쓸 수 있으면 true
+ */
+function isSearchEnabled(): boolean {
+    return process.env.GEMINI_SEARCH_ENABLED !== '0';
+}
+
+/**
+ * AI 어댑터 — Google Gemini(공식 SDK @google/genai). 키 GEMINI_API_KEY, 모델 GEMINI_CHAT_MODEL · GEMINI_EMBEDDING_MODEL, 웹 검색 GEMINI_SEARCH_ENABLED(0 이면 끔 — 무료 등급).
  * 지시문 · 응답 형식은 쓰는 도메인이 넘기고 여기서는 호출 · 실패 분류만 한다 — 끊기 신호(이용자가 연결을 끊음)는 그대로 던지고,
  * 그 밖(키 없음 · 한도 · 5xx · 네트워크 · 제한 시간 · JSON 아님 · 빈 벡터)은 모두 503 AI_UNAVAILABLE_MESSAGE. 세팅: docs/guides/gemini-setup.md
  */
@@ -65,11 +75,14 @@ export class GeminiAiGateway implements AiGatewayInterface, OnApplicationBootstr
     private client: GoogleGenAI | null = null;
 
     /**
-     * GEMINI_API_KEY 가 비어 있으면 부팅 때 한 번 경고한다. 부팅은 막지 않고 AI 요청만 실패한다.
+     * GEMINI_API_KEY 가 비어 있으면 부팅 때 한 번 경고한다. 부팅은 막지 않고 AI 요청만 실패한다. 웹 검색을 껐으면 그것도 한 번 알린다.
      */
     onApplicationBootstrap(): void {
         if (!process.env.GEMINI_API_KEY) {
             this.logger.warn('GEMINI_API_KEY 가 비어 있어 AI 대화형 검색 · 업체 검색 벡터를 쓸 수 없습니다 — docs/guides/gemini-setup.md');
+        }
+        if (!isSearchEnabled()) {
+            this.logger.log('GEMINI_SEARCH_ENABLED=0 — 웹 검색(Google 검색 그라운딩) 없이 답합니다(무료 등급 키)');
         }
     }
 
@@ -86,7 +99,7 @@ export class GeminiAiGateway implements AiGatewayInterface, OnApplicationBootstr
                 contents: toGeminiContents(input.history, input.content),
                 config: {
                     systemInstruction: input.system,
-                    tools: input.use_search ? [{googleSearch: {}}] : undefined,
+                    tools: input.use_search && isSearchEnabled() ? [{googleSearch: {}}] : undefined,
                     responseMimeType: 'application/json',
                     responseJsonSchema: input.schema,
                     abortSignal: withTimeout(input.signal, AI_REQUEST_TIMEOUT_MS),
@@ -113,7 +126,11 @@ export class GeminiAiGateway implements AiGatewayInterface, OnApplicationBootstr
             this.genai().models.generateContentStream({
                 model: readChatModel(),
                 contents: toGeminiContents(input.history, input.content),
-                config: {systemInstruction: input.system, tools: input.use_search ? [{googleSearch: {}}] : undefined, abortSignal: withTimeout(input.signal, AI_STREAM_TIMEOUT_MS)},
+                config: {
+                    systemInstruction: input.system,
+                    tools: input.use_search && isSearchEnabled() ? [{googleSearch: {}}] : undefined,
+                    abortSignal: withTimeout(input.signal, AI_STREAM_TIMEOUT_MS),
+                },
             }),
         );
         try {

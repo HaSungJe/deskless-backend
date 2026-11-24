@@ -15,7 +15,7 @@ NestJS 12 모노레포(MSA) — 앱 4개를 따로 빌드 · 배포한다.
 
 - **요청 흐름** — 공개 경로는 `/api/v1/<서비스>/<도메인>/…`. 조회 · 로그인은 게이트웨이 → 서비스 내부 HTTP(동기), 상태를 바꾸는 요청은 RabbitMQ 명령으로 처리하고 결과를 요청 단위 SSE(`accepted` → `done` · `failed` · `pending`)로 돌려준다. AI 대화 답은 세 번째 경로 — 게이트웨이가 서비스의 SSE 를 그대로 흘리는 내부 HTTP 스트리밍([docs/streaming.md](docs/streaming.md)).
 - **로그인 그룹 3개** — 이용자(SNS) · 매니저(업체코드 + 아이디) · 관리자(아이디). 그룹마다 경로 · 토큰 · 가드가 따로다.
-- **AI 대화형 업체 검색** — 로그인한 이용자가 말로 묻으면 Gemini 가 요청을 읽고(필요하면 웹 검색) 업체 검색 벡터(pgvector)로 업체를 최대 3곳 골라 답을 글자 단위로 흘려 준다. 하루 질문 수는 `CHAT_DAILY_LIMIT`(기본 5, 한국 시각 자정), 대화는 Redis 에 7일 — 세팅 [docs/guides/gemini-setup.md](docs/guides/gemini-setup.md).
+- **AI 대화형 업체 검색** — 로그인한 이용자가 말로 묻으면 Gemini 가 요청을 읽고(필요하면 웹 검색) 업체 검색 벡터(pgvector)로 업체를 최대 3곳 골라 답을 글자 단위로 흘려 준다. 하루 질문 수는 `CHAT_DAILY_LIMIT`(기본 5, 한국 시각 자정), 대화는 Redis 에 7일. 무료 등급 키는 웹 검색을 쓸 수 없어 `GEMINI_SEARCH_ENABLED=0` — 세팅 [docs/guides/gemini-setup.md](docs/guides/gemini-setup.md).
 - **외부 연동** — SMS(Amazon SNS) · 파일(S3 + CloudFront) · 결제(토스페이먼츠) · 문 정보 · AI 대화(Redis) · AI(Google Gemini). AWS 값을 비우면 AWS 없이 돈다 — SMS 는 로그로, 파일은 게이트웨이 내부 저장소로.
 - **문 소켓** — 문 쪽 타 업체 프로그램이 업체 단위로 붙는 표준 WebSocket. 문이 읽은 QR 을 서버가 확인하고, 업체 관리자의 바로 열기 명령을 내려 보낸다 — 규격 [docs/realtime.md](docs/realtime.md).
 - **지표 · 헬스 체크** — 앱마다 전용 포트에 `/metrics` · `/health/live` · `/health/ready` — [docs/monitoring.md](docs/monitoring.md).
