@@ -1,6 +1,8 @@
 import {randomUUID} from 'node:crypto';
 import type {DataSource, EntityTarget, ObjectLiteral} from 'typeorm';
 import {getBcrypt} from '@app/common/utils/bcrypt.js';
+import {InquiryCategoryEntity} from '../entities/inquiry/inquiry-category.entity.js';
+import {InquiryStateEntity} from '../entities/inquiry/inquiry-state.entity.js';
 import {PaymentStateEntity} from '../entities/payment/payment-state.entity.js';
 import {ReservationCancelRequestStateEntity} from '../entities/reservation/reservation-cancel-request-state.entity.js';
 import {ReservationDetailTypeEntity} from '../entities/reservation/reservation-detail-type.entity.js';
@@ -66,6 +68,24 @@ export const STORE_STATE_SEED_DATA: StoreStateEntity[] = [
     {store_state_id: 'ACTIVE', store_state_name: '활성'},
     {store_state_id: 'SUSPEND', store_state_name: '영업중지'},
     {store_state_id: 'LEAVE', store_state_name: '탈퇴'},
+];
+
+/** 문의 상태(t_inquiry_state) 기본 데이터 — contracts INQUIRY_STATE 와 같다 */
+export const INQUIRY_STATE_SEED_DATA: InquiryStateEntity[] = [
+    {inquiry_state_id: 'RECEIVED', inquiry_state_name: '접수'},
+    {inquiry_state_id: 'ANSWERED', inquiry_state_name: '답변완료'},
+    {inquiry_state_id: 'BLIND', inquiry_state_name: '블라인드'},
+];
+
+/** 문의 카테고리(t_inquiry_category) 기본 데이터 — contracts INQUIRY_CATEGORY 와 같다, 화면 순서 sort_order */
+export const INQUIRY_CATEGORY_SEED_DATA: InquiryCategoryEntity[] = [
+    {inquiry_category_id: 'RESERVATION', inquiry_category_name: '예약', sort_order: 1},
+    {inquiry_category_id: 'PAYMENT', inquiry_category_name: '결제/환불', sort_order: 2},
+    {inquiry_category_id: 'ROOM', inquiry_category_name: '객실/시설', sort_order: 3},
+    {inquiry_category_id: 'DOOR', inquiry_category_name: '출입/QR', sort_order: 4},
+    {inquiry_category_id: 'ACCOUNT', inquiry_category_name: '회원/계정', sort_order: 5},
+    {inquiry_category_id: 'STORE_APPLICATION', inquiry_category_name: '입점', sort_order: 6},
+    {inquiry_category_id: 'ETC', inquiry_category_name: '기타', sort_order: 7},
 ];
 
 /** 입점 신청 상태(t_store_application_state) 기본 데이터 */
@@ -203,6 +223,8 @@ export const SEED_TARGETS: SeedTarget[] = [
     {entity: SnsEntity, data: SNS_SEED_DATA},
     {entity: SmsPurposeEntity, data: SMS_PURPOSE_SEED_DATA},
     {entity: StoreStateEntity, data: STORE_STATE_SEED_DATA},
+    {entity: InquiryStateEntity, data: INQUIRY_STATE_SEED_DATA},
+    {entity: InquiryCategoryEntity, data: INQUIRY_CATEGORY_SEED_DATA},
     {entity: StoreApplicationStateEntity, data: STORE_APPLICATION_STATE_SEED_DATA},
     {entity: StoreFilePurposeEntity, data: STORE_FILE_PURPOSE_SEED_DATA},
     {entity: RoomStateEntity, data: ROOM_STATE_SEED_DATA},

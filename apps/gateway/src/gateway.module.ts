@@ -10,6 +10,7 @@ import {DoorSocketModule} from './modules/door-socket/door-socket.module.js';
 import {LocalFileModule} from './modules/local-file/local-file.module.js';
 import {TransportModule} from './modules/transport/transport.module.js';
 import {AdminModule} from './api/v1/admin-service/admin/admin.module.js';
+import {InquiryModule} from './api/v1/admin-service/inquiry/inquiry.module.js';
 import {ManagerModule} from './api/v1/admin-service/manager/manager.module.js';
 import {ReservationModule as AdminReservationModule} from './api/v1/admin-service/reservation/reservation.module.js';
 import {RoomModule} from './api/v1/admin-service/room/room.module.js';
@@ -17,6 +18,7 @@ import {StatsModule} from './api/v1/admin-service/stats/stats.module.js';
 import {StoreModule} from './api/v1/admin-service/store/store.module.js';
 import {UserModule as AdminUserModule} from './api/v1/admin-service/user/user.module.js';
 import {DiscoveryModule} from './api/v1/user-service/discovery/discovery.module.js';
+import {InquiryModule as UserInquiryModule} from './api/v1/user-service/inquiry/inquiry.module.js';
 import {ReservationModule} from './api/v1/user-service/reservation/reservation.module.js';
 import {StoreModule as UserStoreModule} from './api/v1/user-service/store/store.module.js';
 import {UserModule} from './api/v1/user-service/user/user.module.js';
@@ -34,7 +36,8 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
  * - 이용자 관리 라우트: AdminUserModule(/api/v1/admin-service/user — 관리자 가드, 목록 · 상세 · 예약 이력 · 이용 제한 · 해제)
  * - 통계 라우트: StatsModule(/api/v1/admin-service/stats — 전체 · 업체별은 관리자 가드, /mine 내 업체는 매니저 가드)
  * - 같은 이름 도메인이 서비스마다 있으면(행위자별 서버 — 사용자 결정 2026-11-07) 별칭으로 들인다
- * - 업체 둘러보기 라우트: DiscoveryModule(/api/v1/user-service/discovery — 가드 없음, 반경 업체 · 업체 상세 · 객실 그룹 목록)
+ * - 업체 둘러보기 라우트: DiscoveryModule(/api/v1/user-service/discovery — 가드 없음, 반경 업체 · 업체 이름 검색 · 업체 상세 · 객실 그룹 목록)
+ * - 문의 라우트: UserInquiryModule(/api/v1/user-service/inquiry — 카테고리 목록은 가드 없음, 등록 · 내 문의는 이용자 가드) · InquiryModule(/api/v1/admin-service/inquiry — /mine 은 매니저 가드(소속 업체 문의), 그 밖 관리자 가드(바로방 문의) — 목록 · 상세 · 답변 · 블라인드 · 해제)
  * - DoorSocketModule: 문 소켓(`/ws/v1/door` — 업체 ID + 시크릿, 표준 WebSocket) — QR 확인 · 잠금 알림 · 바로 열기 명령
  * - LocalFileModule: 내부 파일 저장소 경로(`/files` — 업로드 받기는 AWS_S3_BUCKET 이 빌 때만, 비공개 열람 · 공개 파일은 늘 — S3 로 바꾸기 전에 올린 LOCAL 행)
  * - ApiLogModule: API 로그 — 모든 HTTP 요청(가드보다 먼저 거는 미들웨어)을 응답이 끝난 뒤 로그 전용 연결로 t_api_log 에 넣는다(Swagger 문서 제외)
@@ -58,6 +61,8 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
         DiscoveryModule,
         AdminUserModule,
         StatsModule,
+        UserInquiryModule,
+        InquiryModule,
         DoorSocketModule,
         LocalFileModule,
     ],

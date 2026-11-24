@@ -15,6 +15,7 @@ import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
 import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {DiscoveryModule} from './discovery/discovery.module.js';
 import {DoorModule} from './door/door.module.js';
+import {InquiryModule} from './inquiry/inquiry.module.js';
 import {ReservationModule} from './reservation/reservation.module.js';
 import {StoreModule} from './store/store.module.js';
 import {UserModule} from './user/user.module.js';
@@ -30,7 +31,7 @@ import {UserModule} from './user/user.module.js';
  * - DoorStoreModule: 문 정보 포트(DOOR_STORE, Redis — RedisModule 연결 포함) — 문 소켓 접속 확인 · QR 확인 · 잠금, 내 예약 QR 발급 · 결제 확인 때 호실의 현재 QR 쓰기, 사용중지 호실 취소 · 이용 중 취소 승인 때 QR 지우기
  * - PaymentModule: 결제 포트(PAYMENT_GATEWAY, 토스페이먼츠) — 예약 결제 환경 · 결제 확인
  * - SeederService: DB 를 소유하는 이 서비스가 룩업 기본 데이터 · 첫 총관리자를 보장한다
- * 도메인(이용자 기능 — 사용자 결정 2026-11-07): UserModule(회원) · ReservationModule(예약) · DiscoveryModule(업체 둘러보기) · StoreModule(입점 신청) · DoorModule(문 소켓 처리). crontab 은 scheduler 앱이 돌린다(이 서비스에는 ScheduleModule 이 없다).
+ * 도메인(이용자 기능 — 사용자 결정 2026-11-07): UserModule(회원) · ReservationModule(예약) · DiscoveryModule(업체 둘러보기) · StoreModule(입점 신청) · DoorModule(문 소켓 처리) · InquiryModule(문의). crontab 은 scheduler 앱이 돌린다(이 서비스에는 ScheduleModule 이 없다).
  */
 @Module({
     imports: [
@@ -46,6 +47,7 @@ import {UserModule} from './user/user.module.js';
         DiscoveryModule,
         StoreModule,
         DoorModule,
+        InquiryModule,
     ],
     providers: [{provide: APP_GUARD, useClass: InternalAuthGuard}, {provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}, SeederService],
 })

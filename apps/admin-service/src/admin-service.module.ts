@@ -12,6 +12,7 @@ import {MessagingModule} from '@app/messaging/messaging.module.js';
 import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
 import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
 import {AdminModule} from './admin/admin.module.js';
+import {InquiryModule} from './inquiry/inquiry.module.js';
 import {ManagerModule} from './manager/manager.module.js';
 import {ReservationModule} from './reservation/reservation.module.js';
 import {RoomModule} from './room/room.module.js';
@@ -20,7 +21,7 @@ import {StoreModule} from './store/store.module.js';
 import {UserModule} from './user/user.module.js';
 
 /**
- * admin-service 루트 모듈 — 업체 관리자 · 업체 총관리자 · 관리자 · 총관리자 전용 기능(사용자 결정 2026-11-07): 매니저(총매니저 · 매니저) · 관리자(총관리자 · 관리자) · store(업체 · 입점 신청 관리 · 업체 정보 파일 · 내 업체 설정) · room(업체 상품 설정 · 객실 그룹 · 호실) · reservation(업체 예약 현황 · 업체 취소 · 호실 이동) · user(이용자 관리 — 총관리자 · 관리자) · stats(통계 — 총관리자 · 관리자 전체 · 업체별, 업체 관리자 내 업체) 도메인. 서버 안 도메인은 기능 대상별이다(사용자 결정 2026-11-09). 게이트웨이를 거친 요청만 받는다.
+ * admin-service 루트 모듈 — 업체 관리자 · 업체 총관리자 · 관리자 · 총관리자 전용 기능(사용자 결정 2026-11-07): 매니저(총매니저 · 매니저) · 관리자(총관리자 · 관리자) · store(업체 · 입점 신청 관리 · 업체 정보 파일 · 내 업체 설정) · room(업체 상품 설정 · 객실 그룹 · 호실) · reservation(업체 예약 현황 · 업체 취소 · 호실 이동) · user(이용자 관리 — 총관리자 · 관리자) · stats(통계 — 총관리자 · 관리자 전체 · 업체별, 업체 관리자 내 업체) · inquiry(문의 관리 — 업체 관리자 소속 업체 문의, 관리자 바로방 문의) 도메인. 서버 안 도메인은 기능 대상별이다(사용자 결정 2026-11-09). 게이트웨이를 거친 요청만 받는다.
  * - APP_GUARD(InternalAuthGuard): 모든 HTTP 요청에 게이트웨이의 내부 토큰을 요구한다
  * - APP_INTERCEPTOR(ReturnedExceptionInterceptor): 내부 HTTP 컨트롤러가 반환한 HttpException 을 실패 응답으로 바꾼다(커밋 뒤 실패 — 큐 경로는 CommandDispatcher)
  * - DatabaseModule: TypeORM(PostgreSQL, user-service 와 같은 DB · 엔티티) + `@Transactional()` (nestjs-cls)
@@ -45,6 +46,7 @@ import {UserModule} from './user/user.module.js';
         ReservationModule,
         UserModule,
         StatsModule,
+        InquiryModule,
     ],
     providers: [
         {provide: APP_GUARD, useClass: InternalAuthGuard},

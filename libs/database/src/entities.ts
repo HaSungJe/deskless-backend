@@ -1,5 +1,8 @@
 import {ApiLogEntity} from './entities/api-log/api-log.entity.js';
 import {DoorOpenLogEntity} from './entities/door/door-open-log.entity.js';
+import {InquiryCategoryEntity} from './entities/inquiry/inquiry-category.entity.js';
+import {InquiryStateEntity} from './entities/inquiry/inquiry-state.entity.js';
+import {InquiryEntity} from './entities/inquiry/inquiry.entity.js';
 import {RoomQrEntity} from './entities/door/room-qr.entity.js';
 import {PaymentStateEntity} from './entities/payment/payment-state.entity.js';
 import {PaymentEntity} from './entities/payment/payment.entity.js';
@@ -77,5 +80,8 @@ export const ENTITIES = [
     SessionEntity,
     SessionRefreshEntity,
     SmsVerificationEntity,
+    InquiryStateEntity,
+    InquiryCategoryEntity,
+    InquiryEntity,
     ApiLogEntity,
 ];

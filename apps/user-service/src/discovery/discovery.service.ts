@@ -5,9 +5,17 @@ import type {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/d
 import type {DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import type {DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import type {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
+import type {DiscoveryStoreSearchDto, DiscoveryStoreSearchResultDto} from '@app/contracts/discovery/dto/discovery-store-search.dto.js';
 import {STORAGE_GATEWAY} from '@app/integration/integration.symbols.js';
 import type {StorageGatewayInterface} from '@app/integration/interfaces/integration.interface.js';
-import {DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE, DISCOVERY_STORE_IMAGE_PURPOSE, DISCOVERY_STORE_LIMIT, DISCOVERY_STORE_NOT_FOUND_MESSAGE, DISCOVERY_STORE_STATE_ACTIVE} from './discovery.constants.js';
+import {
+    DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE,
+    DISCOVERY_STORE_IMAGE_PURPOSE,
+    DISCOVERY_STORE_LIMIT,
+    DISCOVERY_STORE_NOT_FOUND_MESSAGE,
+    DISCOVERY_STORE_SEARCH_LIMIT,
+    DISCOVERY_STORE_STATE_ACTIVE,
+} from './discovery.constants.js';
 import {DISCOVERY_REPOSITORY} from './discovery.symbols.js';
 import {
     isRoomGroupDetailFilterKey,
@@ -21,6 +29,7 @@ import {
     toDiscoveryStoreItem,
     toRoomGroupDetailFilterItems,
     toStoreFilter,
+    toStoreSearchItem,
 } from './discovery.util.js';
 import type {DiscoveryRepositoryInterface} from './interfaces/discovery.repository.interface.js';
 
@@ -66,6 +75,21 @@ export class DiscoveryService {
                 .map((row) => toDiscoveryStoreItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl({file_key: row.cover_file_key, file_storage: row.cover_file_storage}) : null)),
             is_truncated: rows.length > DISCOVERY_STORE_LIMIT ? 1 : 0,
         };
+    }
+
+    /**
+     * 업체 이름 검색 (문의할 업체 고르기) — 상호명 부분 일치, 영업 중 · 영업중지(탈퇴 · 지운 업체 제외), 상호명 순 최대 20건.
+     * 주소 · 위경도(지도에서 위치 확인) · 대표 사진 1장(공개 주소, 없으면 null)을 같이 준다(사용자 결정 2026-11-24). 로그인 없음.
+     * (내부 HTTP: GET /internal/v1/user-service/discovery/store-search)
+     *
+     * @param dto 검색어
+     * @returns 업체 목록
+     */
+    async searchStores(dto: DiscoveryStoreSearchDto): Promise<DiscoveryStoreSearchResultDto> {
+        // 1. 이름 검색 — 상태 · 삭제 · 개수 조건과 대표 사진 키는 쿼리(repository)
+        const rows = await this.discoveryRepository.findStoreSearchRows(dto.keyword, DISCOVERY_STORE_SEARCH_LIMIT);
+        // 2. 대표 사진 공개 주소를 붙여 목록 반환
+        return {list: rows.map((row) => toStoreSearchItem(row, row.cover_file_key ? this.storageGateway.getPublicUrl({file_key: row.cover_file_key, file_storage: row.cover_file_storage}) : null))};
     }
 
     /**

@@ -21,6 +21,21 @@ export interface SampleRoomGroup {
     rooms: {floor: number; room_name: string}[];
 }
 
+/** 샘플 문의 본보기 — 카테고리(기본 시드 t_inquiry_category ID) · 제목 · 내용 · 답변(답변완료로 넣을 때 쓴다, 스팸은 null) */
+export interface SampleInquiryTemplate {
+    inquiry_category_id: string;
+    title: string;
+    content: string;
+    answer_content: string | null;
+}
+
+/** 샘플 문의 수 — 대상(업체 번호, null = 바로방)마다 일반 문의 · 스팸 문의(블라인드) 개수 */
+export interface SampleInquiryCount {
+    store_no: number | null;
+    normal: number;
+    spam: number;
+}
+
 /** 샘플 업체 — 배열 순서(01 ~ 10)가 고정 ID 번호 · 사진 파일 번호다(scripts/sample-images.mjs 의 GROUP_COUNTS 와 그룹 수가 같아야 한다) */
 export interface SampleStore {
     store_name: string;
@@ -80,6 +95,7 @@ export const SAMPLE_ID_KIND = {
     ROOM_GROUP_IMAGE: 14,
     ROOM_GROUP_PLAN: 15,
     ROOM: 16,
+    INQUIRY: 17,
 } as const;
 
 /** 업체 총관리자 아이디 · 비밀번호 — 업체마다 같다(매니저 아이디는 업체 안에서만 유일 — UK_User_LoginIdLoginScopeStoreId). 로그인은 업체코드 + 아이디 */
@@ -293,4 +309,110 @@ export const SAMPLE_STORES: SampleStore[] = [
             {room_group_name: '스위트', description: '거실이 딸린 2룸 객실(숙박 전용)', detail: DETAIL_SUITE, prices: {HOURLY: null, NIGHT: 115000, LONG: 125000}, rooms: sampleRooms(4, 3)},
         ],
     },
+];
+
+/** 샘플 일반 문의 본보기 13개 — 카테고리마다 1 ~ 2개, 대상마다 순서를 밀어 가며 돌려 쓴다 */
+export const SAMPLE_INQUIRY_TEMPLATES: SampleInquiryTemplate[] = [
+    {
+        inquiry_category_id: 'RESERVATION',
+        title: '예약 시간을 바꿀 수 있을까요?',
+        content: '오늘 18시 예약을 20시로 바꾸고 싶은데 가능한가요?',
+        answer_content: '예약 시간은 취소 뒤 다시 예약하셔야 합니다. 이용 시작 60분 전까지 취소하시면 전액 환불됩니다.',
+    },
+    {
+        inquiry_category_id: 'RESERVATION',
+        title: '하루 더 머물 수 있나요?',
+        content: '1박으로 예약했는데 하루 더 묵고 싶습니다. 어떻게 하면 되나요?',
+        answer_content: '이용 중에 내 예약에서 연장을 신청하시면 됩니다. 다음 예약이 없으면 최대 3회까지 늘릴 수 있습니다.',
+    },
+    {
+        inquiry_category_id: 'PAYMENT',
+        title: '결제 영수증을 받을 수 있나요?',
+        content: '법인카드로 결제했는데 영수증을 따로 받을 수 있는지 궁금합니다.',
+        answer_content: '내 예약 상세에서 결제 영수증을 확인하실 수 있습니다.',
+    },
+    {
+        inquiry_category_id: 'PAYMENT',
+        title: '환불이 아직 들어오지 않았어요',
+        content: '어제 예약을 취소했는데 카드사에 환불이 아직 보이지 않습니다.',
+        answer_content: '카드사에 따라 영업일 기준 3 ~ 5일이 걸릴 수 있습니다. 그 뒤에도 보이지 않으면 다시 문의해 주세요.',
+    },
+    {
+        inquiry_category_id: 'ROOM',
+        title: '주차할 수 있나요?',
+        content: '차를 가지고 가려는데 건물에 주차할 수 있는지 알고 싶습니다.',
+        answer_content: '건물 지하 주차장을 이용하실 수 있습니다. 입차 때 객실 번호를 알려 주세요.',
+    },
+    {
+        inquiry_category_id: 'ROOM',
+        title: '수건을 더 받을 수 있나요?',
+        content: '두 명이 쓰기에 수건이 모자랍니다. 더 받을 수 있을까요?',
+        answer_content: '객실 옷장 아래 칸에 여분 수건이 있습니다. 모자라면 업체 연락처로 알려 주세요.',
+    },
+    {
+        inquiry_category_id: 'DOOR',
+        title: 'QR 이 인식되지 않아요',
+        content: '입구에서 QR 을 여러 번 대 봤는데 문이 열리지 않습니다.',
+        answer_content: '화면 밝기를 최대로 올린 뒤 다시 대 주세요. 계속되면 업체 연락처로 전화 주시면 바로 열어 드립니다.',
+    },
+    {
+        inquiry_category_id: 'DOOR',
+        title: '나갈 때 문이 잠기나요?',
+        content: '잠깐 밖에 나갔다 오려는데 문이 저절로 잠기는지 궁금합니다.',
+        answer_content: '문을 닫으면 저절로 잠깁니다. 다시 들어오실 때 같은 QR 을 쓰시면 됩니다.',
+    },
+    {
+        inquiry_category_id: 'ACCOUNT',
+        title: '휴대폰 번호를 바꾸고 싶어요',
+        content: '번호가 바뀌었는데 계정의 휴대폰 번호는 어떻게 바꾸나요?',
+        answer_content: '마이페이지에서 새 번호로 휴대폰 인증을 다시 하시면 바뀝니다.',
+    },
+    {
+        inquiry_category_id: 'ACCOUNT',
+        title: '탈퇴하면 예약은 어떻게 되나요?',
+        content: '탈퇴 신청을 하면 남아 있는 예약도 같이 취소되나요?',
+        answer_content: '탈퇴 대기 14일 동안은 예약이 그대로 남고, 그 안에 철회하실 수 있습니다.',
+    },
+    {
+        inquiry_category_id: 'STORE_APPLICATION',
+        title: '입점 신청 절차가 궁금합니다',
+        content: '운영 중인 무인 숙소도 입점 신청을 할 수 있나요? 심사 기간도 알고 싶습니다.',
+        answer_content: '입점 신청을 남기시면 영업일 기준 3일 안에 심사 결과를 문자로 알려 드립니다.',
+    },
+    {
+        inquiry_category_id: 'STORE_APPLICATION',
+        title: '사업자등록증을 다시 올리고 싶어요',
+        content: '입점 신청 때 올린 사업자등록증 사진이 흐리게 나왔습니다.',
+        answer_content: '대기 중인 신청은 업체 정보 파일을 지우고 다시 올리실 수 있습니다.',
+    },
+    {
+        inquiry_category_id: 'ETC',
+        title: '예약 알림을 받고 싶어요',
+        content: '예약 시작 전에 알림을 받을 수 있는 방법이 있을까요?',
+        answer_content: '이용 시작 전에 QR 확인 링크를 문자로 보내 드립니다.',
+    },
+];
+
+/** 샘플 스팸 문의 본보기 — 블라인드로 넣는다(답변 없음) */
+export const SAMPLE_INQUIRY_SPAMS: SampleInquiryTemplate[] = [
+    {inquiry_category_id: 'ETC', title: '[광고] 숙박 최저가 대행', content: '숙박 예약 대행 문의는 아래 연락처로 주세요. 숙박 예약 대행 문의는 아래 연락처로 주세요.', answer_content: null},
+    {inquiry_category_id: 'ETC', title: '[광고] 리뷰 작업 해 드립니다', content: '리뷰 작업 저렴하게 해 드립니다. 연락 주세요. 연락 주세요. 연락 주세요.', answer_content: null},
+];
+
+/**
+ * 샘플 문의 수 — 업체 01 · 바로방은 한 페이지(20건)를 넘겨 페이지 넘김을 시험한다, 업체 02 는 블라인드 1건, 업체 03 ~ 10 은 3건씩. 모두 71건.
+ * 일반 문의는 번갈아 접수 · 답변완료, 스팸은 블라인드(바로방 문의의 답변 · 블라인드 계정은 총관리자 `admin` — 없으면 접수로만 넣는다).
+ */
+export const SAMPLE_INQUIRY_COUNTS: SampleInquiryCount[] = [
+    {store_no: 1, normal: 20, spam: 2},
+    {store_no: 2, normal: 2, spam: 1},
+    {store_no: 3, normal: 3, spam: 0},
+    {store_no: 4, normal: 3, spam: 0},
+    {store_no: 5, normal: 3, spam: 0},
+    {store_no: 6, normal: 3, spam: 0},
+    {store_no: 7, normal: 3, spam: 0},
+    {store_no: 8, normal: 3, spam: 0},
+    {store_no: 9, normal: 3, spam: 0},
+    {store_no: 10, normal: 3, spam: 0},
+    {store_no: null, normal: 20, spam: 2},
 ];

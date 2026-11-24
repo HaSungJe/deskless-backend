@@ -3,6 +3,7 @@ import type {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/d
 import {DiscoveryRoomGroupListParamDto, DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import {DiscoveryStoreDetailParamDto, DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
+import {DiscoveryStoreSearchDto, DiscoveryStoreSearchResultDto} from '@app/contracts/discovery/dto/discovery-store-search.dto.js';
 import {DiscoveryService} from '../discovery.service.js';
 
 /**
@@ -23,6 +24,16 @@ export class DiscoveryController {
     async getStores(@Query() query: DiscoveryStoreListDto): Promise<DiscoveryStoreListResultDto> {
         const dto = new DiscoveryStoreListDto(query);
         return this.discoveryService.getStores(dto);
+    }
+
+    /**
+     * 업체 이름 검색 — 문의할 업체 고르기 (인증 없음)
+     */
+    @Get('/store-search')
+    @HttpCode(200)
+    async searchStores(@Query() query: DiscoveryStoreSearchDto): Promise<DiscoveryStoreSearchResultDto> {
+        const dto = new DiscoveryStoreSearchDto(query);
+        return this.discoveryService.searchStores(dto);
     }
 
     /**

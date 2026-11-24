@@ -31,8 +31,8 @@ NestJS 12 모노레포(MSA) — 앱 4개를 따로 빌드 · 배포한다.
 ```
 apps/
   gateway/         # 진입점 — api/v1/<서비스>/<도메인>(공개 라우트) · guards · modules(전송 · 문 소켓 · 파일 · API 로그)
-  user-service/    # 도메인 user · reservation · discovery · store · door + migrate.ts
-  admin-service/   # 도메인 manager · admin · user · store · room · reservation · stats
+  user-service/    # 도메인 user · reservation · discovery · store · door · inquiry + migrate.ts
+  admin-service/   # 도메인 manager · admin · user · store · room · reservation · stats · inquiry
   scheduler/       # 도메인별 crontab — user · reservation · api-log
 libs/
   contracts/       # 게이트웨이 ↔ 서비스 규격(DTO · 명령 · 내부 경로)

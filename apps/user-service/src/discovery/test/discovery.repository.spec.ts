@@ -14,7 +14,7 @@ import {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.
 import {StoreFileEntity} from '@app/database/entities/store/store-file.entity.js';
 import {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import {StoreEntity} from '@app/database/entities/store/store.entity.js';
-import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow} from '../interfaces/discovery.repository.interface.js';
+import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow, DiscoveryStoreSearchRow} from '../interfaces/discovery.repository.interface.js';
 import {DiscoveryRepository} from '../repositories/discovery.repository.js';
 
 /** DiscoveryStoreRow 키 — raw select 별칭과 비교 */
@@ -32,6 +32,9 @@ const STORE_ROW_KEYS: (keyof DiscoveryStoreRow)[] = [
     'min_hourly_price',
     'min_night_price',
 ];
+
+/** DiscoveryStoreSearchRow 키 — 업체 이름 검색 */
+const STORE_SEARCH_ROW_KEYS: (keyof DiscoveryStoreSearchRow)[] = ['store_id', 'store_name', 'address', 'latitude', 'longitude', 'cover_file_key', 'cover_file_storage'];
 
 /** DiscoveryStorePlanRow 키 */
 const STORE_PLAN_ROW_KEYS: (keyof DiscoveryStorePlanRow)[] = [
@@ -178,6 +181,7 @@ describe('DiscoveryRepository — 조건 · 통일 500', () => {
 
     it.each([
         ['findStoreRows', 'buildStoreRowsQuery', [FILTER, 301]],
+        ['findStoreSearchRows', 'buildStoreSearchQuery', ['강남', 20]],
         ['findStorePlanRows', 'buildStorePlanRowsQuery', ['s1']],
         ['countBookableRooms', 'buildBookableRoomCountsQuery', [['g1']]],
     ] as const)('[FAIL:repository] %s 는 같은 인자로 %s 를 실행하고, 실패는 통일 500', async (method, builder, args) => {
@@ -256,6 +260,22 @@ describe('[SMOKE:data-access] 반경 업체 · 상품 설정 · 그룹별 호실
         );
         expect(flat).toContain('"s"."latitude" BETWEEN');
         expect(flat).toBe(STORE_ROWS_DETAIL_SQL);
+    });
+
+    it('업체 이름 검색 — 상호명 ILIKE(이스케이프) · 영업 중 · 영업중지 IN 펼침 · 지워지지 않음 · 상호명 · ID 순 · LIMIT, 위경도 · 대표 사진 서브쿼리 2개(지워지지 않은 업체 사진 첫 장), 별칭 = DiscoveryStoreSearchRow 키', () => {
+        const [sql, parameters] = repository.buildStoreSearchQuery('50%_강남', 20).getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(parameters).toEqual(expect.arrayContaining(['STORE_IMAGE', '%50\\%\\_강남%', 'ACTIVE', 'SUSPEND']));
+        expect(flat).toContain('"s"."latitude" AS "latitude"');
+        expect(flat).toContain('"s"."longitude" AS "longitude"');
+        expect(
+            flat.match(
+                /FROM "t_store_file" "f" WHERE "f"."store_id" = "s"."store_id" AND "f"."store_file_purpose_id" = \$\d+ AND "f"."is_deleted" = 0 ORDER BY "f"."sort_order" ASC, "f"."created_at" ASC LIMIT 1/g,
+            ),
+        ).toHaveLength(2);
+        expect(flat).toMatch(/"s"."store_name" ILIKE \$\d+ AND "s"."store_state_id" IN \(\$\d+, \$\d+\) AND "s"."is_deleted" = 0 ORDER BY "s"."store_name" ASC, "s"."store_id" ASC LIMIT 20$/);
+        expect([...new Set(selectAliases(flat))].sort()).toEqual([...STORE_SEARCH_ROW_KEYS].sort());
     });
 
     it('그룹별 예약 받을 호실 수 — IN 펼침 · 지워지지 않음 · 사용중지 제외 · GROUP BY, 별칭 = DiscoveryRoomCountRow 키', () => {

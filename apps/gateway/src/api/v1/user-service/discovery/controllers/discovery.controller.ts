@@ -6,6 +6,7 @@ import {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discov
 import {DiscoveryRoomGroupListParamDto, DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import {DiscoveryStoreDetailParamDto, DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
+import {DiscoveryStoreSearchDto, DiscoveryStoreSearchResultDto} from '@app/contracts/discovery/dto/discovery-store-search.dto.js';
 import {InternalHttpClient} from '../../../../../modules/transport/internal-http.client.js';
 
 /**
@@ -33,6 +34,21 @@ export class DiscoveryController {
     async getStores(@Query() query: DiscoveryStoreListDto): Promise<DiscoveryStoreListResultDto> {
         const dto = new DiscoveryStoreListDto(query);
         return this.internalHttp.request<DiscoveryStoreListResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.STORE_LIST, {query: dto});
+    }
+
+    /**
+     * 업체 이름 검색 (로그인 없음) — 문의할 업체 고르기. 상호명 부분 일치, 영업 중 · 영업중지 업체를 상호명 순 최대 20건 — 주소 · 위경도(지도에서 위치 확인) · 대표 사진 1장 포함
+     */
+    @Get('/store-search')
+    @HttpCode(200)
+    @ApiOperation({summary: '업체 이름 검색'})
+    @ApiOkResponse({type: DiscoveryStoreSearchResultDto})
+    @ApiBadRequestResponse({type: ApiFailResultDto})
+    @ApiServiceUnavailableResponse({type: ApiFailResultDto})
+    @ApiInternalServerErrorResponse({type: ApiFailResultDto})
+    async searchStores(@Query() query: DiscoveryStoreSearchDto): Promise<DiscoveryStoreSearchResultDto> {
+        const dto = new DiscoveryStoreSearchDto(query);
+        return this.internalHttp.request<DiscoveryStoreSearchResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.STORE_SEARCH, {query: dto});
     }
 
     /**

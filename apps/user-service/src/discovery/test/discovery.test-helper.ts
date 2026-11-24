@@ -39,6 +39,7 @@ export type StorageGatewayMock = {getPublicUrl: Mock};
 export function createDiscoveryRepositoryMock(): DiscoveryRepositoryMock {
     return {
         findStoreRows: vi.fn().mockResolvedValue([]),
+        findStoreSearchRows: vi.fn().mockResolvedValue([]),
         findDiscoveryStore: vi.fn().mockResolvedValue(storeEntity()),
         findStoreImages: vi.fn().mockResolvedValue([]),
         findStoreHours: vi.fn().mockResolvedValue([]),

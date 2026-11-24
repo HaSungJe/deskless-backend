@@ -1,5 +1,7 @@
-import type {EntityTarget, ObjectLiteral} from 'typeorm';
+import type {DataSource, EntityTarget, ObjectLiteral} from 'typeorm';
 import {getBcrypt} from '@app/common/utils/bcrypt.js';
+import {dayjs} from '@app/common/utils/dayjs.js';
+import {InquiryEntity} from '../entities/inquiry/inquiry.entity.js';
 import {RoomGroupImageEntity} from '../entities/room/room-group-image.entity.js';
 import {RoomGroupPlanEntity} from '../entities/room/room-group-plan.entity.js';
 import {RoomGroupEntity} from '../entities/room/room-group.entity.js';
@@ -13,6 +15,9 @@ import {UserSettingEntity} from '../entities/user/user-setting.entity.js';
 import {UserEntity} from '../entities/user/user.entity.js';
 import {
     SAMPLE_ID_KIND,
+    SAMPLE_INQUIRY_COUNTS,
+    SAMPLE_INQUIRY_SPAMS,
+    SAMPLE_INQUIRY_TEMPLATES,
     SAMPLE_IMAGE_KEY_PREFIX,
     SAMPLE_MANAGER_LOGIN_ID,
     SAMPLE_MANAGER_PASSWORD,
@@ -339,6 +344,67 @@ export function buildSampleRooms(): RoomEntity[] {
     );
 }
 
+/** 샘플 문의 행 — 등록일을 과거로 흩어 넣으려고 엔티티 인스턴스가 아닌 객체 리터럴로 만든다(insert 훅이 등록일을 지금으로 덮지 않게 — 시드 행의 객체 리터럴 예외) */
+export type SampleInquiryRow = Omit<InquiryEntity, 'insertTimestamp' | 'updateTimestamp'>;
+
+/**
+ * 샘플 문의 — 샘플 이용자가 쓴 71건(SAMPLE_INQUIRY_COUNTS — 업체 01 · 바로방 22건씩, 업체 02 ~ 10 3건씩).
+ * 일반 문의는 본보기를 대상마다 밀어 가며 돌려 쓰고 번갈아 접수 · 답변완료, 스팸은 블라인드. 답변 · 블라인드 계정은 업체 문의면 그 업체의 업체 총관리자, 바로방 문의면 총관리자(없으면 접수로만).
+ * 등록일은 지금부터 대상 · 순서마다 몇 시간씩 앞으로 흩고(최신순 목록 · 날짜를 볼 수 있게), 답변은 등록 3시간 뒤 · 블라인드는 1시간 뒤다(CHK_Inquiry_Answer · CHK_Inquiry_Blind).
+ *
+ * @param admin_id 총관리자 ID(바로방 문의의 답변 · 블라인드 계정) — 없으면 null
+ * @param now 기준 시각
+ * @returns 문의 행
+ */
+export function buildSampleInquiries(admin_id: string | null, now: Date = new Date()): SampleInquiryRow[] {
+    const rows: SampleInquiryRow[] = [];
+    SAMPLE_INQUIRY_COUNTS.forEach((count, targetIndex) => {
+        const handler_id = count.store_no === null ? admin_id : sampleId(SAMPLE_ID_KIND.MANAGER, count.store_no);
+        const total = count.normal + count.spam;
+        for (let order = 0; order < total; order += 1) {
+            const is_spam = order >= count.normal;
+            const template = is_spam
+                ? SAMPLE_INQUIRY_SPAMS[(order - count.normal) % SAMPLE_INQUIRY_SPAMS.length]
+                : SAMPLE_INQUIRY_TEMPLATES[(order + targetIndex * 3) % SAMPLE_INQUIRY_TEMPLATES.length];
+            const state = handler_id === null ? 'RECEIVED' : is_spam ? 'BLIND' : order % 2 === 1 ? 'ANSWERED' : 'RECEIVED';
+            const created_at = dayjs(now)
+                .subtract((total - order) * 9 + targetIndex, 'hour')
+                .toDate();
+            rows.push({
+                inquiry_id: sampleId(SAMPLE_ID_KIND.INQUIRY, rows.length + 1),
+                user_id: sampleId(SAMPLE_ID_KIND.USER, 1),
+                store_id: count.store_no === null ? null : sampleId(SAMPLE_ID_KIND.STORE, count.store_no),
+                inquiry_category_id: template.inquiry_category_id,
+                inquiry_state_id: state,
+                title: template.title,
+                content: template.content,
+                answer_content: state === 'ANSWERED' ? template.answer_content : null,
+                answer_user_id: state === 'ANSWERED' ? handler_id : null,
+                answered_at: state === 'ANSWERED' ? dayjs(created_at).add(3, 'hour').toDate() : null,
+                blind_user_id: state === 'BLIND' ? handler_id : null,
+                blinded_at: state === 'BLIND' ? dayjs(created_at).add(1, 'hour').toDate() : null,
+                created_at,
+                updated_at: created_at,
+            });
+        }
+    });
+    return rows;
+}
+
+/**
+ * 샘플 문의 시드 대상 — 바로방 문의의 처리 계정으로 기본 시드의 총관리자(`admin`)를 찾는다(시드 함수의 "다른 행 참조"). SEED_SAMPLE_DATA 가 '1' 이 아니면 0건.
+ *
+ * @param dataSource DB 연결
+ * @returns 문의 행
+ */
+async function buildSampleInquiryRows(dataSource: DataSource): Promise<SampleInquiryRow[]> {
+    if (!isSampleSeedEnabled(process.env.SEED_SAMPLE_DATA)) {
+        return [];
+    }
+    const admin = await dataSource.getRepository(UserEntity).findOne({where: {login_id: 'admin', login_scope: 'ADMIN'}});
+    return buildSampleInquiries(admin ? admin.user_id : null);
+}
+
 /**
  * 샘플 시드 대상 하나 — SEED_SAMPLE_DATA 가 '1' 이 아니면 0건(만드는 함수를 부르지 않는다 — bcrypt 도 돌지 않는다).
  *
@@ -351,7 +417,7 @@ function sampleTarget(entity: EntityTarget<ObjectLiteral>, build: () => ObjectLi
 }
 
 /**
- * 샘플 시드 대상 — FK 부모 순(업체 → 업체 설정 · 사진 → 계정 → 객실 그룹 → 그룹 사진 · 상품 → 호실). SEED_TARGETS 끝(룩업 · 첫 총관리자 뒤)에 붙는다.
+ * 샘플 시드 대상 — FK 부모 순(업체 → 업체 설정 · 사진 → 계정 → 객실 그룹 → 그룹 사진 · 상품 → 호실 → 문의 — 문의 카테고리 · 상태 룩업은 기본 시드). SEED_TARGETS 끝(룩업 · 첫 총관리자 뒤)에 붙는다.
  * 테스트 데이터 — 개발 · 테스트 DB 에서만 켠다(docs/guides/sample-data.md).
  */
 export const SAMPLE_SEED_TARGETS: SeedTarget[] = [
@@ -367,4 +433,5 @@ export const SAMPLE_SEED_TARGETS: SeedTarget[] = [
     sampleTarget(RoomGroupImageEntity, buildSampleRoomGroupImages),
     sampleTarget(RoomGroupPlanEntity, buildSampleRoomGroupPlans),
     sampleTarget(RoomEntity, buildSampleRooms),
+    {entity: InquiryEntity, data: buildSampleInquiryRows},
 ];

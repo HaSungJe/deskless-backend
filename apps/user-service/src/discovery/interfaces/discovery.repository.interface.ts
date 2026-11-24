@@ -64,6 +64,17 @@ export interface DiscoveryStorePlanRow {
     max_extensions: number;
 }
 
+/** 업체 이름 검색 행 (QueryBuilder raw — 별칭이 키와 같다) — 대표 사진은 업체 사진 첫 장의 키 · 저장소 */
+export interface DiscoveryStoreSearchRow {
+    store_id: string;
+    store_name: string;
+    address: string;
+    latitude: number;
+    longitude: number;
+    cover_file_key: string | null;
+    cover_file_storage: string | null;
+}
+
 /** 그룹별 예약 받을 호실 수 (QueryBuilder raw) */
 export interface DiscoveryRoomCountRow {
     room_group_id: string;
@@ -77,6 +88,8 @@ export interface DiscoveryRoomCountRow {
 export interface DiscoveryRepositoryInterface {
     /** 반경 안의 활성 업체 — 가까운 순, limit 개 */
     findStoreRows(filter: DiscoveryStoreFilter, limit: number): Promise<DiscoveryStoreRow[]>;
+    /** 업체 이름 검색 — 상호명 부분 일치 · 영업 중 · 영업중지, 상호명 순 limit 개(대표 사진 키 포함) */
+    findStoreSearchRows(keyword: string, limit: number): Promise<DiscoveryStoreSearchRow[]>;
     /** 업체 단건 */
     findDiscoveryStore(where: FindOptionsWhere<StoreEntity>): Promise<StoreEntity | null>;
     /** 업체 정보 파일 — 정렬 순서 · 등록일 순 */

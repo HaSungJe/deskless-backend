@@ -13,9 +13,24 @@ import {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.
 import {StoreFileEntity} from '@app/database/entities/store/store-file.entity.js';
 import {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import {StoreEntity} from '@app/database/entities/store/store.entity.js';
+import {toContainsPattern} from '@app/common/utils/search.js';
 import {notDeleted} from '@app/database/soft-delete.js';
-import {DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE, DISCOVERY_ROOM_STATE_DISABLED, DISCOVERY_STORE_IMAGE_PURPOSE, DISCOVERY_STORE_STATE_ACTIVE} from '../discovery.constants.js';
-import type {DiscoveryRepositoryInterface, DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow} from '../interfaces/discovery.repository.interface.js';
+import {
+    DISCOVERY_EARTH_RADIUS_KM,
+    DISCOVERY_PLAN_TYPE,
+    DISCOVERY_ROOM_STATE_DISABLED,
+    DISCOVERY_SEARCH_STORE_STATES,
+    DISCOVERY_STORE_IMAGE_PURPOSE,
+    DISCOVERY_STORE_STATE_ACTIVE,
+} from '../discovery.constants.js';
+import type {
+    DiscoveryRepositoryInterface,
+    DiscoveryRoomCountRow,
+    DiscoveryStoreFilter,
+    DiscoveryStorePlanRow,
+    DiscoveryStoreRow,
+    DiscoveryStoreSearchRow,
+} from '../interfaces/discovery.repository.interface.js';
 
 /** DB 최종 실패 메시지 */
 const SERVER_ERROR_MESSAGE = '서버에서 오류가 발생했습니다. 관리자에게 문의해주세요.';
@@ -107,6 +122,73 @@ export class DiscoveryRepository implements DiscoveryRepositoryInterface {
         } catch {
             throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
         }
+    }
+
+    /**
+     * 업체 이름 검색 — 상호명 부분 일치 · 영업 중 · 영업중지 · 지워지지 않은 업체, 상호명 순 limit 개
+     *
+     * @param keyword 검색어
+     * @param limit 최대 개수
+     * @returns 업체 행
+     */
+    async findStoreSearchRows(keyword: string, limit: number): Promise<DiscoveryStoreSearchRow[]> {
+        try {
+            return await this.buildStoreSearchQuery(keyword, limit).getRawMany<DiscoveryStoreSearchRow>();
+        } catch {
+            throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
+        }
+    }
+
+    /**
+     * 업체 이름 검색 쿼리 — 상호명 부분 일치(이스케이프) · 영업 중 · 영업중지 · 지워지지 않은 업체, 상호명 순(같으면 ID 순) 최대 limit 건.
+     * 주소 · 위경도(지도 위치 확인)와 대표 사진(지워지지 않은 업체 사진 중 정렬 순서 · 등록일이 가장 앞인 1장의 키 · 저장소 — 반경 업체 쿼리와 같은 서브쿼리)을 같이 읽는다.
+     * 매핑 민감(raw select · 서브쿼리 · IN · ILIKE)이라 Data-Access Smoke spec 으로 SQL 을 고정한다.
+     *
+     * @param keyword 검색어
+     * @param limit 최대 개수
+     * @returns 쿼리 빌더
+     */
+    buildStoreSearchQuery(keyword: string, limit: number): SelectQueryBuilder<StoreEntity> {
+        return this.stores
+            .createQueryBuilder('s')
+            .select('s.store_id', 'store_id')
+            .addSelect('s.store_name', 'store_name')
+            .addSelect('s.address', 'address')
+            .addSelect('s.latitude', 'latitude')
+            .addSelect('s.longitude', 'longitude')
+            .addSelect(
+                (sub) =>
+                    sub
+                        .select('"f"."file_key"')
+                        .from(StoreFileEntity, 'f')
+                        .where('"f"."store_id" = "s"."store_id"')
+                        .andWhere('"f"."store_file_purpose_id" = :image_purpose')
+                        .andWhere('"f"."is_deleted" = 0')
+                        .orderBy('"f"."sort_order"', 'ASC')
+                        .addOrderBy('"f"."created_at"', 'ASC')
+                        .limit(1),
+                'cover_file_key',
+            )
+            .addSelect(
+                (sub) =>
+                    sub
+                        .select('"f"."file_storage"')
+                        .from(StoreFileEntity, 'f')
+                        .where('"f"."store_id" = "s"."store_id"')
+                        .andWhere('"f"."store_file_purpose_id" = :image_purpose')
+                        .andWhere('"f"."is_deleted" = 0')
+                        .orderBy('"f"."sort_order"', 'ASC')
+                        .addOrderBy('"f"."created_at"', 'ASC')
+                        .limit(1),
+                'cover_file_storage',
+            )
+            .where('s.store_name ILIKE :pattern', {pattern: toContainsPattern(keyword)})
+            .andWhere('s.store_state_id IN (:...states)', {states: DISCOVERY_SEARCH_STORE_STATES})
+            .andWhere('s.is_deleted = 0')
+            .orderBy('s.store_name', 'ASC')
+            .addOrderBy('s.store_id', 'ASC')
+            .limit(limit)
+            .setParameters({image_purpose: DISCOVERY_STORE_IMAGE_PURPOSE});
     }
 
     /**

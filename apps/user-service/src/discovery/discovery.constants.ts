@@ -30,3 +30,9 @@ export const DISCOVERY_STORE_NOT_FOUND_MESSAGE = '업체를 찾을 수 없습니
 
 /** 추가정보 필터에 정의에 없는 항목이 있다 — DTO 모양 검사와 같은 문구 */
 export const DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE = '추가정보 필터가 올바르지 않습니다.';
+
+/** 업체 이름 검색(문의할 업체 고르기) 대상 상태 — 영업 중 · 영업중지(탈퇴 제외, 사용자 결정 2026-11-24). 다른 둘러보기는 활성만 보인다 */
+export const DISCOVERY_SEARCH_STORE_STATES: string[] = ['ACTIVE', 'SUSPEND'];
+
+/** 업체 이름 검색 최대 개수 */
+export const DISCOVERY_STORE_SEARCH_LIMIT = 20;

@@ -9,6 +9,7 @@ import type {
 } from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import type {DiscoveryRoomGroupDetailFilterItemResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
 import type {DiscoveryStoreItemResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
+import type {DiscoveryStoreSearchItemResultDto} from '@app/contracts/discovery/dto/discovery-store-search.dto.js';
 import type {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
 import type {RoomGroupPlanEntity} from '@app/database/entities/room/room-group-plan.entity.js';
 import {ROOM_GROUP_DETAIL_DEFAULTS, ROOM_GROUP_DETAIL_FILTERS} from '@app/database/entities/room/room-group.entity.js';
@@ -17,7 +18,7 @@ import type {StoreBreakEntity} from '@app/database/entities/store/store-break.en
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
 import {DISCOVERY_DATE_FORMAT, DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE_ORDER, DISCOVERY_RADIUS_ALL} from './discovery.constants.js';
-import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow} from './interfaces/discovery.repository.interface.js';
+import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow, DiscoveryStoreSearchRow} from './interfaces/discovery.repository.interface.js';
 
 /** 반경을 덮는 위경도 사각형 — 인덱스로 먼저 거를 범위 */
 export interface RadiusBox {
@@ -343,4 +344,15 @@ export function toDiscoveryRoomGroups(
         });
     }
     return result;
+}
+
+/**
+ * 업체 이름 검색 행 → 결과 항목 (위경도는 raw 숫자 문자열일 수 있어 Number)
+ *
+ * @param row 업체 이름 검색 행
+ * @param image_url 대표 사진 공개 주소(없으면 null)
+ * @returns 업체 항목
+ */
+export function toStoreSearchItem(row: DiscoveryStoreSearchRow, image_url: string | null): DiscoveryStoreSearchItemResultDto {
+    return {store_id: row.store_id, store_name: row.store_name, address: row.address, latitude: Number(row.latitude), longitude: Number(row.longitude), image_url};
 }
