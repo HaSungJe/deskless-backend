@@ -45,6 +45,8 @@ export interface UserRepositoryInterface {
     findSmsVerification(where: FindOptionsWhere<SmsVerificationEntity>): Promise<SmsVerificationEntity | null>;
     /** 확인 시도 1회 소비 — 한도 미만일 때만 +1, 확인과 같은 트랜잭션. 한도에 닿았으면 false */
     consumeSmsVerificationAttempt(sms_verification_id: string, max_attempts: number): Promise<boolean>;
-    /** SMS 인증 기록 수정 (verified_at) */
+    /** SMS 인증 기록 수정 — 새 번호를 보내기 전에 이전 미사용 번호를 닫는다(expires_at, 여러 행) */
     updateSmsVerification(where: FindOptionsWhere<SmsVerificationEntity>, entity: SmsVerificationEntity): Promise<void>;
+    /** SMS 인증 완료 표시 — where 에 verified_at IS NULL, 1행을 바꿨으면 true(이미 사용됐으면 false) */
+    completeSmsVerification(where: FindOptionsWhere<SmsVerificationEntity>, entity: SmsVerificationEntity): Promise<boolean>;
 }

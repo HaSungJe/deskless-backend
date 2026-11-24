@@ -1,8 +1,8 @@
 import type {TestingModule} from '@nestjs/testing';
-import {In, MoreThanOrEqual} from 'typeorm';
+import {In, IsNull, MoreThan, MoreThanOrEqual} from 'typeorm';
 import {sha256Hex} from '@app/common/utils/hash.js';
 import {USER_COMMAND} from '@app/contracts/user/user.commands.js';
-import type {SmsVerificationEntity} from '@app/database/entities/user/sms-verification.entity.js';
+import {SmsVerificationEntity} from '@app/database/entities/user/sms-verification.entity.js';
 import type {CommandDispatcher} from '@app/messaging/command.dispatcher.js';
 import {bootCommandPath, createJwtServiceMock, createSmsSenderMock, createUserRepositoryMock, FIXED_TIME, runCommand, SmsSenderMock, UserRepositoryMock} from './user.test-helper.js';
 
@@ -64,6 +64,14 @@ describe('아이디 찾기 (큐 경로)', () => {
             // 하루 발송 수는 한국 날짜 0시부터 센다 — FIXED_TIME(2026-01-01)의 한국 0시 = 2025-12-31T15:00Z
             expect(repo.countSmsVerifications).toHaveBeenCalledWith({phone: PHONE, created_at: MoreThanOrEqual(new Date('2025-12-31T15:00:00.000Z'))});
             const inserted = repo.insertSmsVerification.mock.calls[0][0];
+            // 같은 회원 · 같은 용도로 아직 쓰지 않은 이전 번호를 발송 기록보다 먼저 닫는다(마지막에 받은 번호만 쓴다)
+            expect(repo.updateSmsVerification).toHaveBeenCalledTimes(1);
+            expect(repo.updateSmsVerification).toHaveBeenCalledWith(
+                {user_id: USER_ID, sms_purpose_id: 'FIND_LOGIN_ID', verified_at: IsNull(), expires_at: MoreThan(FIXED_TIME)},
+                {expires_at: FIXED_TIME},
+            );
+            expect(repo.updateSmsVerification.mock.calls[0][1]).toBeInstanceOf(SmsVerificationEntity);
+            expect(repo.updateSmsVerification.mock.invocationCallOrder[0]).toBeLessThan(repo.insertSmsVerification.mock.invocationCallOrder[0]);
             expect(inserted).toMatchObject({sms_purpose_id: 'FIND_LOGIN_ID', user_id: USER_ID, phone: PHONE, code_hash: sha256Hex('123456'), code: '123456'});
             expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(result).toEqual({result: {sms_verification_id: inserted.sms_verification_id, expires_at: new Date(FIXED_TIME.getTime() + 5 * 60 * 1000).toISOString()}, error: null});
@@ -76,6 +84,7 @@ describe('아이디 찾기 (큐 경로)', () => {
 
             expect(result?.error).toEqual({status_code: 404, body: {message: '일치하는 회원 정보가 없습니다.', validation_errors: null}});
             expect(repo.insertSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(sms.send).not.toHaveBeenCalled();
         });
 
@@ -87,6 +96,7 @@ describe('아이디 찾기 (큐 경로)', () => {
 
             expect(result?.error?.status_code).toBe(429);
             expect(repo.insertSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(sms.send).not.toHaveBeenCalled();
         });
     });
@@ -96,6 +106,7 @@ describe('아이디 찾기 (큐 경로)', () => {
             repo.findSmsVerification.mockResolvedValueOnce(verification());
             repo.findUser.mockResolvedValueOnce({user_id: USER_ID, login_id: 'KAKAO_20250601093000000', sns_id: 'KAKAO', created_at: CREATED_AT});
             repo.consumeSmsVerificationAttempt.mockResolvedValueOnce(true);
+            repo.completeSmsVerification.mockResolvedValueOnce(true);
 
             const {result} = await runCommand(dispatcher, {type: USER_COMMAND.FIND_LOGIN_ID_CONFIRM, payload: PAYLOAD});
 
@@ -103,7 +114,8 @@ describe('아이디 찾기 (큐 경로)', () => {
             expect(repo.findSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id, sms_purpose_id: 'FIND_LOGIN_ID'});
             expect(repo.findUser).toHaveBeenCalledWith({user_id: USER_ID, login_scope: 'USER', state_id: RECOVERY_STATES});
             expect(repo.consumeSmsVerificationAttempt).toHaveBeenCalledWith(PAYLOAD.sms_verification_id, 3);
-            expect(repo.updateSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id}, {verified_at: FIXED_TIME});
+            expect(repo.completeSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id, verified_at: IsNull()}, {verified_at: FIXED_TIME});
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
         });
 
         it('[FAIL:service] 인증 ID 의 기록이 없으면 404, 시도 소비 없음', async () => {
@@ -125,6 +137,18 @@ describe('아이디 찾기 (큐 경로)', () => {
             expect(repo.consumeSmsVerificationAttempt).not.toHaveBeenCalled();
         });
 
+        it('[FAIL:business] 같은 인증번호를 동시에 확인해 다른 요청이 먼저 완료했으면(완료 표시 0행) 400 이미 사용 — 아이디를 돌려주지 않는다', async () => {
+            repo.findSmsVerification.mockResolvedValueOnce(verification());
+            repo.findUser.mockResolvedValueOnce({user_id: USER_ID, login_id: 'KAKAO_20250601093000000', sns_id: 'KAKAO', created_at: CREATED_AT});
+            repo.consumeSmsVerificationAttempt.mockResolvedValueOnce(true);
+            repo.completeSmsVerification.mockResolvedValueOnce(false);
+
+            const {result} = await runCommand(dispatcher, {type: USER_COMMAND.FIND_LOGIN_ID_CONFIRM, payload: PAYLOAD});
+
+            expect(result).toEqual({result: null, error: {status_code: 400, body: {message: '이미 사용한 인증번호입니다. 인증번호를 다시 요청해주세요.', validation_errors: null}}});
+            expect(repo.completeSmsVerification).toHaveBeenCalledTimes(1);
+        });
+
         it('[FAIL:validation] 인증번호가 다르면 400, 인증 완료 없음', async () => {
             repo.findSmsVerification.mockResolvedValueOnce(verification());
             repo.findUser.mockResolvedValueOnce({user_id: USER_ID, login_id: 'deskless_01', sns_id: null, created_at: CREATED_AT});
@@ -134,7 +158,7 @@ describe('아이디 찾기 (큐 경로)', () => {
 
             expect(result?.error?.status_code).toBe(400);
             expect(result?.error?.body.validation_errors).toEqual([{property: 'code', message: '인증번호가 일치하지 않습니다.'}]);
-            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
+            expect(repo.completeSmsVerification).not.toHaveBeenCalled();
         });
     });
 });

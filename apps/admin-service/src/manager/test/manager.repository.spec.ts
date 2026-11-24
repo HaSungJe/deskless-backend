@@ -1,7 +1,9 @@
 import {BadRequestException, InternalServerErrorException} from '@nestjs/common';
 import type {TransactionHost} from '@nestjs-cls/transactional';
 import type {TransactionalAdapterTypeOrm} from '@nestjs-cls/transactional-adapter-typeorm';
-import {DataSource, QueryFailedError} from 'typeorm';
+import {DataSource, IsNull, QueryFailedError} from 'typeorm';
+import type {EntityTarget, ObjectLiteral} from 'typeorm';
+import {buildSmsVerificationCompletion, buildSmsVerificationExpiry} from '@app/account/utils/sms-verification.js';
 import {ManagerStaffListDto} from '@app/contracts/manager/dto/manager-staff-list.dto.js';
 import {ENTITIES} from '@app/database/entities.js';
 import {StoreEntity} from '@app/database/entities/store/store.entity.js';
@@ -11,6 +13,19 @@ import {SmsVerificationEntity} from '@app/database/entities/user/sms-verificatio
 import {UserEntity} from '@app/database/entities/user/user.entity.js';
 import {buildStaffListWhere} from '../manager.util.js';
 import {ManagerRepository} from '../repositories/manager.repository.js';
+
+/**
+ * 가로챈 manager.update(대상, 조건, 값)을 같은 UPDATE 로 빌드한다 — 관계 컬럼 · 연산자 조건이 SQL 로 어떻게 바뀌는지 고정한다.
+ *
+ * @param dataSource 메타데이터만 만든 DataSource
+ * @param call update 호출 인자
+ * @returns 공백을 하나로 줄인 SQL 과 파라미터
+ */
+function buildUpdateQuery(dataSource: DataSource, call: unknown[]): [string, unknown[]] {
+    const [target, criteria, partial] = call as [EntityTarget<ObjectLiteral>, ObjectLiteral, ObjectLiteral];
+    const [sql, parameters] = dataSource.manager.createQueryBuilder().update(target).set(partial).where(criteria).getQueryAndParameters();
+    return [sql.replace(/\s+/g, ' '), parameters];
+}
 
 /**
  * PostgreSQL 드라이버가 던지는 것과 같은 모양의 제약 위반 오류.
@@ -150,6 +165,21 @@ describe('ManagerRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         expect(session.findOne).toHaveBeenCalledWith({where: {session_id: 's1', is_deleted: 0}, loadRelationIds: true});
     });
 
+    describe('completeSmsVerification — 사용 전인 기록만 인증 완료', () => {
+        it.each([
+            [1, true],
+            [0, false],
+        ])('갱신 행 %i → %s (이미 사용된 기록이면 false — service 가 400 으로 롤백)', async (affected, expected) => {
+            const {repository, sms} = makeRepository();
+            sms.update.mockResolvedValueOnce({affected});
+            const where = {sms_verification_id: 'v1', verified_at: IsNull()};
+            const entity = Object.assign(new SmsVerificationEntity(), {verified_at: new Date(0)});
+
+            await expect(repository.completeSmsVerification(where, entity)).resolves.toBe(expected);
+            expect(sms.update).toHaveBeenCalledWith(where, entity);
+        });
+    });
+
     it.each([
         ['findManager', 'user', 'findOne'],
         ['updateManager', 'user', 'update'],
@@ -163,6 +193,7 @@ describe('ManagerRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
         ['countSmsVerifications', 'sms', 'count'],
         ['findSmsVerification', 'sms', 'findOne'],
         ['updateSmsVerification', 'sms', 'update'],
+        ['completeSmsVerification', 'sms', 'update'],
     ] as const)('%s 실패는 통일 500', async (method, repo, fn) => {
         const fakes = makeRepository();
         fakes[repo][fn].mockRejectedValueOnce(new Error('db'));
@@ -195,7 +226,7 @@ describe('ManagerRepository — TypeORM 오류 → HTTP 예외 매핑', () => {
 /** 업체 관리자 관리 필터 — 조건 없음 */
 const ACCOUNT_FILTER = {user_id: null, keyword: null, store_id: null, auth_id: null, state_id: null};
 
-describe('[SMOKE:data-access] findLoginManager · consumeSmsVerificationAttempt · 업체 인력 목록 쿼리 — DB 연결 없이 SQL 빌드', () => {
+describe('[SMOKE:data-access] findLoginManager · consumeSmsVerificationAttempt · 인증 기록 update 조건 · 업체 인력 목록 쿼리 — DB 연결 없이 SQL 빌드', () => {
     let dataSource: DataSource;
     let repository: ManagerRepository;
 
@@ -229,6 +260,32 @@ describe('[SMOKE:data-access] findLoginManager · consumeSmsVerificationAttempt 
 
         expect(parameters).toEqual(['v1', 3]);
         expect(sql).toBe('UPDATE "t_sms_verification" SET "attempt_count" = "attempt_count" + 1, "updated_at" = CURRENT_TIMESTAMP WHERE "sms_verification_id" = $1 AND "attempt_count" < $2');
+    });
+
+    it('이전 미사용 인증번호 닫기 — 같은 회원 · 같은 용도 · 사용 전 · 만료 전인 행의 만료를 지금으로(관계 컬럼 조건)', async () => {
+        const update = vi.spyOn(dataSource.manager, 'update').mockResolvedValue({affected: 2, raw: [], generatedMaps: []});
+        const now = new Date('2026-01-01T00:00:00.000Z');
+        const expiry = buildSmsVerificationExpiry('u1', 'PHONE_VERIFY', now);
+
+        await repository.updateSmsVerification(expiry.where, expiry.entity);
+        const [sql, parameters] = buildUpdateQuery(dataSource, update.mock.calls[0]);
+        update.mockRestore();
+
+        expect(parameters).toEqual([now, 'u1', 'PHONE_VERIFY', now]);
+        expect(sql).toBe('UPDATE "t_sms_verification" SET "expires_at" = $1 WHERE ("user_id" = $2 AND "sms_purpose_id" = $3 AND "verified_at" IS NULL AND "expires_at" > $4)');
+    });
+
+    it('인증 완료 — 인증 ID 의 사용 전인 행만(verified_at IS NULL)', async () => {
+        const update = vi.spyOn(dataSource.manager, 'update').mockResolvedValue({affected: 1, raw: [], generatedMaps: []});
+        const now = new Date('2026-01-01T00:00:00.000Z');
+        const completion = buildSmsVerificationCompletion('v1', now);
+
+        await expect(repository.completeSmsVerification(completion.where, completion.entity)).resolves.toBe(true);
+        const [sql, parameters] = buildUpdateQuery(dataSource, update.mock.calls[0]);
+        update.mockRestore();
+
+        expect(parameters).toEqual([now, 'v1']);
+        expect(sql).toBe('UPDATE "t_sms_verification" SET "verified_at" = $1 WHERE ("sms_verification_id" = $2 AND "verified_at" IS NULL)');
     });
 
     const USER_SELECT =

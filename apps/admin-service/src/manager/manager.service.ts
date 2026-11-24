@@ -18,7 +18,15 @@ import {
     USER_NOT_FOUND_MESSAGE,
 } from '@app/account/account.constants.js';
 import {generateTemporaryPassword, temporaryPasswordText} from '@app/account/utils/password.js';
-import {buildSmsVerification, checkSmsVerification, generateVerificationCode, getSmsDailyLimit, smsVerificationText} from '@app/account/utils/sms-verification.js';
+import {
+    buildSmsVerification,
+    buildSmsVerificationCompletion,
+    buildSmsVerificationExpiry,
+    checkSmsVerification,
+    generateVerificationCode,
+    getSmsDailyLimit,
+    smsVerificationText,
+} from '@app/account/utils/sms-verification.js';
 import {issueAccessAndRefresh} from '@app/account/utils/token.js';
 import {getBcrypt, matchBcrypt} from '@app/common/utils/bcrypt.js';
 import {encryptAesGcm} from '@app/common/utils/cipher.js';
@@ -45,7 +53,6 @@ import type {ManagerTokenRefreshDto, ManagerTokenRefreshResultDto} from '@app/co
 import {AUTH_ID, LOGIN_SCOPE} from '@app/contracts/roles.js';
 import {SessionRefreshEntity} from '@app/database/entities/user/session-refresh.entity.js';
 import {SessionEntity} from '@app/database/entities/user/session.entity.js';
-import {SmsVerificationEntity} from '@app/database/entities/user/sms-verification.entity.js';
 import {UserEntity} from '@app/database/entities/user/user.entity.js';
 import {SMS_SENDER} from '@app/integration/integration.symbols.js';
 import type {SmsSenderInterface} from '@app/integration/interfaces/integration.interface.js';
@@ -307,7 +314,9 @@ export class ManagerService {
             throw new HttpException({message: SMS_DAILY_LIMIT_MESSAGE}, HttpStatus.TOO_MANY_REQUESTS);
         }
 
-        // 3. 발송 기록 → SMS 발송(마지막)
+        // 3. 이전 미사용 번호 닫기(마지막에 받은 번호만 쓴다) → 발송 기록 → SMS 발송(마지막)
+        const expiry = buildSmsVerificationExpiry(manager.user_id, SMS_PURPOSE.FIND_LOGIN_ID, now);
+        await this.managerRepository.updateSmsVerification(expiry.where, expiry.entity);
         const code = generateVerificationCode();
         const verification = buildSmsVerification({sms_purpose_id: SMS_PURPOSE.FIND_LOGIN_ID, user_id: manager.user_id, phone: dto.phone, code, ip, now});
         await this.managerRepository.insertSmsVerification(verification);
@@ -350,10 +359,11 @@ export class ManagerService {
             return new BadRequestException({message: SMS_CODE_MISMATCH_MESSAGE, validation_errors: createValidationError('code', SMS_CODE_MISMATCH_MESSAGE)});
         }
 
-        // 4. 인증 완료 → 결과
-        const verifiedEntity = new SmsVerificationEntity();
-        verifiedEntity.verified_at = now;
-        await this.managerRepository.updateSmsVerification({sms_verification_id: verification.sms_verification_id}, verifiedEntity);
+        // 4. 인증 완료(사용 전인 기록만 — 동시 확인의 뒤 요청은 400 으로 롤백) → 결과
+        const completion = buildSmsVerificationCompletion(verification.sms_verification_id, now);
+        if (!(await this.managerRepository.completeSmsVerification(completion.where, completion.entity))) {
+            throw new BadRequestException({message: SMS_STATE_MESSAGE.USED});
+        }
         return {login_id: manager.login_id, created_at: manager.created_at.toISOString()};
     }
 
@@ -382,7 +392,9 @@ export class ManagerService {
             throw new HttpException({message: SMS_DAILY_LIMIT_MESSAGE}, HttpStatus.TOO_MANY_REQUESTS);
         }
 
-        // 3. 발송 기록 → SMS 발송(마지막)
+        // 3. 이전 미사용 번호 닫기(마지막에 받은 번호만 쓴다) → 발송 기록 → SMS 발송(마지막)
+        const expiry = buildSmsVerificationExpiry(manager.user_id, SMS_PURPOSE.PASSWORD_RESET, now);
+        await this.managerRepository.updateSmsVerification(expiry.where, expiry.entity);
         const code = generateVerificationCode();
         const verification = buildSmsVerification({sms_purpose_id: SMS_PURPOSE.PASSWORD_RESET, user_id: manager.user_id, phone: dto.phone, code, ip, now});
         await this.managerRepository.insertSmsVerification(verification);
@@ -426,10 +438,11 @@ export class ManagerService {
             return new BadRequestException({message: SMS_CODE_MISMATCH_MESSAGE, validation_errors: createValidationError('code', SMS_CODE_MISMATCH_MESSAGE)});
         }
 
-        // 4. 인증 완료 → 임시 비밀번호로 교체 + 변경 필요 표시 → SMS 발송(마지막)
-        const verifiedEntity = new SmsVerificationEntity();
-        verifiedEntity.verified_at = now;
-        await this.managerRepository.updateSmsVerification({sms_verification_id: verification.sms_verification_id}, verifiedEntity);
+        // 4. 인증 완료(사용 전인 기록만 — 동시 확인의 뒤 요청은 400 으로 롤백해 임시 비밀번호를 두 번 만들지 않는다) → 임시 비밀번호로 교체 + 변경 필요 표시 → SMS 발송(마지막)
+        const completion = buildSmsVerificationCompletion(verification.sms_verification_id, now);
+        if (!(await this.managerRepository.completeSmsVerification(completion.where, completion.entity))) {
+            throw new BadRequestException({message: SMS_STATE_MESSAGE.USED});
+        }
 
         const temporaryPassword = generateTemporaryPassword();
         const managerEntity = new UserEntity();

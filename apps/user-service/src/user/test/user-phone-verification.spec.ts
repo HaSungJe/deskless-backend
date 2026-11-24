@@ -1,6 +1,6 @@
 import {ServiceUnavailableException} from '@nestjs/common';
 import type {TestingModule} from '@nestjs/testing';
-import {MoreThanOrEqual} from 'typeorm';
+import {IsNull, MoreThan, MoreThanOrEqual} from 'typeorm';
 import {sha256Hex} from '@app/common/utils/hash.js';
 import {USER_COMMAND} from '@app/contracts/user/user.commands.js';
 import {SmsVerificationEntity} from '@app/database/entities/user/sms-verification.entity.js';
@@ -87,6 +87,14 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
                 verified_at: null,
                 ip: '10.0.0.1',
             });
+            // 같은 회원 · 같은 용도로 아직 쓰지 않은 이전 번호를 발송 기록보다 먼저 닫는다(마지막에 받은 번호만 쓴다)
+            expect(repo.updateSmsVerification).toHaveBeenCalledTimes(1);
+            expect(repo.updateSmsVerification).toHaveBeenCalledWith(
+                {user_id: ACTOR.user_id, sms_purpose_id: 'PHONE_VERIFY', verified_at: IsNull(), expires_at: MoreThan(FIXED_TIME)},
+                {expires_at: FIXED_TIME},
+            );
+            expect(repo.updateSmsVerification.mock.calls[0][1]).toBeInstanceOf(SmsVerificationEntity);
+            expect(repo.updateSmsVerification.mock.invocationCallOrder[0]).toBeLessThan(repo.insertSmsVerification.mock.invocationCallOrder[0]);
             expect(sms.send).toHaveBeenCalledTimes(1);
             expect(sms.send).toHaveBeenCalledWith({to: PHONE, text: '[바로방] 인증번호 [123456] — 5분 안에 입력해주세요.'});
             expect(repo.insertSmsVerification.mock.invocationCallOrder[0]).toBeLessThan(sms.send.mock.invocationCallOrder[0]);
@@ -101,6 +109,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
             expect(result?.error).toEqual({status_code: 400, body: {message: '이미 휴대폰 인증을 마쳤습니다.', validation_errors: null}});
             expect(repo.countSmsVerifications).not.toHaveBeenCalled();
             expect(repo.insertSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(sms.send).not.toHaveBeenCalled();
         });
 
@@ -111,6 +120,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
 
             expect(result?.error).toEqual({status_code: 400, body: {message: '이미 가입된 번호입니다.', validation_errors: [{property: 'phone', message: '이미 가입된 번호입니다.'}]}});
             expect(repo.insertSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(sms.send).not.toHaveBeenCalled();
         });
 
@@ -126,6 +136,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
 
             expect(result?.error).toEqual({status_code: 429, body: {message: '오늘은 이 번호로 인증번호를 더 보낼 수 없습니다. 내일 다시 시도해주세요.', validation_errors: null}});
             expect(repo.insertSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(sms.send).not.toHaveBeenCalled();
         });
 
@@ -163,11 +174,12 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
     describe('user.member.phone-verification-confirm — 인증번호 확인', () => {
         const PAYLOAD = {sms_verification_id: 'v'.repeat(32), code: '123456'};
 
-        /** 확인 전 회원 · 인증 기록을 준비한다 */
-        function arrange(record: Partial<SmsVerificationEntity> | null = verification(), consumed = true): void {
+        /** 확인 전 회원 · 인증 기록을 준비한다 — completed 는 완료 표시가 1행을 바꿨는지(동시 확인에서 먼저 완료됐으면 false) */
+        function arrange(record: Partial<SmsVerificationEntity> | null = verification(), consumed = true, completed = true): void {
             repo.findUser.mockResolvedValueOnce({user_id: ACTOR.user_id, phone_verified_at: null, login_scope: 'USER'});
             repo.findSmsVerification.mockResolvedValueOnce(record);
             repo.consumeSmsVerificationAttempt.mockResolvedValueOnce(consumed);
+            repo.completeSmsVerification.mockResolvedValueOnce(completed);
         }
 
         it('[SUCCESS] 시도 1회를 소비하고 일치하면 인증 완료 + 그 기록의 번호를 회원정보에 저장', async () => {
@@ -179,7 +191,8 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
             expect(result).toEqual({result: null, error: null});
             expect(repo.findSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id, sms_purpose_id: 'PHONE_VERIFY', user_id: ACTOR.user_id});
             expect(repo.consumeSmsVerificationAttempt).toHaveBeenCalledWith(PAYLOAD.sms_verification_id, 3);
-            expect(repo.updateSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id}, {verified_at: FIXED_TIME});
+            expect(repo.completeSmsVerification).toHaveBeenCalledWith({sms_verification_id: PAYLOAD.sms_verification_id, verified_at: IsNull()}, {verified_at: FIXED_TIME});
+            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
             expect(repo.updateUser).toHaveBeenCalledWith({user_id: ACTOR.user_id}, {phone: PHONE, phone_verified_at: FIXED_TIME});
         });
 
@@ -210,7 +223,17 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
             const {result} = await runCommand(dispatcher, {type: USER_COMMAND.PHONE_VERIFICATION_CONFIRM, payload: PAYLOAD, actor: ACTOR});
 
             expect(result?.error).toEqual({status_code: 400, body: {message: '인증번호 입력 횟수를 초과했습니다. 인증번호를 다시 요청해주세요.', validation_errors: null}});
-            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
+            expect(repo.completeSmsVerification).not.toHaveBeenCalled();
+            expect(repo.updateUser).not.toHaveBeenCalled();
+        });
+
+        it('[FAIL:business] 같은 인증번호를 동시에 확인해 다른 요청이 먼저 완료했으면(완료 표시 0행) 400 이미 사용 — 번호 저장 없음', async () => {
+            arrange(verification(), true, false);
+
+            const {result} = await runCommand(dispatcher, {type: USER_COMMAND.PHONE_VERIFICATION_CONFIRM, payload: PAYLOAD, actor: ACTOR});
+
+            expect(result?.error).toEqual({status_code: 400, body: {message: '이미 사용한 인증번호입니다. 인증번호를 다시 요청해주세요.', validation_errors: null}});
+            expect(repo.completeSmsVerification).toHaveBeenCalledTimes(1);
             expect(repo.updateUser).not.toHaveBeenCalled();
         });
 
@@ -221,7 +244,7 @@ describe('휴대폰 SMS 인증 (큐 경로)', () => {
 
             expect(result?.error).toEqual({status_code: 400, body: {message: '인증번호가 일치하지 않습니다.', validation_errors: [{property: 'code', message: '인증번호가 일치하지 않습니다.'}]}});
             expect(repo.consumeSmsVerificationAttempt).toHaveBeenCalledTimes(1);
-            expect(repo.updateSmsVerification).not.toHaveBeenCalled();
+            expect(repo.completeSmsVerification).not.toHaveBeenCalled();
             expect(repo.updateUser).not.toHaveBeenCalled();
         });
 

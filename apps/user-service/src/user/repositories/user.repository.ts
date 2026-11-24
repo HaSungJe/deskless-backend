@@ -335,7 +335,7 @@ export class UserRepository implements UserRepositoryInterface {
     }
 
     /**
-     * SMS 인증 기록 수정 (verified_at)
+     * SMS 인증 기록 수정 — 새 번호를 보내기 전에 이전 미사용 번호를 닫는다(expires_at, 여러 행).
      *
      * @param where 수정 조건
      * @param entity new SmsVerificationEntity() + 할당
@@ -343,6 +343,22 @@ export class UserRepository implements UserRepositoryInterface {
     async updateSmsVerification(where: FindOptionsWhere<SmsVerificationEntity>, entity: SmsVerificationEntity): Promise<void> {
         try {
             await this.smsVerifications.update(where, entity);
+        } catch {
+            throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
+        }
+    }
+
+    /**
+     * SMS 인증 완료 표시 — 상태 조건을 건 쓰기(where 에 verified_at IS NULL). 같은 기록을 동시에 확인하면 먼저 커밋한 쪽만 1행을 바꾼다.
+     *
+     * @param where 수정 조건(인증 ID + 사용 전)
+     * @param entity new SmsVerificationEntity() + verified_at
+     * @returns 1행을 바꿨으면 true, 이미 사용된 기록이면 false(service 가 400 으로 롤백)
+     */
+    async completeSmsVerification(where: FindOptionsWhere<SmsVerificationEntity>, entity: SmsVerificationEntity): Promise<boolean> {
+        try {
+            const result = await this.smsVerifications.update(where, entity);
+            return result.affected === 1;
         } catch {
             throw new InternalServerErrorException({message: SERVER_ERROR_MESSAGE});
         }

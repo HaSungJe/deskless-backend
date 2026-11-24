@@ -1,4 +1,6 @@
 import {randomInt} from 'node:crypto';
+import {IsNull, MoreThan} from 'typeorm';
+import type {FindOptionsWhere} from 'typeorm';
 import {dayjs} from '@app/common/utils/dayjs.js';
 import {sha256Hex} from '@app/common/utils/hash.js';
 import {generateId} from '@app/common/utils/id.js';
@@ -74,6 +76,41 @@ export function buildSmsVerification(input: SmsVerificationInput): SmsVerificati
     entity.verified_at = null;
     entity.ip = input.ip || null;
     return entity;
+}
+
+/** 인증 기록 수정 조건 · 값 — repository update 에 그대로 넘긴다 */
+export interface SmsVerificationUpdate {
+    where: FindOptionsWhere<SmsVerificationEntity>;
+    entity: SmsVerificationEntity;
+}
+
+/**
+ * 이전 인증번호 닫기 — 새 번호를 보내기 전에 같은 회원 · 같은 용도로 아직 쓰지 않았고 만료 전인 기록의 만료를 지금으로 당긴다.
+ * 마지막에 받은 번호만 쓸 수 있다(사용자 결정 2026-11-24). 닫힌 번호로 확인하면 "만료" 400 이다.
+ *
+ * @param user_id 회원 ID
+ * @param sms_purpose_id 용도
+ * @param now 기준 시각
+ * @returns 수정 조건 · 값(expires_at = now)
+ */
+export function buildSmsVerificationExpiry(user_id: string, sms_purpose_id: string, now: Date): SmsVerificationUpdate {
+    const entity = new SmsVerificationEntity();
+    entity.expires_at = now;
+    return {where: {user_id, sms_purpose_id, verified_at: IsNull(), expires_at: MoreThan(now)}, entity};
+}
+
+/**
+ * 인증 완료 표시 — 아직 사용 전인 행만 바꾼다(verified_at IS NULL). 같은 번호로 동시에 확인하면 먼저 커밋한 쪽만 1행을 바꾸고,
+ * 뒤의 요청은 0행이라 service 가 "이미 사용" 400 으로 롤백한다 — 한 번호는 한 번만 쓴다.
+ *
+ * @param sms_verification_id 인증 기록 ID
+ * @param now 인증 완료 시각
+ * @returns 수정 조건 · 값(verified_at = now)
+ */
+export function buildSmsVerificationCompletion(sms_verification_id: string, now: Date): SmsVerificationUpdate {
+    const entity = new SmsVerificationEntity();
+    entity.verified_at = now;
+    return {where: {sms_verification_id, verified_at: IsNull()}, entity};
 }
 
 /**

@@ -16,7 +16,15 @@ import {
     SMS_VERIFICATION_NOT_FOUND_MESSAGE,
     USER_NOT_FOUND_MESSAGE,
 } from '@app/account/account.constants.js';
-import {buildSmsVerification, checkSmsVerification, generateVerificationCode, getSmsDailyLimit, smsVerificationText} from '@app/account/utils/sms-verification.js';
+import {
+    buildSmsVerification,
+    buildSmsVerificationCompletion,
+    buildSmsVerificationExpiry,
+    checkSmsVerification,
+    generateVerificationCode,
+    getSmsDailyLimit,
+    smsVerificationText,
+} from '@app/account/utils/sms-verification.js';
 import {issueAccessAndRefresh} from '@app/account/utils/token.js';
 import {getBcrypt} from '@app/common/utils/bcrypt.js';
 import {encryptAesGcm} from '@app/common/utils/cipher.js';
@@ -37,7 +45,6 @@ import type {UserTokenRefreshDto, UserTokenRefreshResultDto} from '@app/contract
 import {AUTH_ID, LOGIN_SCOPE} from '@app/contracts/roles.js';
 import {SessionRefreshEntity} from '@app/database/entities/user/session-refresh.entity.js';
 import {SessionEntity} from '@app/database/entities/user/session.entity.js';
-import {SmsVerificationEntity} from '@app/database/entities/user/sms-verification.entity.js';
 import {UserSettingEntity} from '@app/database/entities/user/user-setting.entity.js';
 import {UserEntity} from '@app/database/entities/user/user.entity.js';
 import {SMS_SENDER} from '@app/integration/integration.symbols.js';
@@ -393,7 +400,9 @@ export class UserService {
             throw new HttpException({message: SMS_DAILY_LIMIT_MESSAGE}, HttpStatus.TOO_MANY_REQUESTS);
         }
 
-        // 4. 발송 기록 → SMS 발송(마지막)
+        // 4. 이전 미사용 번호 닫기(마지막에 받은 번호만 쓴다) → 발송 기록 → SMS 발송(마지막)
+        const expiry = buildSmsVerificationExpiry(user_id, SMS_PURPOSE.PHONE_VERIFY, now);
+        await this.userRepository.updateSmsVerification(expiry.where, expiry.entity);
         const code = generateVerificationCode();
         const verification = buildSmsVerification({sms_purpose_id: SMS_PURPOSE.PHONE_VERIFY, user_id, phone: dto.phone, code, ip, now});
         await this.userRepository.insertSmsVerification(verification);
@@ -441,10 +450,11 @@ export class UserService {
             return new BadRequestException({message: SMS_CODE_MISMATCH_MESSAGE, validation_errors: createValidationError('code', SMS_CODE_MISMATCH_MESSAGE)});
         }
 
-        // 4. 인증 완료 + 회원정보에 그 기록의 번호 저장 (같은 그룹의 다른 계정과 경쟁하면 UK_User_PhoneLoginScope → 400)
-        const verifiedEntity = new SmsVerificationEntity();
-        verifiedEntity.verified_at = now;
-        await this.userRepository.updateSmsVerification({sms_verification_id: verification.sms_verification_id}, verifiedEntity);
+        // 4. 인증 완료(사용 전인 기록만 — 같은 번호를 동시에 확인했으면 뒤의 요청은 400 으로 롤백) + 회원정보에 그 기록의 번호 저장 (같은 그룹의 다른 계정과 경쟁하면 UK_User_PhoneLoginScope → 400)
+        const completion = buildSmsVerificationCompletion(verification.sms_verification_id, now);
+        if (!(await this.userRepository.completeSmsVerification(completion.where, completion.entity))) {
+            throw new BadRequestException({message: SMS_STATE_MESSAGE.USED});
+        }
 
         const userEntity = new UserEntity();
         userEntity.phone = verification.phone;
@@ -474,7 +484,9 @@ export class UserService {
             throw new HttpException({message: SMS_DAILY_LIMIT_MESSAGE}, HttpStatus.TOO_MANY_REQUESTS);
         }
 
-        // 3. 발송 기록 → SMS 발송(마지막)
+        // 3. 이전 미사용 번호 닫기(마지막에 받은 번호만 쓴다) → 발송 기록 → SMS 발송(마지막)
+        const expiry = buildSmsVerificationExpiry(user.user_id, SMS_PURPOSE.FIND_LOGIN_ID, now);
+        await this.userRepository.updateSmsVerification(expiry.where, expiry.entity);
         const code = generateVerificationCode();
         const verification = buildSmsVerification({sms_purpose_id: SMS_PURPOSE.FIND_LOGIN_ID, user_id: user.user_id, phone: dto.phone, code, ip, now});
         await this.userRepository.insertSmsVerification(verification);
@@ -517,10 +529,11 @@ export class UserService {
             return new BadRequestException({message: SMS_CODE_MISMATCH_MESSAGE, validation_errors: createValidationError('code', SMS_CODE_MISMATCH_MESSAGE)});
         }
 
-        // 4. 인증 완료 → 결과 (SNS 계정은 자동 생성 아이디 대신 가입한 SNS)
-        const verifiedEntity = new SmsVerificationEntity();
-        verifiedEntity.verified_at = now;
-        await this.userRepository.updateSmsVerification({sms_verification_id: verification.sms_verification_id}, verifiedEntity);
+        // 4. 인증 완료(사용 전인 기록만 — 동시 확인의 뒤 요청은 400 으로 롤백) → 결과 (SNS 계정은 자동 생성 아이디 대신 가입한 SNS)
+        const completion = buildSmsVerificationCompletion(verification.sms_verification_id, now);
+        if (!(await this.userRepository.completeSmsVerification(completion.where, completion.entity))) {
+            throw new BadRequestException({message: SMS_STATE_MESSAGE.USED});
+        }
         return {login_id: user.sns_id ? null : user.login_id, sns_id: user.sns_id, created_at: user.created_at.toISOString()};
     }
 }

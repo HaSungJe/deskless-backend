@@ -79,6 +79,7 @@ export function createManagerRepositoryMock(): ManagerRepositoryMock {
         findSmsVerification: vi.fn(),
         consumeSmsVerificationAttempt: vi.fn(),
         updateSmsVerification: vi.fn(),
+        completeSmsVerification: vi.fn(),
     };
 }
 
