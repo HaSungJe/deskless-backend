@@ -15,7 +15,7 @@
 ## API 변경
 | 구분 | 메서드 · 주소 | 방식 | 바뀐 점(요청 · 응답 · 실패 · 로그인) |
 |---|---|---|---|
-| 추가 | `PUT /api/v1/admin-service/store/mine/detail` | 큐(SSE) · 매니저 | 내 업체 편의시설 설정 — **통째로 교체**. 본문 `{has_convenience_store?, has_cafe?, has_hot_spring?, is_pet_allowed?, has_meal?, is_delivery_allowed?, has_parking?}` 모두 선택 · 값 `0` · `1`, **빠진 항목은 없음(0)으로 저장**된다(빈 본문 `{}` = 전부 끔). done data 없음. 값이 0 · 1 이 아니면 400(그 항목 — 예: `온천 여부가 올바르지 않습니다.`), 선언 안 된 항목을 보내면 400. 소속 업체가 탈퇴 · 삭제됐으면 failed 404 `소속 업체를 찾을 수 없습니다.` |
+| 추가 | `PUT /api/v1/admin-service/store/mine/detail` | 큐(SSE) · 매니저 | 내 업체 편의시설 설정 — **통째로 교체**. 본문 `{has_convenience_store?, has_cafe?, has_hot_spring?, is_pet_allowed?, has_meal?, is_delivery_allowed?, has_parking?}` 모두 선택 · 값 `0` · `1`, **빠진 항목은 없음(0)으로 저장**된다(빈 본문 `{}` = 전부 끔). done data 없음. 값이 0 · 1 이 아니면 400(그 항목 — 예: `온천 여부가 올바르지 않습니다.`), 선언 안 된 항목은 저장하지 않고 버린다(400 아님 — 2026-11-25 바로잡음). 소속 업체가 탈퇴 · 삭제됐으면 failed 404 `소속 업체를 찾을 수 없습니다.` |
 | 추가 | `GET /api/v1/user-service/discovery/detail-filter` | 동기 · 로그인 없음 | 추가정보 필터 항목 `{list: [{key, name, group}]}` — 보일 순서. 객실(`group: ROOM_GROUP`) `room_count` 방 2개 이상 · `has_shower` 샤워실 · `has_tv` TV · `has_pc` PC, 다음 업체(`group: STORE`) `has_convenience_store` 편의점 · `has_cafe` 카페 · `has_hot_spring` 온천 · `is_pet_allowed` 반려동물 동반 · `has_meal` 식사 제공 · `is_delivery_allowed` 배달 음식 · `has_parking` 주차. 실패는 공통(503 · 500) |
 | 삭제 | `GET /api/v1/user-service/discovery/room-group-detail-filter` | — | 위 `detail-filter` 로 바뀐다(404) |
 | 변경 | `GET /api/v1/user-service/discovery/store` | 동기 · 로그인 없음 | query `detail_filter` 에 **업체 편의시설 키도 섞어 넣을 수 있다**(예: `has_pc,has_hot_spring,is_pet_allowed`). 객실 키는 "고른 조건을 모두 갖춘 객실 그룹이 있는 업체", 업체 키는 "그 시설이 있는 업체" — 고른 것을 모두 만족하는 업체만. 목록에 없는 키는 지금처럼 400 `추가정보 필터가 올바르지 않습니다.`. 응답은 그대로 |
@@ -36,7 +36,7 @@ contracts/store/dto/store-mine-detail.dto.ts — 새 파일
 import {IsIn, IsOptional} from 'class-validator';
 
 /**
- * 내 업체 편의시설 설정 (업체 관리자) — 통째로 교체. 항목은 모두 선택이고 빠진 항목은 없음(0)으로 저장한다. 선언하지 않은 항목은 400(forbidNonWhitelisted).
+ * 내 업체 편의시설 설정 (업체 관리자) — 통째로 교체. 항목은 모두 선택이고 빠진 항목은 없음(0)으로 저장한다. 선언하지 않은 항목은 검증에서 막지 않고(전역 파이프 whitelist 꺼짐) service 가 버린다.
  */
 export class StoreMineDetailDto {
     // 편의점 (0: 없음, 1: 있음)

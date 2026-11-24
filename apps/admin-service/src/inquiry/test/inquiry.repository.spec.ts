@@ -223,9 +223,10 @@ describe('[SMOKE:data-access] 매니저 소속 업체 · 문의 관리 목록 ·
         const [sql, parameters] = buildUpdateQuery(dataSource, update.mock.calls[0]);
         update.mockRestore();
 
-        expect(parameters).toEqual(['ANSWERED', INQUIRY_ID, 'BLIND']);
-        expect(sql).toContain('"blind_user_id" = NULL');
-        expect(sql).toContain('"blinded_at" = NULL');
+        // TypeORM 1.x 는 SET 의 NULL 도 파라미터로 넘긴다(값은 NULL 그대로)
+        expect(parameters).toEqual(['ANSWERED', null, null, INQUIRY_ID, 'BLIND']);
+        expect(sql).toContain('"blind_user_id" = $2');
+        expect(sql).toContain('"blinded_at" = $3');
         expect(sql).toContain('"store_id" IS NULL');
         expect(sql).toContain('NOT("answered_at" IS NULL)');
     });

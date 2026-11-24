@@ -261,7 +261,7 @@ describe('[SMOKE:data-access] 목록 · 파일 조회 · 파일 업체 지정 ·
     const STORE_SELECT =
         'SELECT "s"."store_id" AS "s_store_id", "s"."store_code" AS "s_store_code", "s"."store_name" AS "s_store_name", "s"."business_number" AS "s_business_number", ' +
         '"s"."owner_name" AS "s_owner_name", "s"."phone" AS "s_phone", "s"."address" AS "s_address", "s"."address_detail" AS "s_address_detail", "s"."latitude" AS "s_latitude", ' +
-        '"s"."longitude" AS "s_longitude", "s"."introduction" AS "s_introduction", "s"."is_always_open" AS "s_is_always_open", ' +
+        '"s"."longitude" AS "s_longitude", "s"."introduction" AS "s_introduction", "s"."store_detail" AS "s_store_detail", "s"."is_always_open" AS "s_is_always_open", ' +
         '"s"."is_open" AS "s_is_open", "s"."maintenance_minutes" AS "s_maintenance_minutes", "s"."booking_open_hours" AS "s_booking_open_hours", ' +
         '"s"."refund_deadline_minutes" AS "s_refund_deadline_minutes", "s"."late_refund_percent" AS "s_late_refund_percent", "s"."door_secret" AS "s_door_secret", "s"."suspend_comment" AS "s_suspend_comment", "s"."is_deleted" AS "s_is_deleted", "s"."delete_backup" AS "s_delete_backup", ' +
         '"s"."created_at" AS "s_created_at", "s"."updated_at" AS "s_updated_at", "s"."store_state_id" AS "s_store_state_id" FROM "t_store" "s"';

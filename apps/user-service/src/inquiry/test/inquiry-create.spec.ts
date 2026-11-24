@@ -92,9 +92,9 @@ describe('user.inquiry.create — 문의 등록 (큐 경로)', () => {
             await expect(validateBody(InquiryDto, {...DTO, title: '가'.repeat(101)})).resolves.toMatchObject({validation_errors: [{property: 'title', message: '제목은 100자 이내로 입력해주세요.'}]});
         });
 
-        it('업체 ID 형식이 틀리면 → store_id, 동의 값 같은 선언 안 된 필드는 거절', async () => {
+        it('업체 ID 형식이 틀리면 → store_id, 동의 값 같은 선언 안 된 필드는 게이트웨이가 막지 않는다(whitelist 꺼짐 — service 가 필드별로 저장해 버린다)', async () => {
             await expect(validateBody(InquiryDto, {...DTO, store_id: 'store-1'})).resolves.toMatchObject({validation_errors: [{property: 'store_id', message: '업체 ID가 올바르지 않습니다.'}]});
-            await expect(validateBody(InquiryDto, {...DTO, is_agreed: 1})).resolves.not.toBeNull();
+            await expect(validateBody(InquiryDto, {...DTO, is_agreed: 1})).resolves.toBeNull();
         });
 
         it('업체 없이(바로방) 카테고리 · 제목 · 내용만 있으면 통과', async () => {

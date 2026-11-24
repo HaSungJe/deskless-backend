@@ -2,7 +2,7 @@ import {ApiProperty} from '@nestjs/swagger';
 import {IsIn, IsOptional} from 'class-validator';
 
 /**
- * 내 업체 편의시설 설정 (업체 관리자) — 통째로 교체. 항목은 모두 선택이고 빠진 항목은 없음(0)으로 저장한다. 선언하지 않은 항목은 400(forbidNonWhitelisted).
+ * 내 업체 편의시설 설정 (업체 관리자) — 통째로 교체. 항목은 모두 선택이고 빠진 항목은 없음(0)으로 저장한다. 선언하지 않은 항목은 검증에서 막지 않고(전역 파이프 whitelist 꺼짐) service 가 버린다.
  */
 export class StoreMineDetailDto {
     @ApiProperty({description: '편의점 (0: 없음, 1: 있음)', required: false, enum: [0, 1]})

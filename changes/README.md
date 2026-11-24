@@ -33,7 +33,9 @@
 
 **그대로 둔 것** — `.beaver/output/frontend/changes/2026-11-24-store-facility.md` 의 DTO 사본(같은 순서) — 프론트용 사본은 Swagger 데코레이터를 뺀 결과 DTO 라 데코레이터 메타데이터가 없어 걸리지 않는다. `.beaver/output/plan|report/store/store-facility-*` — 지난 기록.
 
-**검증** — `npm run typecheck` · `npm run lint` 통과, `npm run build`(네 앱 + `build:check` — 네 앱 모두 불러옴) 통과. `npm test` 는 1473건 중 **15건 실패 — 이 변경과 무관하게 전부터 있던 실패**다: 이 변경을 치운 `c0534f1` 그대로에서도 같은 12건이 실패하고, 나머지 3건(`store-application-approve` · `store-detail` · `store-mine-detail`)은 `c0534f1` 에서는 파일이 불러와지지 않아 숨어 있던 것이다. 대부분 편의시설 커밋이 `t_store.store_detail` 을 더한 뒤 갱신하지 않은 SQL 스냅샷 · 선언 안 된 필드 거절 단언이다 — 따로 고친다. `docker build` 는 돌리지 않았다.
+**검증** — `npm run typecheck` · `npm run lint` 통과, `npm run build`(네 앱 + `build:check` — 네 앱 모두 불러옴) 통과. `npm test` 는 1473건 중 **15건 실패 — 이 변경과 무관하게 전부터 있던 실패**다: 이 변경을 치운 `c0534f1` 그대로에서도 같은 12건이 실패하고, 나머지 3건(`store-application-approve` · `store-detail` · `store-mine-detail`)은 `c0534f1` 에서는 파일이 불러와지지 않아 숨어 있던 것이다. 대부분 편의시설 커밋이 `t_store.store_detail` 을 더한 뒤 갱신하지 않은 SQL 스냅샷 · 선언 안 된 필드 거절 단언이다. `docker build` 는 돌리지 않았다.
+
+**이어서 고친 것(같은 날, 다음 커밋)** — 15건 모두 테스트 기대값이 코드보다 뒤처진 것이라 기대값을 고쳤다(코드 동작은 그대로): 업체 SELECT 스냅샷 10건에 `store_detail` 컬럼 · 입점 승인은 편의시설을 넣지 않는다(DB 기본값 `'{}'`) · 업체 상세(관리) 응답의 `store_detail` · 선언 안 된 필드는 게이트웨이가 막지 않는다(전역 파이프 whitelist 꺼짐 — service 가 버린다, 객실 그룹 등록 spec 과 같은 기준) 2건 · TypeORM 1.x 가 SET 의 NULL 도 파라미터로 넘긴다 1건. 같은 잘못된 설명("선언 안 된 항목 · 필드는 400")을 `StoreMineDetailDto` 주석과 프론트 요청서 2개(`2026-11-24-store-facility.md` · `2026-11-24-inquiry.md`)에서 바로잡았다. `npm test` 1473건 모두 통과.
 
 ## 2026-11-24 — 반영 결과 요약
 

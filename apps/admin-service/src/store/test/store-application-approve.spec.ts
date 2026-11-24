@@ -76,7 +76,8 @@ describe('admin.store.application-approve — 입점 승인 (큐 경로)', () =>
                 is_deleted: 0,
                 delete_backup: null,
             });
-            expect(store).not.toHaveProperty('store_detail');
+            // 편의시설은 넣지 않는다 — DB 기본값 '{}'(모두 없음), 업체 관리자가 내 업체 설정에서 켠다
+            expect(store.store_detail).toBeUndefined();
 
             // 업체 상품 설정 — 새 업체에 상품 종류마다 1행(판매 · 매일 · 기본 이용 시간 · 입실 · 퇴실 시각 · 연박 박수)
             expect(repo.insertStorePlans).toHaveBeenCalledTimes(1);

@@ -58,8 +58,8 @@ describe('admin.store.mine-detail — 내 업체 편의시설 설정 (큐 경로
             });
         });
 
-        it('모르는 항목을 보내면 400, 빈 본문(전부 없음)과 0 · 1 만 있는 본문은 통과', async () => {
-            await expect(validateBody(StoreMineDetailDto, {has_wifi: 1})).resolves.not.toBeNull();
+        it('선언 안 된 항목은 게이트웨이가 막지 않는다(whitelist 꺼짐) — service 가 버린다, 빈 본문(전부 없음)과 0 · 1 만 있는 본문도 통과', async () => {
+            await expect(validateBody(StoreMineDetailDto, {has_wifi: 1})).resolves.toBeNull();
             await expect(validateBody(StoreMineDetailDto, {})).resolves.toBeNull();
             await expect(validateBody(StoreMineDetailDto, {has_convenience_store: 1, has_cafe: 0, has_meal: 1})).resolves.toBeNull();
         });

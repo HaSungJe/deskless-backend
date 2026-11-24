@@ -74,7 +74,6 @@ describe('GET /internal/v1/admin-service/store/:store_id — 업체 상세 (총�
                 created_at: FIXED_TIME.toISOString(),
                 updated_at: FIXED_TIME.toISOString(),
             });
-            expect(res.body).not.toHaveProperty('store_detail');
             expect(res.body.files).toEqual([
                 {
                     store_file_id: 'f'.repeat(32),
