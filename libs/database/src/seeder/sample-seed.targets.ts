@@ -32,10 +32,10 @@ import type {SeedTarget} from './seeder.targets.js';
 import {isSampleSeedEnabled, sampleId, sampleNo} from './seeder.util.js';
 
 /**
- * 샘플 업체 10곳 — 활성 · 영업 중, 업체코드 고정(매니저 로그인 · 매니저 화면 주소), 예약 정책은 입점 승인 기본값.
+ * 샘플 업체(SAMPLE_STORES — 서울 10 · 전국 61) — 활성 · 영업 중, 업체코드 고정(매니저 로그인 · 매니저 화면 주소), 예약 정책은 입점 승인 기본값.
  * 사업자등록번호 `99900000NN` · 연락처 `02123400NN`(입점 신청 형식 — 숫자만).
  *
- * @returns 업체 10행
+ * @returns 업체마다 1행
  */
 export function buildSampleStores(): StoreEntity[] {
     return SAMPLE_STORES.map((sample, index) => {
@@ -111,7 +111,7 @@ export function buildSampleStoreBreaks(): StoreBreakEntity[] {
 /**
  * 샘플 업체 상품 설정 — 업체 × 종류 3행(판매 안 하는 종류는 is_used 0). 값 조합은 CHK_RoomPlan_* 와 입점 승인 기본값을 따른다.
  *
- * @returns 업체 상품 설정 30행
+ * @returns 업체마다 3행
  */
 export function buildSampleRoomPlans(): RoomPlanEntity[] {
     return SAMPLE_STORES.flatMap((sample, index) =>
@@ -138,7 +138,7 @@ export function buildSampleRoomPlans(): RoomPlanEntity[] {
 /**
  * 샘플 업체 사진 — 업체마다 2장(공개 용도 STORE_IMAGE, 신청 없이 업체에 바로), 키 `sample/store-NN-P.png`.
  *
- * @returns 업체 정보 파일 20행
+ * @returns 업체마다 2행
  */
 export function buildSampleStoreFiles(): StoreFileEntity[] {
     return SAMPLE_STORES.flatMap((_, index) =>
@@ -165,7 +165,7 @@ export function buildSampleStoreFiles(): StoreFileEntity[] {
  * 샘플 업체 총관리자 — 업체마다 1명(대표), 아이디 manager · 비밀번호 1234(시드 시점 bcrypt + pepper — 한 번 해시해 같이 쓴다), 비밀번호 변경 요구 없음.
  * 휴대폰 `0109000000NN`(업체 안 유일).
  *
- * @returns 업체 총관리자 10행
+ * @returns 업체마다 1행
  */
 export async function buildSampleManagers(): Promise<UserEntity[]> {
     const login_pw = await getBcrypt(SAMPLE_MANAGER_PASSWORD);
@@ -237,7 +237,7 @@ export async function buildSampleUser(): Promise<UserEntity[]> {
 /**
  * 샘플 계정의 회원 설정 — 로그인 회원 조회가 회원 설정을 inner join 한다(첫 총관리자 회원 설정 시드와 같은 이유).
  *
- * @returns 회원 설정 11행(업체 총관리자 10 + 이용자 1)
+ * @returns 업체 총관리자마다 1행 + 이용자 1행
  */
 export function buildSampleUserSettings(): UserSettingEntity[] {
     const accounts = [
@@ -256,7 +256,7 @@ export function buildSampleUserSettings(): UserSettingEntity[] {
 /**
  * 샘플 객실 그룹 — 업체마다 2 ~ 3개(그룹 번호 = 업체 번호 × 10 + 순서).
  *
- * @returns 객실 그룹 25행
+ * @returns 그룹마다 1행
  */
 export function buildSampleRoomGroups(): RoomGroupEntity[] {
     return SAMPLE_STORES.flatMap((sample, index) =>
@@ -276,7 +276,7 @@ export function buildSampleRoomGroups(): RoomGroupEntity[] {
 /**
  * 샘플 그룹 사진 — 그룹마다 2장, 키 `sample/room-NN-G-P.png`.
  *
- * @returns 그룹 사진 50행
+ * @returns 그룹마다 2행
  */
 export function buildSampleRoomGroupImages(): RoomGroupImageEntity[] {
     return SAMPLE_STORES.flatMap((sample, index) =>
@@ -302,7 +302,7 @@ export function buildSampleRoomGroupImages(): RoomGroupImageEntity[] {
 /**
  * 샘플 그룹 상품 — 그룹 × 종류 3행, 요금이 있으면 판매(is_used 1), 없으면 판매 안 함 · 요금 0(객실 그룹 생성과 같은 기본 모양).
  *
- * @returns 그룹 상품 75행
+ * @returns 그룹마다 3행
  */
 export function buildSampleRoomGroupPlans(): RoomGroupPlanEntity[] {
     return SAMPLE_STORES.flatMap((sample, index) =>
@@ -323,9 +323,9 @@ export function buildSampleRoomGroupPlans(): RoomGroupPlanEntity[] {
 }
 
 /**
- * 샘플 호실 — 그룹마다 3 ~ 5개, 모두 예약가능(호실 번호 = 업체 번호 × 1000 + 호실명).
+ * 샘플 호실 — 그룹마다 2 ~ 5개, 모두 예약가능(호실 번호 = 업체 번호 × 1000 + 호실명).
  *
- * @returns 호실 96행
+ * @returns 호실마다 1행
  */
 export function buildSampleRooms(): RoomEntity[] {
     return SAMPLE_STORES.flatMap((sample, index) =>

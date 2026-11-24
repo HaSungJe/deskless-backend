@@ -143,7 +143,7 @@ apps/gateway/src/
 ├── modules/api-log/        # api-log.middleware(모든 HTTP 요청 — 글 응답 조각 모으기(바이너리 — /files 사진은 본문 null) · finish/close 1번) · api-log.writer(로그 전용 DataSource insert) · api-log.util(라우트 패턴 · 응답 본문 · SSE 마지막 이벤트) · api-log.module
 ├── modules/door-socket/    # door-socket.server(upgrade 수신 · 인증 · 메시지 · 명령 구독 · ping) · door-socket.util · door-socket.module
 ├── modules/local-file/     # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때만, 읽기는 늘) — local-file.server(업로드 받기 · 비공개 열람 · 공개 파일) · local-file.util · local-file.module
-├── assets/sample/          # 샘플 사진 PNG 70개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, nest-cli assets 로 dist 복사)
+├── assets/sample/          # 샘플 사진 PNG 450개(테스트 데이터 시드 — scripts/sample-images.mjs 가 그림, nest-cli assets 로 dist 복사)
 ├── config/                 # cors.config.ts(buildCorsOptions) · trust-proxy.config.ts(parseTrustProxy) · sample-image.config.ts(/sample/ 정적 경로) · swagger.config.ts(buildSwaggerCustomOptions — Swagger 도메인 선택 상자)
 ├── gateway.module.ts
 └── main.ts
@@ -165,7 +165,7 @@ apps/gateway/src/
 
 `SeederService`(libs/database, `OnApplicationBootstrap`)가 [seeder.targets.ts](../libs/database/src/seeder/seeder.targets.ts) 의 `SEED_TARGETS` 를 순서대로 처리한다 — PK 기준으로 없는 행만 insert(`pickMissingRows`). 대상별 실패는 경고 로그만 남기고 부팅을 막지 않는다. DB 를 소유한 서비스 한 곳에서만 등록한다.
 
-테스트 데이터(샘플 시드)는 `SEED_TARGETS` 끝의 `SAMPLE_SEED_TARGETS`([sample-seed.targets.ts](../libs/database/src/seeder/sample-seed.targets.ts) · 값은 sample-seed.data.ts)다 — `SEED_SAMPLE_DATA=1` 일 때만 업체 10곳 · 객실 그룹 · 호실 · 업체 총관리자 · 이용자 · 문의를 고정 ID(`sampleId` — `5a3e` + 종류 + 번호)로 넣고, 꺼져 있으면 만드는 함수를 부르지 않는다. 사진은 게이트웨이 `assets/sample/` 의 PNG(`/sample/` 정적 경로 — config/sample-image.config.ts). 켜는 법 · 계정: [guides/sample-data.md](guides/sample-data.md).
+테스트 데이터(샘플 시드)는 `SEED_TARGETS` 끝의 `SAMPLE_SEED_TARGETS`([sample-seed.targets.ts](../libs/database/src/seeder/sample-seed.targets.ts) · 값은 sample-seed.data.ts — 전국 업체는 sample-seed.region.data.ts)다 — `SEED_SAMPLE_DATA=1` 일 때만 업체 71곳(서울 10 · 전국 61) · 객실 그룹 · 호실 · 업체 총관리자 · 이용자 · 문의를 고정 ID(`sampleId` — `5a3e` + 종류 + 번호)로 넣고, 꺼져 있으면 만드는 함수를 부르지 않는다. 사진은 게이트웨이 `assets/sample/` 의 PNG(`/sample/` 정적 경로 — config/sample-image.config.ts). 켜는 법 · 계정: [guides/sample-data.md](guides/sample-data.md).
 
 ## 스케줄러
 
@@ -228,7 +228,7 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | 〃 | `SWAGGER_TITLE` · `SWAGGER_PATH` | Swagger 제목 · 경로(기본 `swagger`) |
 | 〃 | `USER_SERVICE_URL` · `ADMIN_SERVICE_URL` | 게이트웨이가 부르는 서비스 주소 — 로컬 `localhost:3010` · `:3020`, 쿠버네티스는 Service 주소 |
 | user-service | `USER_SERVICE_PORT` · `USER_SERVICE_HOST` · `USER_SERVICE_METRICS_PORT` | 포트(3010) · 바인딩(기본 127.0.0.1 — 같은 머신의 게이트웨이만, 파드는 0.0.0.0) · 지표 포트(로컬 9465) |
-| 〃 | `SEED_SAMPLE_DATA` | 1 이면 user-service 가 부팅할 때 서울 업체 10곳 · 객실 · 업체 총관리자 10명 · 이용자 1명 · 문의 71건을 고정 ID 로 넣는다(이미 있으면 건너뜀). 운영 DB 는 0 — [guides/sample-data.md](guides/sample-data.md) |
+| 〃 | `SEED_SAMPLE_DATA` | 1 이면 user-service 가 부팅할 때 업체 71곳(서울 10 · 전국 61) · 객실 · 업체 총관리자 71명 · 이용자 1명 · 문의 71건을 고정 ID 로 넣는다(이미 있으면 건너뜀). 운영 DB 는 0 — [guides/sample-data.md](guides/sample-data.md) |
 | admin-service | `ADMIN_SERVICE_PORT` · `ADMIN_SERVICE_HOST` · `ADMIN_SERVICE_METRICS_PORT` | 포트(3020) · 바인딩(user-service 와 같다) · 지표 포트(로컬 9466) |
 | scheduler | `SCHEDULER_METRICS_PORT` | 지표 · 헬스 체크 포트(로컬 9467) — scheduler 가 받는 연결은 이것뿐 |
 | PostgreSQL | `DATABASE_URL` (필수) | 접속 주소 — 네 앱 모두(게이트웨이는 API 로그 적재 전용 연결 풀 5). 로컬은 deskless 로컬 클러스터, 운영은 클러스터 안 DB 또는 RDS 등 |

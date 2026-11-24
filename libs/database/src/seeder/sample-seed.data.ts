@@ -1,5 +1,6 @@
 import type {RoomGroupDetail} from '../entities/room/room-group.entity.js';
 import type {StoreDetail} from '../entities/store/store.entity.js';
+import {SAMPLE_REGION_STORES} from './sample-seed.region.data.js';
 import {sampleHours, sampleRooms} from './seeder.util.js';
 
 /** 상품 종류 — t_room_plan_type 시드(HOURLY · NIGHT · LONG) */
@@ -37,7 +38,7 @@ export interface SampleInquiryCount {
     spam: number;
 }
 
-/** 샘플 업체 — 배열 순서(01 ~ 10)가 고정 ID 번호 · 사진 파일 번호다(scripts/sample-images.mjs 의 GROUP_COUNTS 와 그룹 수가 같아야 한다) */
+/** 샘플 업체 — 배열 순서(01 ~ 71 — 서울 01 ~ 10, 전국 11 ~ 71)가 고정 ID 번호 · 사진 파일 번호다(scripts/sample-images.mjs 의 GROUP_COUNTS 와 그룹 수가 같아야 한다) */
 export interface SampleStore {
     store_name: string;
     address: string;
@@ -123,10 +124,10 @@ const PLANS_NO_LONG: Record<SamplePlanType, boolean> = {HOURLY: true, NIGHT: tru
 const PLANS_HOURLY: Record<SamplePlanType, boolean> = {HOURLY: true, NIGHT: false, LONG: false};
 
 /**
- * 샘플 업체 10곳(서울) — 24시간 6곳(시간 이용 · 1박 · 연박), 영업시간 4곳(잠실 · 신촌 시간 이용 · 1박 / 여의도 · 이태원 시간 이용만 — 휴무 요일 · 브레이크 포함).
+ * 서울 샘플 업체 10곳(번호 01 ~ 10) — 24시간 6곳(시간 이용 · 1박 · 연박), 영업시간 4곳(잠실 · 신촌 시간 이용 · 1박 / 여의도 · 이태원 시간 이용만 — 휴무 요일 · 브레이크 포함).
  * 그룹마다 층이 다르다(2층 · 3층 · 4층). 1박 입실 22:00 ~ 퇴실 09:00 · 연박 15:00 ~ 11:00 은 SAMPLE_PLAN_DEFAULTS.
  */
-export const SAMPLE_STORES: SampleStore[] = [
+const SAMPLE_SEOUL_STORES: SampleStore[] = [
     {
         store_name: '바로방 강남역점',
         store_detail: {has_convenience_store: 1, has_cafe: 1, is_delivery_allowed: 1, has_parking: 1},
@@ -323,6 +324,12 @@ export const SAMPLE_STORES: SampleStore[] = [
         ],
     },
 ];
+
+/**
+ * 샘플 업체 71곳 — 서울 10곳(01 ~ 10) 뒤에 전국 61곳(11 ~ 71 — sample-seed.region.data.ts).
+ * 배열 순서가 고정 ID 번호다 — 새 업체는 끝에만 더한다(이미 넣은 개발 DB 의 고정 ID 가 다른 업체를 가리키지 않게). 번호는 두 자리(99곳)까지 — sampleNo · 사진 파일 이름 · 사업자등록번호.
+ */
+export const SAMPLE_STORES: SampleStore[] = [...SAMPLE_SEOUL_STORES, ...SAMPLE_REGION_STORES];
 
 /** 샘플 일반 문의 본보기 13개 — 카테고리마다 1 ~ 2개, 대상마다 순서를 밀어 가며 돌려 쓴다 */
 export const SAMPLE_INQUIRY_TEMPLATES: SampleInquiryTemplate[] = [

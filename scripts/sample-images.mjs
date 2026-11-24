@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // 샘플 이미지(PNG) 생성기 — 테스트 데이터 시드(SEED_SAMPLE_DATA=1)의 업체 사진 · 객실 그룹 사진을 그린다.
 // 외부 패키지 없이 node:zlib 로 PNG(RGB 8bit)를 만든다. 결과는 apps/gateway/src/assets/sample/ 에 저장하고 커밋한다 — 게이트웨이가 /sample/<파일> 로 내준다.
-// 업체 수 · 업체별 객실 그룹 수(GROUP_COUNTS)는 libs/database/src/seeder/sample-seed.data.ts 의 SAMPLE_STORES 와 같아야 한다.
+// 업체 수 · 업체별 객실 그룹 수(GROUP_COUNTS)는 libs/database/src/seeder/sample-seed.data.ts 의 SAMPLE_STORES(서울 01 ~ 10 + 전국 11 ~ 71 — sample-seed.region.data.ts)와 같아야 한다.
 //   npm run sample:images            (기본 폴더에 다시 그린다 — 폴더의 기존 PNG 는 지운다)
 //   node scripts/sample-images.mjs <폴더>   (다른 폴더에 그려 본다)
 import {mkdirSync, readdirSync, rmSync, writeFileSync} from 'node:fs';
@@ -12,8 +12,22 @@ import {deflateSync} from 'node:zlib';
 const OUT_DIR = process.argv[2] ?? fileURLToPath(new URL('../apps/gateway/src/assets/sample/', import.meta.url));
 const WIDTH = 960;
 const HEIGHT = 640;
-/** 업체별 객실 그룹 수 — SAMPLE_STORES 순서(업체 01 ~ 10) */
-const GROUP_COUNTS = [3, 2, 3, 2, 2, 3, 2, 3, 2, 3];
+/** 업체별 객실 그룹 수 — SAMPLE_STORES 순서(업체 01 ~ 71) */
+const GROUP_COUNTS = [
+    ...[3, 2, 3, 2, 2, 3, 2, 3, 2, 3], // 01 ~ 10 서울
+    ...[3, 2, 3, 2, 2, 2], // 11 ~ 16 부산
+    ...[3, 2, 2, 2, 2, 2, 3, 2], // 17 ~ 24 제주
+    ...[2, 2, 2, 2, 2, 2, 2, 2], // 25 ~ 32 강원
+    ...[2, 2, 2, 2, 2], // 33 ~ 37 경기
+    ...[3, 2, 2], // 38 ~ 40 인천
+    ...[2, 3, 2], // 41 ~ 43 대전 · 세종
+    ...[2, 2, 2, 2], // 44 ~ 47 충남
+    ...[2, 2, 2], // 48 ~ 50 충북
+    ...[2, 2, 2], // 51 ~ 53 전북
+    ...[2, 2, 2, 2, 2], // 54 ~ 58 전남 · 광주
+    ...[2, 2, 2, 2, 2, 2, 3, 2], // 59 ~ 66 경북 · 대구
+    ...[2, 2, 2, 2, 2], // 67 ~ 71 경남 · 울산
+];
 /** 사진 수 — 업체 · 그룹마다 */
 const PHOTOS = 2;
 const WHITE = [255, 255, 255];
@@ -463,7 +477,8 @@ let count = 0;
 let bytes = 0;
 GROUP_COUNTS.forEach((groups, index) => {
     const nn = String(index + 1).padStart(2, '0');
-    const hue = (index * 36 + 10) % 360;
+    // 업체 색 — 10곳마다 17도씩 더 돌린다(서울 01 ~ 10 은 예전 값 그대로 — 다시 그려도 같은 사진)
+    const hue = (index * 36 + 10 + Math.floor(index / 10) * 17) % 360;
     for (let photo = 1; photo <= PHOTOS; photo += 1) {
         const rand = random((index + 1) * 100 + photo);
         bytes += writeImage(`store-${nn}-${photo}.png`, (canvas) => (photo === 1 ? drawStoreDay(canvas, hue, rand) : drawStoreNight(canvas, hue, rand)), `STORE ${nn}`);
