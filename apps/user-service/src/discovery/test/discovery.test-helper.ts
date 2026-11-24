@@ -134,6 +134,7 @@ export function storeEntity(override: Record<string, unknown> = {}): Record<stri
         latitude: 37.4979,
         longitude: 127.0276,
         introduction: '역에서 1분',
+        store_detail: {has_convenience_store: 1, has_cafe: 0, has_hot_spring: 0, is_pet_allowed: 1, has_meal: 0, is_delivery_allowed: 1, has_parking: 0},
         is_always_open: 0,
         is_open: 1,
         maintenance_minutes: 30,

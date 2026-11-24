@@ -203,7 +203,7 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
 
             expect(repo.findStoreRows).toHaveBeenCalledTimes(1);
             expect(repo.findStoreRows).toHaveBeenCalledWith(
-                {latitude: 37.5665, longitude: 126.978, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions: []},
+                {latitude: 37.5665, longitude: 126.978, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions: [], store_conditions: []},
                 301,
             );
         });
@@ -215,15 +215,21 @@ describe('GET /internal/v1/user-service/discovery/store — 반경 업체 조회
             expect(filter.radius_m).toBe(5000);
             expect(filter.min_latitude).toBeCloseTo(37.521534, 6);
             expect(filter.detail_conditions).toEqual([]);
+            expect(filter.store_conditions).toEqual([]);
         });
 
-        it('[SUCCESS] detail_filter — 항목 정의의 조건 · 비교 값 + 빠진 항목 기본값, 중복은 한 번(순서 유지)', async () => {
-            await requestFilter({...SEOUL, radius_km: '10', detail_filter: 'has_pc,room_count,has_pc'});
+        it('[SUCCESS] detail_filter — 객실 항목 · 업체 편의시설 항목이 섞여 와도 묶음별 조건으로 나뉜다(정의의 조건 · 비교 값 + 빠진 항목 기본값, 중복은 한 번 · 순서 유지)', async () => {
+            await requestFilter({...SEOUL, radius_km: '10', detail_filter: 'has_pc,has_hot_spring,room_count,has_pc,is_pet_allowed'});
 
+            expect(repo.findStoreRows).toHaveBeenCalledTimes(1);
             const [filter] = repo.findStoreRows.mock.calls[0];
             expect(filter.detail_conditions).toEqual([
                 {key: 'has_pc', operator: 'EQ', value: 1, default_value: 1},
                 {key: 'room_count', operator: 'GTE', value: 2, default_value: 1},
+            ]);
+            expect(filter.store_conditions).toEqual([
+                {key: 'has_hot_spring', operator: 'EQ', value: 1, default_value: 0},
+                {key: 'is_pet_allowed', operator: 'EQ', value: 1, default_value: 0},
             ]);
             expect(filter.radius_m).toBe(10000);
         });

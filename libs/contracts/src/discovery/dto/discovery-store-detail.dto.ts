@@ -113,6 +113,9 @@ export class DiscoveryStoreDetailResultDto {
     @ApiProperty({description: '업체 소개', nullable: true, type: String})
     introduction: string | null;
 
+    @ApiProperty({description: '편의시설 (편의점 · 카페 · 온천 · 반려동물 동반 · 식사 제공 · 배달 음식 · 주차 — 0: 없음, 1: 있음)', type: () => DiscoveryStoreFacilityResultDto})
+    store_detail: DiscoveryStoreFacilityResultDto;
+
     @ApiProperty({description: '영업중 여부 (0: 지금 영업하지 않음 — 예약 불가, 1: 영업중)'})
     is_open: number;
 
@@ -139,4 +142,30 @@ export class DiscoveryStoreDetailResultDto {
 
     @ApiProperty({description: '판매 중인 상품 설정 (시간 이용 → 1박 → 연박)', type: () => [DiscoveryStorePlanResultDto]})
     plans: DiscoveryStorePlanResultDto[];
+}
+
+/**
+ * 업체 편의시설 (이용자 업체 상세) — 7개 항목(저장 안 된 항목은 없음 0)
+ */
+export class DiscoveryStoreFacilityResultDto {
+    @ApiProperty({description: '편의점 (0: 없음, 1: 있음)'})
+    has_convenience_store: number;
+
+    @ApiProperty({description: '카페 (0: 없음, 1: 있음)'})
+    has_cafe: number;
+
+    @ApiProperty({description: '온천 (0: 없음, 1: 있음)'})
+    has_hot_spring: number;
+
+    @ApiProperty({description: '반려동물 동반 가능 (0: 없음, 1: 있음)'})
+    is_pet_allowed: number;
+
+    @ApiProperty({description: '식사 제공 (0: 없음, 1: 있음)'})
+    has_meal: number;
+
+    @ApiProperty({description: '배달 음식 가능 (0: 없음, 1: 있음)'})
+    is_delivery_allowed: number;
+
+    @ApiProperty({description: '주차 가능 (0: 없음, 1: 있음)'})
+    has_parking: number;
 }

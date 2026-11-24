@@ -24,6 +24,7 @@ import {StoreMineDoorSecretDto} from '@app/contracts/store/dto/store-mine-door-s
 import {StoreMineFileDeleteParamDto} from '@app/contracts/store/dto/store-mine-file-delete.dto.js';
 import {StoreMineFileOrderDto} from '@app/contracts/store/dto/store-mine-file-order.dto.js';
 import {StoreMineFileDto, StoreMineFileResultDto} from '@app/contracts/store/dto/store-mine-file.dto.js';
+import {StoreMineDetailDto} from '@app/contracts/store/dto/store-mine-detail.dto.js';
 import {StoreMineHoursDto} from '@app/contracts/store/dto/store-mine-hours.dto.js';
 import {StoreMineMaintenanceDto} from '@app/contracts/store/dto/store-mine-maintenance.dto.js';
 import {StoreMineOpenDto} from '@app/contracts/store/dto/store-mine-open.dto.js';
@@ -143,6 +144,24 @@ export class StoreQueueController {
     @ApiInternalServerErrorResponse({type: ApiFailResultDto})
     async replaceMyStoreHours(@PassportActor() actor: Actor, @Body() dto: StoreMineHoursDto, @Ip() ip: string, @Res() res: Response): Promise<void> {
         await this.commandStream.dispatch(res, {type: STORE_COMMAND.MINE_HOURS, actor, payload: dto, client_ip: ip});
+    }
+
+    /**
+     * 내 업체 편의시설 설정 (업체 관리자) — 편의점 · 카페 · 온천 · 반려동물 동반 · 식사 제공 · 배달 음식 · 주차를 통째로 교체(빠진 항목은 없음 0). done 의 data 는 null.
+     */
+    @Put('/mine/detail')
+    @UseGuards(PassportJwtManagerAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({summary: '내 업체 편의시설 설정'})
+    @ApiBody({type: StoreMineDetailDto})
+    @ApiProduces('text/event-stream')
+    @ApiBadRequestResponse({type: ApiFailResultDto})
+    @ApiUnauthorizedResponse({type: ApiFailResultDto})
+    @ApiNotFoundResponse({type: ApiFailResultDto})
+    @ApiServiceUnavailableResponse({type: ApiFailResultDto})
+    @ApiInternalServerErrorResponse({type: ApiFailResultDto})
+    async replaceMyStoreDetail(@PassportActor() actor: Actor, @Body() dto: StoreMineDetailDto, @Ip() ip: string, @Res() res: Response): Promise<void> {
+        await this.commandStream.dispatch(res, {type: STORE_COMMAND.MINE_DETAIL, actor, payload: dto, client_ip: ip});
     }
 
     /**

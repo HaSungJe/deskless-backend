@@ -78,6 +78,7 @@ describe('GET /internal/v1/admin-service/store/mine — 내 업체 상세 (업�
                 latitude: 37.4979,
                 longitude: 127.0276,
                 introduction: '소개',
+                store_detail: {has_convenience_store: 0, has_cafe: 1, has_hot_spring: 0, is_pet_allowed: 0, has_meal: 0, is_delivery_allowed: 0, has_parking: 1},
                 is_always_open: 0,
                 is_open: 1,
                 maintenance_minutes: 30,

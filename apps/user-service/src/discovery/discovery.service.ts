@@ -1,7 +1,7 @@
 import {BadRequestException, Inject, Injectable, NotFoundException} from '@nestjs/common';
 import {In, MoreThanOrEqual} from 'typeorm';
 import {createValidationError} from '@app/common/utils/validation.js';
-import type {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
+import type {DiscoveryDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-detail-filter.dto.js';
 import type {DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import type {DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import type {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
@@ -18,7 +18,7 @@ import {
 } from './discovery.constants.js';
 import {DISCOVERY_REPOSITORY} from './discovery.symbols.js';
 import {
-    isRoomGroupDetailFilterKey,
+    isDetailFilterKey,
     isRoomGroupPlanOnSale,
     isStorePlanUsed,
     splitDetailFilter,
@@ -27,7 +27,7 @@ import {
     toDiscoveryRoomGroups,
     toDiscoveryStoreDetail,
     toDiscoveryStoreItem,
-    toRoomGroupDetailFilterItems,
+    toDetailFilterItems,
     toStoreFilter,
     toStoreSearchItem,
 } from './discovery.util.js';
@@ -58,9 +58,9 @@ export class DiscoveryService {
      * @throws BadRequestException 추가정보 필터에 정의에 없는 항목이 있을 때
      */
     async getStores(dto: DiscoveryStoreListDto): Promise<DiscoveryStoreListResultDto> {
-        // 1. 추가정보 필터 — 정의(ROOM_GROUP_DETAIL_FILTERS)에 있는 항목만
+        // 1. 추가정보 필터 — 객실 항목(ROOM_GROUP_DETAIL_FILTERS) · 업체 편의시설 항목(STORE_DETAIL_FILTERS) 정의에 있는 키만(둘 중 어디에도 없으면 400)
         const detail_keys = splitDetailFilter(dto.detail_filter);
-        if (!detail_keys.every(isRoomGroupDetailFilterKey)) {
+        if (!detail_keys.every(isDetailFilterKey)) {
             throw new BadRequestException({message: DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE, validation_errors: createValidationError('detail_filter', DISCOVERY_DETAIL_FILTER_INVALID_MESSAGE)});
         }
 
@@ -93,13 +93,14 @@ export class DiscoveryService {
     }
 
     /**
-     * 추가정보 필터 항목 — 객실 그룹 상세 항목마다 체크박스 1개(정의 순서). 항목이 늘면 저절로 늘어난다.
-     * (내부 HTTP: GET /internal/v1/user-service/discovery/room-group-detail-filter)
+     * 업체 검색 추가정보 필터 항목 — 객실 항목(ROOM_GROUP_DETAIL_FILTERS) 다음 업체 편의시설 항목(STORE_DETAIL_FILTERS), 항목마다 체크박스 1개 · 묶음 표시. 항목이 늘면 저절로 늘어난다.
+     * (내부 HTTP: GET /internal/v1/user-service/discovery/detail-filter)
      *
      * @returns 항목 목록
      */
-    getRoomGroupDetailFilters(): DiscoveryRoomGroupDetailFilterListResultDto {
-        return {list: toRoomGroupDetailFilterItems()};
+    getDetailFilters(): DiscoveryDetailFilterListResultDto {
+        // 1. 항목 모으기 → 2. 목록 반환 (DB 없음)
+        return {list: toDetailFilterItems()};
     }
 
     /**

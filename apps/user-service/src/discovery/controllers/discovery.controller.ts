@@ -1,5 +1,5 @@
 import {Controller, Get, HttpCode, Param, Query} from '@nestjs/common';
-import type {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
+import type {DiscoveryDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-detail-filter.dto.js';
 import {DiscoveryRoomGroupListParamDto, DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import {DiscoveryStoreDetailParamDto, DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
@@ -37,12 +37,12 @@ export class DiscoveryController {
     }
 
     /**
-     * 업체 검색 추가정보 필터 항목 (인증 없음)
+     * 업체 검색 추가정보 필터 항목 — 객실 · 업체 편의시설 (인증 없음)
      */
-    @Get('/room-group-detail-filter')
+    @Get('/detail-filter')
     @HttpCode(200)
-    getRoomGroupDetailFilters(): DiscoveryRoomGroupDetailFilterListResultDto {
-        return this.discoveryService.getRoomGroupDetailFilters();
+    getDetailFilters(): DiscoveryDetailFilterListResultDto {
+        return this.discoveryService.getDetailFilters();
     }
 
     /**

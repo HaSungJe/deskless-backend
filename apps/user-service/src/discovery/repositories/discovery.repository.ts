@@ -295,6 +295,17 @@ export class DiscoveryRepository implements DiscoveryRepositoryInterface {
                 parameters,
             );
         }
+        // 업체 편의시설 조건 — 업체 행 JSON 에 바로(빠진 항목은 기본값 없음), 키는 text 로 못 박는다
+        if (filter.store_conditions.length > 0) {
+            const parameters: Record<string, string | number> = {};
+            const conditions = filter.store_conditions.map((condition, index) => {
+                parameters[`store_detail_key_${index}`] = condition.key;
+                parameters[`store_detail_default_${index}`] = condition.default_value;
+                parameters[`store_detail_value_${index}`] = condition.value;
+                return `COALESCE(("s"."store_detail" ->> CAST(:store_detail_key_${index} AS text))::integer, :store_detail_default_${index}) ${condition.operator === 'GTE' ? '>=' : '='} :store_detail_value_${index}`;
+            });
+            query.andWhere(conditions.join(' AND '), parameters);
+        }
         // 가까운 순(같으면 업체 ID 순)
         return query
             .orderBy('"distance_m"', 'ASC')

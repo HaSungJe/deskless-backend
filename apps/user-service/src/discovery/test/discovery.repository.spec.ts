@@ -64,6 +64,7 @@ const FILTER: DiscoveryStoreFilter = {
     min_longitude: 126.921271,
     max_longitude: 127.034729,
     detail_conditions: [],
+    store_conditions: [],
 };
 /** 거리 제한 없음(ALL) */
 const FILTER_ALL: DiscoveryStoreFilter = {
@@ -75,7 +76,18 @@ const FILTER_ALL: DiscoveryStoreFilter = {
     min_longitude: null,
     max_longitude: null,
     detail_conditions: [],
+    store_conditions: [],
 };
+/** 서울 5km + 업체 편의시설 2개(온천 · 반려동물) + 객실 항목 1개(PC) */
+const FILTER_STORE_DETAIL: DiscoveryStoreFilter = {
+    ...FILTER,
+    detail_conditions: [{key: 'has_pc', operator: 'EQ', value: 1, default_value: 1}],
+    store_conditions: [
+        {key: 'has_hot_spring', operator: 'EQ', value: 1, default_value: 0},
+        {key: 'is_pet_allowed', operator: 'EQ', value: 1, default_value: 0},
+    ],
+};
+
 /** 서울 5km + 추가정보 2개(PC 있음 · 방 2개 이상) */
 const FILTER_DETAIL: DiscoveryStoreFilter = {
     ...FILTER,
@@ -276,6 +288,19 @@ describe('[SMOKE:data-access] 반경 업체 · 상품 설정 · 그룹별 호실
         ).toHaveLength(2);
         expect(flat).toMatch(/"s"."store_name" ILIKE \$\d+ AND "s"."store_state_id" IN \(\$\d+, \$\d+\) AND "s"."is_deleted" = 0 ORDER BY "s"."store_name" ASC, "s"."store_id" ASC LIMIT 20$/);
         expect([...new Set(selectAliases(flat))].sort()).toEqual([...STORE_SEARCH_ROW_KEYS].sort());
+    });
+
+    it('반경 업체 (업체 편의시설 + 객실 항목) — 업체 JSON 조건(text 로 못 박은 키 · 기본값 없음 0)이 객실 EXISTS 와 함께 걸리고, 파라미터 이름이 겹치지 않는다', () => {
+        const [sql, parameters] = repository.buildStoreRowsQuery(FILTER_STORE_DETAIL, 301).getQueryAndParameters();
+        const flat = sql.replace(/\s+/g, ' ');
+
+        expect(flat.match(/COALESCE\(\("s"\."store_detail" ->> CAST\(\$\d+ AS text\)\)::integer, \$\d+\) = \$\d+/g)).toHaveLength(2);
+        expect(flat).toContain('EXISTS (SELECT 1 FROM "t_room_group" "g" WHERE "g"."store_id" = "s"."store_id"');
+        expect(flat).toContain('COALESCE(("g"."room_group_detail" ->> CAST(');
+        expect(parameters).toEqual(expect.arrayContaining(['has_hot_spring', 'is_pet_allowed', 'has_pc']));
+        expect(new Set(flat.match(/\$\d+/g)).size).toBeGreaterThanOrEqual(19);
+        expect(flat).toContain('ORDER BY "distance_m" ASC, "s"."store_id" ASC LIMIT 301');
+        expect([...new Set(selectAliases(flat))].sort()).toEqual([...STORE_ROW_KEYS].sort());
     });
 
     it('그룹별 예약 받을 호실 수 — IN 펼침 · 지워지지 않음 · 사용중지 제외 · GROUP BY, 별칭 = DiscoveryRoomCountRow 키', () => {

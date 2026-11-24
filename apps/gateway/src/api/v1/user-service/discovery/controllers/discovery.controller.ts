@@ -2,7 +2,7 @@ import {Controller, Get, HttpCode, Param, Query} from '@nestjs/common';
 import {ApiBadRequestResponse, ApiInternalServerErrorResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiServiceUnavailableResponse, ApiTags} from '@nestjs/swagger';
 import {ApiFailResultDto} from '@app/common/dto/global.result.dto.js';
 import {DISCOVERY_INTERNAL_PATH} from '@app/contracts/discovery/discovery.commands.js';
-import {DiscoveryRoomGroupDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
+import {DiscoveryDetailFilterListResultDto} from '@app/contracts/discovery/dto/discovery-detail-filter.dto.js';
 import {DiscoveryRoomGroupListParamDto, DiscoveryRoomGroupListResultDto} from '@app/contracts/discovery/dto/discovery-room-group-list.dto.js';
 import {DiscoveryStoreDetailParamDto, DiscoveryStoreDetailResultDto} from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
 import {DiscoveryStoreListDto, DiscoveryStoreListResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
@@ -52,16 +52,16 @@ export class DiscoveryController {
     }
 
     /**
-     * 업체 검색 추가정보 필터 항목 (로그인 없음) — 객실 그룹 상세 항목마다 체크박스 1개, 고른 키를 업체 검색 detail_filter 에 쉼표로 넣는다
+     * 업체 검색 추가정보 필터 항목 (로그인 없음) — 객실 항목(방 2개 이상 · 샤워실 · TV · PC) 다음 업체 편의시설 항목(편의점 · 카페 · 온천 · 반려동물 · 식사 · 배달 · 주차), 항목마다 체크박스 1개 · 묶음(group). 고른 키를 업체 검색 detail_filter 에 쉼표로 넣는다
      */
-    @Get('/room-group-detail-filter')
+    @Get('/detail-filter')
     @HttpCode(200)
     @ApiOperation({summary: '업체 검색 추가정보 필터 항목'})
-    @ApiOkResponse({type: DiscoveryRoomGroupDetailFilterListResultDto})
+    @ApiOkResponse({type: DiscoveryDetailFilterListResultDto})
     @ApiServiceUnavailableResponse({type: ApiFailResultDto})
     @ApiInternalServerErrorResponse({type: ApiFailResultDto})
-    async getRoomGroupDetailFilters(): Promise<DiscoveryRoomGroupDetailFilterListResultDto> {
-        return this.internalHttp.request<DiscoveryRoomGroupDetailFilterListResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.ROOM_GROUP_DETAIL_FILTER);
+    async getDetailFilters(): Promise<DiscoveryDetailFilterListResultDto> {
+        return this.internalHttp.request<DiscoveryDetailFilterListResultDto>('user', 'GET', DISCOVERY_INTERNAL_PATH.DETAIL_FILTER);
     }
 
     /**

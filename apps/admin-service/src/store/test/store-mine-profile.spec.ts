@@ -46,14 +46,14 @@ describe('admin.store.mine-profile — 내 업체 소개 수정 (큐 경로)', (
             expect(entity.introduction).toBeNull();
         });
 
-        it('예전 클라이언트가 편의시설(store_detail)을 보내도 소개 · 연락처만 바꾼다 — 편의시설은 객실 그룹으로 옮겼다', async () => {
+        it('소개 수정에 편의시설(store_detail)이 섞여 와도 소개 · 연락처만 바꾼다 — 편의시설은 PUT /mine/detail 로 따로 바꾼다', async () => {
             const payload = {phone: '0298765432', store_detail: {room_count: 3, has_tv: 1}};
 
             const {result} = await runCommand(dispatcher, {type: STORE_COMMAND.MINE_PROFILE, payload, actor: MANAGER_ACTOR});
 
             expect(result).toEqual({result: null, error: null});
             const entity = repo.updateStore.mock.calls[0][1] as StoreEntity;
-            expect(entity).not.toHaveProperty('store_detail');
+            expect(entity.store_detail).toBeUndefined();
             expect(
                 Object.entries(entity)
                     .filter(([, value]) => value !== undefined)

@@ -1,4 +1,5 @@
 import type {RoomGroupDetail} from '../entities/room/room-group.entity.js';
+import type {StoreDetail} from '../entities/store/store.entity.js';
 import {sampleHours, sampleRooms} from './seeder.util.js';
 
 /** 상품 종류 — t_room_plan_type 시드(HOURLY · NIGHT · LONG) */
@@ -46,6 +47,8 @@ export interface SampleStore {
     introduction: string;
     /** 24시간 연중무휴 1 — 요일 영업시간이 없다(hours 빈 배열) */
     is_always_open: number;
+    /** 업체 편의시설 — 적은 항목만 있음(1), 나머지는 기본값 없음(0) */
+    store_detail: Partial<StoreDetail>;
     /** 일(0) ~ 토(6) 영업시간, 휴무 null — 24시간 업체는 빈 배열 */
     hours: (SampleStoreHour | null)[];
     /** 매일 브레이크 */
@@ -126,6 +129,7 @@ const PLANS_HOURLY: Record<SamplePlanType, boolean> = {HOURLY: true, NIGHT: fals
 export const SAMPLE_STORES: SampleStore[] = [
     {
         store_name: '바로방 강남역점',
+        store_detail: {has_convenience_store: 1, has_cafe: 1, is_delivery_allowed: 1, has_parking: 1},
         address: '서울 강남구 강남대로 396',
         address_detail: '5층',
         latitude: 37.4979,
@@ -145,6 +149,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 홍대입구점',
+        store_detail: {has_convenience_store: 1, has_cafe: 1, is_delivery_allowed: 1},
         address: '서울 마포구 양화로 160',
         address_detail: '3층',
         latitude: 37.5572,
@@ -163,6 +168,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 잠실점',
+        store_detail: {has_meal: 1, has_parking: 1, is_pet_allowed: 1},
         address: '서울 송파구 올림픽로 240',
         address_detail: '7층',
         latitude: 37.5133,
@@ -182,6 +188,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 성수점',
+        store_detail: {has_cafe: 1, is_pet_allowed: 1, has_parking: 1},
         address: '서울 성동구 아차산로 100',
         address_detail: '2층',
         latitude: 37.5446,
@@ -200,6 +207,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 여의도점',
+        store_detail: {has_meal: 1, has_cafe: 1},
         address: '서울 영등포구 여의대로 108',
         address_detail: '4층',
         latitude: 37.5259,
@@ -218,6 +226,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 종로점',
+        store_detail: {has_convenience_store: 1, is_delivery_allowed: 1},
         address: '서울 종로구 종로 51',
         address_detail: '6층',
         latitude: 37.5703,
@@ -237,6 +246,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 신촌점',
+        store_detail: {has_convenience_store: 1, has_cafe: 1, is_delivery_allowed: 1, has_meal: 1},
         address: '서울 서대문구 신촌로 83',
         address_detail: '4층',
         latitude: 37.5551,
@@ -255,6 +265,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 건대입구점',
+        store_detail: {is_delivery_allowed: 1, has_parking: 1},
         address: '서울 광진구 아차산로 243',
         address_detail: '5층',
         latitude: 37.5404,
@@ -274,6 +285,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 이태원점',
+        store_detail: {has_cafe: 1, is_pet_allowed: 1},
         address: '서울 용산구 이태원로 177',
         address_detail: '3층',
         latitude: 37.5345,
@@ -292,6 +304,7 @@ export const SAMPLE_STORES: SampleStore[] = [
     },
     {
         store_name: '바로방 합정점',
+        store_detail: {has_cafe: 1, is_delivery_allowed: 1, has_parking: 1, is_pet_allowed: 1},
         address: '서울 마포구 양화로 45',
         address_detail: '8층',
         latitude: 37.5495,

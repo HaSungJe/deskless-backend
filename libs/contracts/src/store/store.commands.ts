@@ -30,6 +30,8 @@ export const STORE_COMMAND = {
     MINE_FILE_ORDER: 'admin.store.mine-file-order',
     /** 내 업체 영업시간 설정 — 연중무휴 · 요일별 (업체 관리자) */
     MINE_HOURS: 'admin.store.mine-hours',
+    /** 내 업체 편의시설 설정 — 통째로 교체 (업체 관리자) */
+    MINE_DETAIL: 'admin.store.mine-detail',
     /** 내 업체 브레이크타임 설정 (업체 관리자) */
     MINE_BREAKS: 'admin.store.mine-breaks',
     /** 내 업체 정비시간 설정 (업체 관리자) */

@@ -21,7 +21,8 @@ export class DiscoveryStoreListDto {
     radius_km: string;
 
     @ApiProperty({
-        description: '추가정보 필터 — 객실 그룹 상세 항목 키를 쉼표로(항목은 GET /api/v1/user-service/discovery/room-group-detail-filter). 고른 조건을 모두 갖춘 객실 그룹이 있는 업체만',
+        description:
+            '추가정보 필터 — 항목 키를 쉼표로(항목은 GET /api/v1/user-service/discovery/detail-filter). 객실 항목은 고른 조건을 모두 갖춘 객실 그룹이 있는 업체만, 업체 편의시설 항목은 그 시설이 있는 업체만',
         required: false,
         example: 'has_pc,has_shower',
     })

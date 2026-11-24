@@ -7,7 +7,7 @@ import type {
     DiscoveryStoreImageResultDto,
     DiscoveryStorePlanResultDto,
 } from '@app/contracts/discovery/dto/discovery-store-detail.dto.js';
-import type {DiscoveryRoomGroupDetailFilterItemResultDto} from '@app/contracts/discovery/dto/discovery-room-group-detail-filter.dto.js';
+import type {DiscoveryDetailFilterItemResultDto} from '@app/contracts/discovery/dto/discovery-detail-filter.dto.js';
 import type {DiscoveryStoreItemResultDto} from '@app/contracts/discovery/dto/discovery-store-list.dto.js';
 import type {DiscoveryStoreSearchItemResultDto} from '@app/contracts/discovery/dto/discovery-store-search.dto.js';
 import type {RoomGroupPlanPriceEntity} from '@app/database/entities/room/room-group-plan-price.entity.js';
@@ -16,8 +16,9 @@ import {ROOM_GROUP_DETAIL_DEFAULTS, ROOM_GROUP_DETAIL_FILTERS} from '@app/databa
 import type {RoomGroupDetail, RoomGroupEntity} from '@app/database/entities/room/room-group.entity.js';
 import type {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.js';
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
-import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
-import {DISCOVERY_DATE_FORMAT, DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE_ORDER, DISCOVERY_RADIUS_ALL} from './discovery.constants.js';
+import {STORE_DETAIL_DEFAULTS, STORE_DETAIL_FILTERS} from '@app/database/entities/store/store.entity.js';
+import type {StoreDetail, StoreEntity} from '@app/database/entities/store/store.entity.js';
+import {DISCOVERY_DATE_FORMAT, DISCOVERY_DETAIL_FILTER_GROUP, DISCOVERY_EARTH_RADIUS_KM, DISCOVERY_PLAN_TYPE_ORDER, DISCOVERY_RADIUS_ALL} from './discovery.constants.js';
 import type {DiscoveryRoomCountRow, DiscoveryStoreFilter, DiscoveryStorePlanRow, DiscoveryStoreRow, DiscoveryStoreSearchRow} from './interfaces/discovery.repository.interface.js';
 
 /** 반경을 덮는 위경도 사각형 — 인덱스로 먼저 거를 범위 */
@@ -100,6 +101,26 @@ export function isRoomGroupDetailFilterKey(key: string): key is keyof RoomGroupD
 }
 
 /**
+ * 업체 편의시설의 필터 항목인지 — 정의(STORE_DETAIL_FILTERS)에 있는 키만
+ *
+ * @param key 항목 키
+ * @returns 필터 항목이면 true
+ */
+export function isStoreDetailFilterKey(key: string): key is keyof StoreDetail {
+    return Object.hasOwn(STORE_DETAIL_FILTERS, key);
+}
+
+/**
+ * 추가정보 필터 항목인지 — 객실 그룹 항목 또는 업체 편의시설 항목
+ *
+ * @param key 항목 키
+ * @returns 어느 한쪽 정의에 있으면 true
+ */
+export function isDetailFilterKey(key: string): boolean {
+    return isRoomGroupDetailFilterKey(key) || isStoreDetailFilterKey(key);
+}
+
+/**
  * 반경 업체 조건 — 거리 제한 없음(ALL)이면 반경 · 사각형 null, 추가정보는 항목 정의의 조건 · 비교 값 + 빠진 항목의 기본값
  *
  * @param latitude 중심 위도
@@ -108,27 +129,30 @@ export function isRoomGroupDetailFilterKey(key: string): key is keyof RoomGroupD
  * @param detail_keys 추가정보 항목 키(정의에 있는 것만)
  * @returns repository 조건
  */
-export function toStoreFilter(latitude: number, longitude: number, radius_km: string, detail_keys: (keyof RoomGroupDetail)[]): DiscoveryStoreFilter {
-    const detail_conditions = detail_keys.map((key) => ({
-        key,
-        operator: ROOM_GROUP_DETAIL_FILTERS[key].operator,
-        value: ROOM_GROUP_DETAIL_FILTERS[key].value,
-        default_value: ROOM_GROUP_DETAIL_DEFAULTS[key],
-    }));
+export function toStoreFilter(latitude: number, longitude: number, radius_km: string, detail_keys: string[]): DiscoveryStoreFilter {
+    const detail_conditions = detail_keys
+        .filter(isRoomGroupDetailFilterKey)
+        .map((key) => ({key, operator: ROOM_GROUP_DETAIL_FILTERS[key].operator, value: ROOM_GROUP_DETAIL_FILTERS[key].value, default_value: ROOM_GROUP_DETAIL_DEFAULTS[key]}));
+    const store_conditions = detail_keys
+        .filter(isStoreDetailFilterKey)
+        .map((key) => ({key, operator: STORE_DETAIL_FILTERS[key].operator, value: STORE_DETAIL_FILTERS[key].value, default_value: STORE_DETAIL_DEFAULTS[key]}));
     if (radius_km === DISCOVERY_RADIUS_ALL) {
-        return {latitude, longitude, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions};
+        return {latitude, longitude, radius_m: null, min_latitude: null, max_latitude: null, min_longitude: null, max_longitude: null, detail_conditions, store_conditions};
     }
     const km = Number(radius_km);
-    return {latitude, longitude, radius_m: km * 1000, ...toRadiusBox(latitude, longitude, km), detail_conditions};
+    return {latitude, longitude, radius_m: km * 1000, ...toRadiusBox(latitude, longitude, km), detail_conditions, store_conditions};
 }
 
 /**
- * 추가정보 필터 항목 목록 — 정의 순서
+ * 추가정보 필터 항목 목록 — 객실 그룹 항목(정의 순서) 다음 업체 편의시설 항목(정의 순서), 묶음 표시
  *
- * @returns 항목(키 · 체크박스 이름)
+ * @returns 항목(키 · 체크박스 이름 · 묶음)
  */
-export function toRoomGroupDetailFilterItems(): DiscoveryRoomGroupDetailFilterItemResultDto[] {
-    return Object.entries(ROOM_GROUP_DETAIL_FILTERS).map(([key, filter]) => ({key, name: filter.name}));
+export function toDetailFilterItems(): DiscoveryDetailFilterItemResultDto[] {
+    return [
+        ...Object.entries(ROOM_GROUP_DETAIL_FILTERS).map(([key, filter]) => ({key, name: filter.name, group: DISCOVERY_DETAIL_FILTER_GROUP.ROOM_GROUP})),
+        ...Object.entries(STORE_DETAIL_FILTERS).map(([key, filter]) => ({key, name: filter.name, group: DISCOVERY_DETAIL_FILTER_GROUP.STORE})),
+    ];
 }
 
 /**
@@ -277,6 +301,7 @@ export function toDiscoveryStoreDetail(
         latitude: Number(store.latitude),
         longitude: Number(store.longitude),
         introduction: store.introduction ?? null,
+        store_detail: {...store.store_detail},
         is_open: store.is_open,
         is_always_open: store.is_always_open,
         booking_open_hours: store.booking_open_hours,

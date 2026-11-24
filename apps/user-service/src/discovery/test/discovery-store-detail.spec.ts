@@ -42,6 +42,7 @@ describe('GET /internal/v1/user-service/discovery/store/:store_id — 업체 상
                 latitude: 37.4979,
                 longitude: 127.0276,
                 introduction: '역에서 1분',
+                store_detail: {has_convenience_store: 1, has_cafe: 0, has_hot_spring: 0, is_pet_allowed: 1, has_meal: 0, is_delivery_allowed: 1, has_parking: 0},
                 is_open: 1,
                 is_always_open: 0,
                 booking_open_hours: 72,

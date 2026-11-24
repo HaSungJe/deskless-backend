@@ -19,6 +19,7 @@ import type {StoreMineBreaksDto} from '@app/contracts/store/dto/store-mine-break
 import type {StoreMineFileOrderDto} from '@app/contracts/store/dto/store-mine-file-order.dto.js';
 import type {StoreMineFileUploadUrlDto, StoreMineFileUploadUrlResultDto} from '@app/contracts/store/dto/store-mine-file-upload-url.dto.js';
 import type {StoreMineFileDto, StoreMineFileResultDto} from '@app/contracts/store/dto/store-mine-file.dto.js';
+import type {StoreMineDetailDto} from '@app/contracts/store/dto/store-mine-detail.dto.js';
 import type {StoreMineHoursDto} from '@app/contracts/store/dto/store-mine-hours.dto.js';
 import type {StoreMineMaintenanceDto} from '@app/contracts/store/dto/store-mine-maintenance.dto.js';
 import type {StoreMineOpenDto} from '@app/contracts/store/dto/store-mine-open.dto.js';
@@ -70,6 +71,7 @@ import {
 import {STORE_REPOSITORY} from './store.symbols.js';
 import {
     buildApplicationListWhere,
+    buildStoreDetail,
     buildStoreFileKey,
     buildStoreListWhere,
     buildUnavailablePeriodOverlapWhere,
@@ -640,6 +642,28 @@ export class StoreService {
             file.sort_order = index;
             await this.storeRepository.updateStoreFile({store_file_id}, file);
         }
+    }
+
+    /**
+     * 내 업체 편의시설 설정 (업체 관리자) — 7개 항목을 통째로 바꾼다(보낸 항목은 그 값, 빠진 항목은 없음 0). (RabbitMQ: admin.store.mine-detail)
+     *
+     * @param user_id 로그인 매니저 ID
+     * @param dto 편의시설 항목(모두 선택)
+     */
+    @Transactional()
+    async replaceMyStoreDetail(user_id: string, dto: StoreMineDetailDto): Promise<void> {
+        // 1. 내 업체 찾기 — 탈퇴 · 지운 업체 제외, 업체 행 잠금
+        const store = await this.storeRepository.findStoreByManager(user_id, true);
+        if (!store) {
+            throw new NotFoundException({message: STORE_MANAGER_STORE_NOT_FOUND_MESSAGE});
+        }
+
+        // 2. 편의시설 채우기 — 보낸 항목 + 빠진 항목은 없음(0), 선언 안 된 키는 버린다
+        const storeEntity = new StoreEntity();
+        storeEntity.store_detail = buildStoreDetail(dto);
+
+        // 3. 저장 — 통째로 교체
+        await this.storeRepository.updateStore({store_id: store.store_id}, storeEntity);
     }
 
     /**

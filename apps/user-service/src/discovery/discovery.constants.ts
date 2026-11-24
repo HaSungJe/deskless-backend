@@ -36,3 +36,6 @@ export const DISCOVERY_SEARCH_STORE_STATES: string[] = ['ACTIVE', 'SUSPEND'];
 
 /** 업체 이름 검색 최대 개수 */
 export const DISCOVERY_STORE_SEARCH_LIMIT = 20;
+
+/** 추가정보 필터 묶음 — 객실 그룹 항목(조건을 갖춘 객실 그룹이 있는 업체) · 업체 편의시설 항목(그 시설이 있는 업체) */
+export const DISCOVERY_DETAIL_FILTER_GROUP = {ROOM_GROUP: 'ROOM_GROUP', STORE: 'STORE'} as const;

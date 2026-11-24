@@ -8,15 +8,15 @@ import type {StoreFileEntity} from '@app/database/entities/store/store-file.enti
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
 
-/** 추가정보 조건 하나 — 객실 그룹 상세 JSON 항목(빠지면 기본값)과 비교 */
+/** 추가정보 조건 하나 — 객실 그룹 상세 JSON 또는 업체 편의시설 JSON 의 항목(빠지면 기본값)과 비교 */
 export interface DiscoveryDetailCondition {
-    /** 항목 키(ROOM_GROUP_DETAIL_FILTERS 에 있는 것만) */
+    /** 항목 키(ROOM_GROUP_DETAIL_FILTERS 또는 STORE_DETAIL_FILTERS 에 있는 것만) */
     key: string;
     /** EQ: 같다, GTE: 이상 */
     operator: 'EQ' | 'GTE';
     /** 비교 값 */
     value: number;
-    /** JSON 에 항목이 빠졌을 때 볼 값(ROOM_GROUP_DETAIL_DEFAULTS) */
+    /** JSON 에 항목이 빠졌을 때 볼 값(ROOM_GROUP_DETAIL_DEFAULTS · STORE_DETAIL_DEFAULTS) */
     default_value: number;
 }
 
@@ -31,6 +31,8 @@ export interface DiscoveryStoreFilter {
     max_longitude: number | null;
     /** 모두 갖춘 이용자에게 보이는 객실 그룹이 있는 업체만 — 없으면 [] */
     detail_conditions: DiscoveryDetailCondition[];
+    /** 업체 편의시설(t_store.store_detail)이 모두 맞는 업체만 — 없으면 [] */
+    store_conditions: DiscoveryDetailCondition[];
 }
 
 /** 반경 업체 행 (QueryBuilder raw — 별칭이 이 키와 같다) */

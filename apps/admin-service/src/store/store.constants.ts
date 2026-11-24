@@ -1,4 +1,6 @@
 import type {RoomPlanEntity} from '@app/database/entities/room/room-plan.entity.js';
+import {STORE_DETAIL_DEFAULTS} from '@app/database/entities/store/store.entity.js';
+import type {StoreDetail} from '@app/database/entities/store/store.entity.js';
 
 /** 업체 상태 — t_store_state PK (seeder.targets.ts 의 STORE_STATE_SEED_DATA 와 같다) */
 export const STORE_STATE = {ACTIVE: 'ACTIVE', SUSPEND: 'SUSPEND', LEAVE: 'LEAVE'} as const;
@@ -78,3 +80,6 @@ export const STORE_PLAN_DEFAULTS: Pick<RoomPlanEntity, 'room_plan_type_id' | 'us
 
 /** 일시 예약불가 입력 형식 — 한국 시각 분 단위 (dayjs 형식 문자열) */
 export const STORE_DATETIME_FORMAT = 'YYYY-MM-DD HH:mm';
+
+/** 업체 편의시설 항목 키 — 저장할 때 이 키만 남긴다(STORE_DETAIL_DEFAULTS 의 키) */
+export const STORE_DETAIL_KEYS = Object.keys(STORE_DETAIL_DEFAULTS) as (keyof StoreDetail)[];

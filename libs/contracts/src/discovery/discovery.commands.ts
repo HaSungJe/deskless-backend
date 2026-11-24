@@ -9,8 +9,8 @@ export const DISCOVERY_INTERNAL_PATH = {
     STORE_LIST: `${DISCOVERY_INTERNAL_BASE}/store`,
     /** 업체 이름 검색 — 문의할 업체 고르기 (GET, 인증 없음) */
     STORE_SEARCH: `${DISCOVERY_INTERNAL_BASE}/store-search`,
-    /** 업체 검색 추가정보 필터 항목 (GET, 인증 없음) */
-    ROOM_GROUP_DETAIL_FILTER: `${DISCOVERY_INTERNAL_BASE}/room-group-detail-filter`,
+    /** 업체 검색 추가정보 필터 항목 — 객실 · 업체 편의시설 (GET, 인증 없음) */
+    DETAIL_FILTER: `${DISCOVERY_INTERNAL_BASE}/detail-filter`,
     /** 업체 상세 (GET, 인증 없음) */
     storeDetail: (store_id: string) => `${DISCOVERY_INTERNAL_BASE}/store/${encodeURIComponent(store_id)}`,
     /** 업체의 객실 그룹 목록 (GET, 인증 없음) */

@@ -6,6 +6,7 @@ import type {StoreMineBreaksDto} from '@app/contracts/store/dto/store-mine-break
 import type {StoreMineFileDeleteParamDto} from '@app/contracts/store/dto/store-mine-file-delete.dto.js';
 import type {StoreMineFileOrderDto} from '@app/contracts/store/dto/store-mine-file-order.dto.js';
 import type {StoreMineFileDto, StoreMineFileResultDto} from '@app/contracts/store/dto/store-mine-file.dto.js';
+import type {StoreMineDetailDto} from '@app/contracts/store/dto/store-mine-detail.dto.js';
 import type {StoreMineHoursDto} from '@app/contracts/store/dto/store-mine-hours.dto.js';
 import type {StoreMineMaintenanceDto} from '@app/contracts/store/dto/store-mine-maintenance.dto.js';
 import type {StoreMineOpenDto} from '@app/contracts/store/dto/store-mine-open.dto.js';
@@ -134,6 +135,16 @@ export class StoreQueueController {
     @OnCommand(STORE_COMMAND.MINE_HOURS)
     async replaceMyStoreHours(command: MessageEnvelope<StoreMineHoursDto>): Promise<void> {
         return this.storeService.replaceMyStoreHours(requireActor(command).user_id, command.payload);
+    }
+
+    /**
+     * 내 업체 편의시설 설정 — 업체 관리자, 통째로 교체
+     *
+     * @param command 명령 봉투 (actor 필수)
+     */
+    @OnCommand(STORE_COMMAND.MINE_DETAIL)
+    async replaceMyStoreDetail(command: MessageEnvelope<StoreMineDetailDto>): Promise<void> {
+        return this.storeService.replaceMyStoreDetail(requireActor(command).user_id, command.payload);
     }
 
     /**

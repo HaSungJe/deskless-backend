@@ -10,7 +10,7 @@ import {RoomEntity} from '../entities/room/room.entity.js';
 import {StoreBreakEntity} from '../entities/store/store-break.entity.js';
 import {StoreFileEntity} from '../entities/store/store-file.entity.js';
 import {StoreHourEntity} from '../entities/store/store-hour.entity.js';
-import {StoreEntity} from '../entities/store/store.entity.js';
+import {STORE_DETAIL_DEFAULTS, StoreEntity} from '../entities/store/store.entity.js';
 import {UserSettingEntity} from '../entities/user/user-setting.entity.js';
 import {UserEntity} from '../entities/user/user.entity.js';
 import {
@@ -53,6 +53,7 @@ export function buildSampleStores(): StoreEntity[] {
         store.latitude = sample.latitude;
         store.longitude = sample.longitude;
         store.introduction = sample.introduction;
+        store.store_detail = {...STORE_DETAIL_DEFAULTS, ...sample.store_detail};
         store.is_always_open = sample.is_always_open;
         store.is_open = 1;
         store.maintenance_minutes = sample.maintenance_minutes;

@@ -16,10 +16,11 @@ import type {StoreApplicationEntity} from '@app/database/entities/store/store-ap
 import type {StoreBreakEntity} from '@app/database/entities/store/store-break.entity.js';
 import type {StoreHourEntity} from '@app/database/entities/store/store-hour.entity.js';
 import type {StoreUnavailablePeriodEntity} from '@app/database/entities/store/store-unavailable-period.entity.js';
-import type {StoreEntity} from '@app/database/entities/store/store.entity.js';
+import {STORE_DETAIL_DEFAULTS} from '@app/database/entities/store/store.entity.js';
+import type {StoreDetail, StoreEntity} from '@app/database/entities/store/store.entity.js';
 import type {UserEntity} from '@app/database/entities/user/user.entity.js';
 import type {StoreFileRow} from './interfaces/store.repository.interface.js';
-import {STORE_FILE_EXTENSION, STORE_FILE_PURPOSE} from './store.constants.js';
+import {STORE_DETAIL_KEYS, STORE_FILE_EXTENSION, STORE_FILE_PURPOSE} from './store.constants.js';
 
 /**
  * 입점 신청 목록 WHERE — 상태 + 검색어(상호명 · 사업자등록번호 OR).
@@ -384,6 +385,7 @@ export function toStoreDetail(entity: StoreEntity, files: StoreDetailFileResultD
         latitude: entity.latitude,
         longitude: entity.longitude,
         introduction: entity.introduction ?? null,
+        store_detail: {...entity.store_detail},
         is_always_open: entity.is_always_open,
         is_open: entity.is_open,
         maintenance_minutes: entity.maintenance_minutes,
@@ -475,6 +477,7 @@ export function toMineDetail(entity: StoreEntity, hours: StoreMineHourItemResult
         latitude: entity.latitude,
         longitude: entity.longitude,
         introduction: entity.introduction ?? null,
+        store_detail: {...entity.store_detail},
         is_always_open: entity.is_always_open,
         is_open: entity.is_open,
         maintenance_minutes: entity.maintenance_minutes,
@@ -504,4 +507,22 @@ export function toUnavailablePeriodItem(entity: StoreUnavailablePeriodEntity): S
         memo: entity.memo ?? null,
         created_at: entity.created_at.toISOString(),
     };
+}
+
+/**
+ * 저장할 업체 편의시설 — 알려진 항목(STORE_DETAIL_KEYS) 중 값이 있는 것만 남기고, 빠진 항목은 기본값(없음 0)으로 채워 전부 만든다.
+ * 선언 안 된 키는 버린다(큐 경로는 다시 검증하지 않는다). 입력 · 항목이 null 이면 보내지 않은 것과 같다. 객실 그룹 상세의 buildRoomGroupDetail(room.util.ts)과 같은 규칙.
+ *
+ * @param dto 받은 항목
+ * @returns 저장할 편의시설(7개 항목)
+ */
+export function buildStoreDetail(dto?: Partial<Record<keyof StoreDetail, number | null>> | null): StoreDetail {
+    const detail: Record<keyof StoreDetail, number> = {...STORE_DETAIL_DEFAULTS};
+    for (const key of STORE_DETAIL_KEYS) {
+        const value = dto?.[key];
+        if (value !== undefined && value !== null) {
+            detail[key] = value;
+        }
+    }
+    return detail as StoreDetail;
 }
