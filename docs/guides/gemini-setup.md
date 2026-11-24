@@ -50,4 +50,5 @@ CHAT_DAILY_LIMIT=5
 | `JSON 응답 실패: … 402 … prepayment credits are depleted` | 유료 등급 프로젝트의 선불 잔액 0 — 충전하거나, 결제 없는 프로젝트의 키 + `GEMINI_SEARCH_ENABLED=0` |
 | `JSON 응답 실패: …` 에 search · grounding · tool 관련 거절 | 무료 등급 키에 웹 검색 — `GEMINI_SEARCH_ENABLED=0` |
 | `JSON 응답 실패: … API key not valid …` | 키 값이 틀렸다 |
+| `JSON 응답 실패: … 404 … is not found for API version v1 …` | API 버전 — 코드는 v1beta 로 고정돼 있다(`AI_API_VERSION`). 2026-11-25 이전 이미지면 다시 올린다. v1beta 인데도 404 면 그 모델이 없어졌거나 이 키에서 쓸 수 없다 — `GEMINI_CHAT_MODEL` 을 [모델 목록](https://ai.google.dev/gemini-api/docs/models)의 정식 모델(예: `gemini-3.8-flash`)로 |
 | `JSON 응답 실패: … 429 …` | 요청 한도 — 잠시 뒤 다시, 자주 나면 유료 등급 |

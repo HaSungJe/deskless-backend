@@ -1,7 +1,15 @@
 import {Injectable, Logger, OnApplicationBootstrap, ServiceUnavailableException} from '@nestjs/common';
 import {GoogleGenAI} from '@google/genai';
 import type {Content} from '@google/genai';
-import {AI_CHAT_MODEL_DEFAULT, AI_EMBEDDING_DIMENSIONS, AI_EMBEDDING_MODEL_DEFAULT, AI_REQUEST_TIMEOUT_MS, AI_STREAM_TIMEOUT_MS, AI_UNAVAILABLE_MESSAGE} from '../integration.constants.js';
+import {
+    AI_API_VERSION,
+    AI_CHAT_MODEL_DEFAULT,
+    AI_EMBEDDING_DIMENSIONS,
+    AI_EMBEDDING_MODEL_DEFAULT,
+    AI_REQUEST_TIMEOUT_MS,
+    AI_STREAM_TIMEOUT_MS,
+    AI_UNAVAILABLE_MESSAGE,
+} from '../integration.constants.js';
 import type {AiEmbedInput, AiGatewayInterface, AiHistoryItem, AiJsonInput, AiTextInput} from '../interfaces/integration.interface.js';
 
 /**
@@ -174,7 +182,7 @@ export class GeminiAiGateway implements AiGatewayInterface, OnApplicationBootstr
     }
 
     /**
-     * SDK 클라이언트 — 키가 비면 503(부팅은 된다).
+     * SDK 클라이언트(API v1beta) — 키가 비면 503(부팅은 된다).
      *
      * @returns 클라이언트
      * @throws ServiceUnavailableException `{message: AI_UNAVAILABLE_MESSAGE}`
@@ -185,7 +193,8 @@ export class GeminiAiGateway implements AiGatewayInterface, OnApplicationBootstr
             throw new ServiceUnavailableException({message: AI_UNAVAILABLE_MESSAGE});
         }
         if (!this.client) {
-            this.client = new GoogleGenAI({apiKey});
+            // API 버전 v1beta 고정 — SDK 기본 v1 에는 미리보기 모델 · 정해진 JSON 응답 · 검색 그라운딩이 없다
+            this.client = new GoogleGenAI({apiKey, apiVersion: AI_API_VERSION});
         }
         return this.client;
     }

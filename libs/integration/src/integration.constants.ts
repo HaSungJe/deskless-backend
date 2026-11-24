@@ -73,6 +73,9 @@ export const AI_REQUEST_TIMEOUT_MS = 30000;
 /** 글 스트리밍 전체의 제한 시간(ms) — 조각이 와도 이 시간을 넘기면 503(멈춘 스트림이 답하는 중 잠금보다 오래 가지 않게) */
 export const AI_STREAM_TIMEOUT_MS = 60000;
 
+/** Gemini API 버전 — SDK(@google/genai 3.x)의 기본값은 v1 인데, 미리보기 모델(gemini-3-flash-preview 등) · 정해진 JSON 응답(responseJsonSchema) · 검색 그라운딩은 v1beta 에 있다(v1 로 부르면 404 not found for API version v1) */
+export const AI_API_VERSION = 'v1beta';
+
 /** 임베딩 벡터 차원 — 업체 검색 벡터 t_store_embedding.embedding(vector(768))과 같아야 한다 */
 export const AI_EMBEDDING_DIMENSIONS = 768;
 
