@@ -193,7 +193,7 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 
 **배포는 deskless 저장소가 맡는다**(쿠버네티스 — k3s · Helm, 사용자 결정 2026-11-23). 인스턴스 수 · 로드밸런싱(Service · Ingress) · 네트워크 격리(NetworkPolicy) · 인프라(PostgreSQL · RabbitMQ 와 그 계정 · 권한 · Redis) · 마이그레이션 Job · 공용 파일 볼륨 · 지표 수집(Prometheus · Grafana) · 환경 값 주입이 모두 거기 있다. 이 저장소는 앱 코드와 이미지([Dockerfile](../Dockerfile))만 갖는다. Docker compose 로 띄우던 시절의 구성(compose · nginx · 공용 네트워크 · 브로커 계정 초기화)은 커밋 `3125886` 에 남아 있다.
 
-- 이미지: [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `deskless/gateway` · `deskless/user-service` · `deskless/admin-service` · `deskless/scheduler` 를 만든다. Node 24 LTS slim — `node:24.22.3-slim`(패치까지 고정 — 보안 패치가 나오면 Dockerfile `NODE_IMAGE` 와 package.json `engines` 하한을 같이 올린다, bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>`, 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행. 이미지를 만드는 `docker build` 는 Claude 도 해도 된다(컨테이너를 띄우지 않는다).
+- 이미지: [Dockerfile](../Dockerfile) 하나를 `APP` 빌드 인자로 나눠 `deskless/gateway` · `deskless/user-service` · `deskless/admin-service` · `deskless/scheduler` 를 만든다. Node 24 LTS slim — `node:24.22.3-slim`(패치까지 고정 — 보안 패치가 나오면 Dockerfile `NODE_IMAGE` 와 package.json `engines` 하한을 같이 올린다, bcrypt 가 glibc prebuild 만 제공), 빌드 단계에서 `nest build <APP>` 뒤 그 앱의 루트 모듈을 불러와 본다(서버는 띄우지 않는다 — 데코레이터 필드 타입이 같은 파일 아래의 클래스면 실행 때 바로 죽는 것을 이미지 빌드에서 잡는다, `npm run build:check` 와 같은 확인), 실행 단계는 운영 의존성 + `dist/apps/<APP>` 만. `node` 사용자로 실행. 이미지를 만드는 `docker build` 는 Claude 도 해도 된다(컨테이너를 띄우지 않는다).
 
 ### 앱이 배포에 기대하는 것 (deskless 가 맞춘다)
 

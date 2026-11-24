@@ -21,6 +21,8 @@ COPY apps ./apps
 COPY libs ./libs
 RUN test -n "$APP" || (echo "APP build-arg 가 필요합니다 (gateway | user-service | admin-service | scheduler)" && exit 1)
 RUN npx nest build "$APP"
+# 빌드 산출물의 루트 모듈을 불러와 본다(서버는 띄우지 않는다) — 데코레이터 필드 타입이 같은 파일 아래의 클래스면 실행 때 바로 죽는 것을 이미지 빌드에서 잡는다(scripts/check-build-load.mjs 와 같은 확인)
+RUN node --input-type=module -e "await import('./dist/apps/${APP}/apps/${APP}/src/${APP}.module.js')"
 
 # ── 3. 운영 의존성만 ──
 FROM ${NODE_IMAGE} AS prod-deps

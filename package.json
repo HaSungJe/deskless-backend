@@ -10,7 +10,7 @@
     "node": ">=24.22.1"
   },
   "scripts": {
-    "build": "npm run build:gateway && npm run build:user-service && npm run build:admin-service && npm run build:scheduler",
+    "build": "npm run build:gateway && npm run build:user-service && npm run build:admin-service && npm run build:scheduler && npm run build:check",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" scripts/*.mjs vitest.config.ts vitest.setup.ts",
     "lint": "oxlint apps/ libs/",
     "test": "vitest run",
@@ -21,6 +21,7 @@
     "build:user-service": "nest build user-service",
     "build:admin-service": "nest build admin-service",
     "build:scheduler": "nest build scheduler",
+    "build:check": "node scripts/check-build-load.mjs",
     "start:gateway": "nest start gateway --watch",
     "start:user-service": "nest start user-service --watch",
     "start:admin-service": "nest start admin-service --watch",

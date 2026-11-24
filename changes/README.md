@@ -13,6 +13,27 @@
 |---|---|---|
 | 2026-11-23 | [Docker 운영 구성 정리 · 모니터링 이전 · 헬스 체크](2026-11-23-k8s-cleanup.md) | 반영 `43abf2d` |
 | 2026-11-24 | [`.env.example` 을 앱 · 기능 단위로 묶고 주석 줄이기](2026-11-24-env-example-layout.md) | 반영(2026-11-24) |
+| 2026-11-25 | [편의시설 DTO 선언 순서(실행하면 바로 죽음)](2026-11-25-dto-declaration-order.md) | 반영(2026-11-25) |
+
+## 2026-11-25 — 반영 결과 요약
+
+**재현** — `c0534f1` 을 빌드해 앱마다 루트 모듈을 불러오니 gateway · admin-service(`StoreDetailFacilityResultDto`) · user-service(`DiscoveryStoreFacilityResultDto`)가 요청서와 같은 `ReferenceError: Cannot access '…' before initialization` 로 죽고 scheduler 만 불러와졌다.
+
+**고침 — 선언 순서 3곳** — 요청서 표 그대로 편의시설 클래스를 쓰는 클래스 위로 옮겼다(모양 · 필드 · 데코레이터는 그대로): `libs/contracts/src/store/dto/store-detail.dto.ts`(`StoreDetailFacilityResultDto` → `StoreDetailResultDto` 위) · `store-mine.dto.ts`(`StoreMineFacilityResultDto` → `StoreMineResultDto` 위) · `libs/contracts/src/discovery/dto/discovery-store-detail.dto.ts`(`DiscoveryStoreFacilityResultDto` → `DiscoveryStoreDetailResultDto` 위).
+
+**다시 찾기** — TypeScript 구문 트리로 `apps/` · `libs/` 의 모든 `.ts` 를 훑었다: 데코레이터가 붙은 필드 · 매개변수 · 반환 타입(`X` · `X | null` — 배열은 `Array` 라 제외)이 같은 파일 아래의 클래스인 곳. 고치기 전 정확히 위 3곳, 고친 뒤 0곳. 이번에 새로 만든 AI 대화 DTO(`libs/contracts/src/chat/dto/*`)는 처음부터 위에서 아래 순서라 걸리지 않는다.
+
+**재발 막기**
+- 규약 한 줄 — `docs/conventions.md` DTO 파일 절 · `AGENTS.md` DTO 줄 · 체크리스트: "중첩 결과 DTO 는 그것을 쓰는 클래스보다 위에 선언(ESM + 데코레이터 메타데이터 — 단일 필드 `x: X` · `x: X | null` 이 걸린다)".
+- 빌드 산출물 불러오기 — `scripts/check-build-load.mjs`(`npm run build:check`): 앱마다 따로 띄운 node 에서 `dist/apps/<앱>/apps/<앱>/src/<앱>.module.js` 를 import 만 한다(서버 · DB · 브로커 · Redis 연결 없음). `npm run build` 가 네 앱을 빌드한 뒤 이어서 돌린다.
+- 이미지 빌드 — `Dockerfile` 빌드 단계가 `nest build <APP>` 뒤 그 앱의 루트 모듈을 같은 방식으로 불러와 본다 → 이런 커밋은 **이미지 빌드에서 실패**한다(CrashLoopBackOff 대신). `scripts/` 는 이미지 빌드 문맥에서 제외돼 있어 Dockerfile 에는 한 줄 `node -e` 로 넣었다.
+- 이 PC 의 ship 푸쉬 전 확인(beaver 로컬 설정 — git 제외)을 `typecheck` → `typecheck + build` 로 바꿨다.
+
+**요청서와 다른 사실 하나** — "Vitest 는 이 오류를 내지 않았다" 는 맞지 않다. `c0534f1` 에서 `npm test` 를 돌리면 store · discovery spec 파일 29개가 같은 TDZ 오류로 **불러오기부터 실패**한다(Vitest 도 데코레이터 메타데이터를 낸다). 놓친 이유는 `7f9b498` 을 테스트 없이 내보낸 것이다(이 저장소는 테스트를 ship 뒤 따로 돌린다) — 그래서 테스트와 별개인 빌드 · 이미지 단계에 확인을 더했다. 문서 문구도 이 사실대로 적었다.
+
+**그대로 둔 것** — `.beaver/output/frontend/changes/2026-11-24-store-facility.md` 의 DTO 사본(같은 순서) — 프론트용 사본은 Swagger 데코레이터를 뺀 결과 DTO 라 데코레이터 메타데이터가 없어 걸리지 않는다. `.beaver/output/plan|report/store/store-facility-*` — 지난 기록.
+
+**검증** — `npm run typecheck` · `npm run lint` 통과, `npm run build`(네 앱 + `build:check` — 네 앱 모두 불러옴) 통과. `npm test` 는 1473건 중 **15건 실패 — 이 변경과 무관하게 전부터 있던 실패**다: 이 변경을 치운 `c0534f1` 그대로에서도 같은 12건이 실패하고, 나머지 3건(`store-application-approve` · `store-detail` · `store-mine-detail`)은 `c0534f1` 에서는 파일이 불러와지지 않아 숨어 있던 것이다. 대부분 편의시설 커밋이 `t_store.store_detail` 을 더한 뒤 갱신하지 않은 SQL 스냅샷 · 선언 안 된 필드 거절 단언이다 — 따로 고친다. `docker build` 는 돌리지 않았다.
 
 ## 2026-11-24 — 반영 결과 요약
 

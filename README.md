@@ -88,7 +88,7 @@ npm run start:scheduler
 | 명령 | 내용 |
 |---|---|
 | `npm run start:<app>` · `start:prod:<app>` | 앱 하나 실행(watch) · 빌드 산출물 실행 — gateway · user-service · admin-service · scheduler |
-| `npm run build` | 네 앱 빌드 → `dist/apps/<app>/apps/<app>/src/main.js` |
+| `npm run build` · `build:check` | 네 앱 빌드 → `dist/apps/<app>/apps/<app>/src/main.js`, 끝에 `build:check`(앱마다 빌드 산출물의 루트 모듈을 불러와 실행하자마자 죽는 경우를 잡는다 — 서버는 띄우지 않는다) |
 | `npm test` · `npm run typecheck` | 전체 테스트(Vitest) · 타입 검사 |
 | `npm run lint` · `npm run format` | oxlint · Prettier |
 | `npm run db:migrate` · `db:revert` | 마이그레이션 적용 · 마지막 1건 되돌리기(실제 DB) |

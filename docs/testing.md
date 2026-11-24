@@ -21,6 +21,7 @@ Vitest 5 + `@nestjs/testing` + `supertest`. 설정 [vitest.config.ts](../vitest.
 - 부가: `npm run test:watch` · `test:cov`(coverage-v8) · `test:debug`(`--inspect-brk --no-file-parallelism`)
 - 타입: `npm run typecheck` — **Vitest 는 타입을 검사하지 않는다.** `FindOptionsWhere<X>` 필드명 오류, helper 의 repository mock 누락 등은 타입체크가 잡으므로 테스트와 함께 반드시 통과시킨다.
 - 스키마: `npm run db:check` — 엔티티와 마이그레이션이 일치하는지(DB 없이 PGlite 로 계산).
+- 빌드 산출물 불러오기: `npm run build`(끝에 `build:check` — [scripts/check-build-load.mjs](../scripts/check-build-load.mjs)) — tsc 로 만든 `dist/` 의 루트 모듈을 앱마다 따로 import 해(서버는 띄우지 않는다) 부팅하자마자 죽는 경우(선언 전 클래스를 데코레이터 메타데이터로 읽는 TDZ — [conventions.md](conventions.md) DTO 파일 절)를 잡는다. 같은 오류는 그 DTO 를 부르는 spec 파일이 불러오기에서 실패해 `npm test` 도 잡지만, 테스트는 ship 뒤 따로 돌리므로(`/beaver:test`) 빌드 · 이미지 빌드(Dockerfile)에서 한 번 더 막는다.
 
 ## 위치 / 명명
 

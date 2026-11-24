@@ -41,6 +41,32 @@ export class StoreDetailFileResultDto {
 }
 
 /**
+ * 업체 편의시설 (총관리자 업체 상세 — 보기만) — 7개 항목(저장 안 된 항목은 없음 0)
+ */
+export class StoreDetailFacilityResultDto {
+    @ApiProperty({description: '편의점 (0: 없음, 1: 있음)'})
+    has_convenience_store: number;
+
+    @ApiProperty({description: '카페 (0: 없음, 1: 있음)'})
+    has_cafe: number;
+
+    @ApiProperty({description: '온천 (0: 없음, 1: 있음)'})
+    has_hot_spring: number;
+
+    @ApiProperty({description: '반려동물 동반 가능 (0: 없음, 1: 있음)'})
+    is_pet_allowed: number;
+
+    @ApiProperty({description: '식사 제공 (0: 없음, 1: 있음)'})
+    has_meal: number;
+
+    @ApiProperty({description: '배달 음식 가능 (0: 없음, 1: 있음)'})
+    is_delivery_allowed: number;
+
+    @ApiProperty({description: '주차 가능 (0: 없음, 1: 있음)'})
+    has_parking: number;
+}
+
+/**
  * 업체 상세 (총관리자)
  */
 export class StoreDetailResultDto {
@@ -112,30 +138,4 @@ export class StoreDetailResultDto {
 
     @ApiProperty({description: '업체 정보 파일 (용도 · 정렬 순서)', type: () => [StoreDetailFileResultDto]})
     files: StoreDetailFileResultDto[];
-}
-
-/**
- * 업체 편의시설 (총관리자 업체 상세 — 보기만) — 7개 항목(저장 안 된 항목은 없음 0)
- */
-export class StoreDetailFacilityResultDto {
-    @ApiProperty({description: '편의점 (0: 없음, 1: 있음)'})
-    has_convenience_store: number;
-
-    @ApiProperty({description: '카페 (0: 없음, 1: 있음)'})
-    has_cafe: number;
-
-    @ApiProperty({description: '온천 (0: 없음, 1: 있음)'})
-    has_hot_spring: number;
-
-    @ApiProperty({description: '반려동물 동반 가능 (0: 없음, 1: 있음)'})
-    is_pet_allowed: number;
-
-    @ApiProperty({description: '식사 제공 (0: 없음, 1: 있음)'})
-    has_meal: number;
-
-    @ApiProperty({description: '배달 음식 가능 (0: 없음, 1: 있음)'})
-    is_delivery_allowed: number;
-
-    @ApiProperty({description: '주차 가능 (0: 없음, 1: 있음)'})
-    has_parking: number;
 }

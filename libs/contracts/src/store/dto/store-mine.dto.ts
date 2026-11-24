@@ -61,6 +61,32 @@ export class StoreMineBreakItemResultDto {
 }
 
 /**
+ * 내 업체 편의시설 — 7개 항목(저장 안 된 항목은 없음 0)
+ */
+export class StoreMineFacilityResultDto {
+    @ApiProperty({description: '편의점 (0: 없음, 1: 있음)'})
+    has_convenience_store: number;
+
+    @ApiProperty({description: '카페 (0: 없음, 1: 있음)'})
+    has_cafe: number;
+
+    @ApiProperty({description: '온천 (0: 없음, 1: 있음)'})
+    has_hot_spring: number;
+
+    @ApiProperty({description: '반려동물 동반 가능 (0: 없음, 1: 있음)'})
+    is_pet_allowed: number;
+
+    @ApiProperty({description: '식사 제공 (0: 없음, 1: 있음)'})
+    has_meal: number;
+
+    @ApiProperty({description: '배달 음식 가능 (0: 없음, 1: 있음)'})
+    is_delivery_allowed: number;
+
+    @ApiProperty({description: '주차 가능 (0: 없음, 1: 있음)'})
+    has_parking: number;
+}
+
+/**
  * 내 업체 상세 (업체 관리자)
  */
 export class StoreMineResultDto {
@@ -138,30 +164,4 @@ export class StoreMineResultDto {
 
     @ApiProperty({description: '수정일시 (ISO 8601)'})
     updated_at: string;
-}
-
-/**
- * 내 업체 편의시설 — 7개 항목(저장 안 된 항목은 없음 0)
- */
-export class StoreMineFacilityResultDto {
-    @ApiProperty({description: '편의점 (0: 없음, 1: 있음)'})
-    has_convenience_store: number;
-
-    @ApiProperty({description: '카페 (0: 없음, 1: 있음)'})
-    has_cafe: number;
-
-    @ApiProperty({description: '온천 (0: 없음, 1: 있음)'})
-    has_hot_spring: number;
-
-    @ApiProperty({description: '반려동물 동반 가능 (0: 없음, 1: 있음)'})
-    is_pet_allowed: number;
-
-    @ApiProperty({description: '식사 제공 (0: 없음, 1: 있음)'})
-    has_meal: number;
-
-    @ApiProperty({description: '배달 음식 가능 (0: 없음, 1: 있음)'})
-    is_delivery_allowed: number;
-
-    @ApiProperty({description: '주차 가능 (0: 없음, 1: 있음)'})
-    has_parking: number;
 }
