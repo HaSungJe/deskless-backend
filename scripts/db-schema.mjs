@@ -7,6 +7,7 @@
 //   npm run db:generate -- AddStoreHour   차이를 libs/database/src/migrations/<ts>-AddStoreHour.ts 로 쓰고 migrations.ts 에 등록
 import {PGlite} from '@electric-sql/pglite';
 import {btree_gist} from '@electric-sql/pglite/contrib/btree_gist';
+import {vector} from '@electric-sql/pglite-pgvector';
 import {PGLiteSocketServer} from '@electric-sql/pglite-socket';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:net';
@@ -41,8 +42,8 @@ function freePort() {
 async function pendingSchemaDiff() {
     const {ENTITIES} = await import(new URL('entities.js', DIST));
     const {MIGRATIONS} = await import(new URL('migrations.js', DIST));
-    // 배타 제약(EXC_ — 기간 겹침)이 쓰는 확장을 실어 둔다 — 운영 PostgreSQL 처럼 CREATE EXTENSION 으로 켠다
-    const db = await PGlite.create({extensions: {btree_gist}});
+    // 배타 제약(EXC_ — 기간 겹침)과 업체 검색 벡터(t_store_embedding — pgvector)가 쓰는 확장을 실어 둔다 — 운영 PostgreSQL 처럼 CREATE EXTENSION 으로 켠다
+    const db = await PGlite.create({extensions: {btree_gist, vector}});
     const port = await freePort();
     const server = new PGLiteSocketServer({db, port, host: '127.0.0.1', maxConnections: 4});
     await server.start();

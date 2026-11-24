@@ -63,3 +63,24 @@ export const LOCAL_FILE_NOT_FOUND_MESSAGE = '파일을 찾을 수 없습니다.'
 
 /** 파일 저장소 구분 — 파일 행(t_store_file · t_room_group_image)의 file_storage. 업로드는 AWS_S3_BUCKET 이 있으면 S3, 비면 LOCAL — S3 로 바꾼 뒤에도 LOCAL 행은 내부 파일 저장소(게이트웨이 /files)에서 연다 */
 export const FILE_STORAGE = {S3: 'S3', LOCAL: 'LOCAL'} as const;
+
+/** AI(Gemini)에 닿지 못했거나 답을 받지 못했을 때 — 503(이용자가 고칠 수 있는 것이 없어 400 을 두지 않는다) */
+export const AI_UNAVAILABLE_MESSAGE = 'AI 답을 만들지 못했습니다. 잠시 후 다시 시도해주세요.';
+
+/** AI 요청 한 번(정해진 JSON 응답 · 임베딩)의 제한 시간(ms) — 넘기면 503 */
+export const AI_REQUEST_TIMEOUT_MS = 30000;
+
+/** 글 스트리밍 전체의 제한 시간(ms) — 조각이 와도 이 시간을 넘기면 503(멈춘 스트림이 답하는 중 잠금보다 오래 가지 않게) */
+export const AI_STREAM_TIMEOUT_MS = 60000;
+
+/** 임베딩 벡터 차원 — 업체 검색 벡터 t_store_embedding.embedding(vector(768))과 같아야 한다 */
+export const AI_EMBEDDING_DIMENSIONS = 768;
+
+/** 대화 모델 기본값(GEMINI_CHAT_MODEL 이 비면) — Google 검색 그라운딩과 정해진 JSON 응답을 한 요청에 같이 쓰려면 Gemini 3 계열이어야 한다 */
+export const AI_CHAT_MODEL_DEFAULT = 'gemini-3-flash-preview';
+
+/** 임베딩 모델 기본값(GEMINI_EMBEDDING_MODEL 이 비면) */
+export const AI_EMBEDDING_MODEL_DEFAULT = 'gemini-embedding-001';
+
+/** 임베딩 용도 — DOCUMENT: 검색될 글(업체), QUERY: 검색하는 글(질문의 검색 문장) */
+export const AI_EMBED_TASK = {DOCUMENT: 'DOCUMENT', QUERY: 'QUERY'} as const;

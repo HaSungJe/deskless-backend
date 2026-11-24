@@ -34,15 +34,17 @@
 
 | 파일 | 내용 |
 |---|---|
-| `integration.symbols.ts` | `SMS_SENDER` · `STORAGE_GATEWAY` · `DOOR_STORE` · `PAYMENT_GATEWAY` |
-| `interfaces/integration.interface.ts` | `SmsSenderInterface` · `SmsMessage` · `StorageGatewayInterface` · `StorageBackendInterface` · `FileStorage` · `StoredFile` · `StorageUploadInput` · `StorageUploadResult` · `StorageDownloadResult` · `DoorStoreInterface` · `DoorRecord` · `DoorState` · `DoorCommand`(`DoorOpenCommand` · `DoorDisconnectCommand`) · `PaymentGatewayInterface` · `PaymentEnvironment` · `PaymentLookupResult` · `PaymentCancelInput` · `PaymentCancelResult` |
-| `integration.constants.ts` | `SMS_UNAVAILABLE_MESSAGE` · `STORAGE_UNAVAILABLE_MESSAGE` · `STORAGE_PUBLIC_URL_MISSING_MESSAGE` · `STORAGE_UPLOAD_URL_TTL_SECONDS` · `STORAGE_DOWNLOAD_URL_TTL_SECONDS` · `FILE_STORAGE` · `REDIS_UNAVAILABLE_MESSAGE` · `DOOR_STATE` · `DOOR_TIME_NONE` · `DOOR_COMMAND_CHANNEL` · `DOOR_COMMAND` · `PAYMENT_UNAVAILABLE_MESSAGE` · `PAYMENT_FAILED_MESSAGE` · `TOSS_API_BASE_URL` · `PAYMENT_REQUEST_TIMEOUT_MS` · `TOSS_PAYMENT_STATUS_DONE` |
+| `integration.symbols.ts` | `SMS_SENDER` · `STORAGE_GATEWAY` · `DOOR_STORE` · `PAYMENT_GATEWAY` · `AI_GATEWAY` · `CONVERSATION_STORE` |
+| `interfaces/integration.interface.ts` | `SmsSenderInterface` · `SmsMessage` · `StorageGatewayInterface` · `StorageBackendInterface` · `FileStorage` · `StoredFile` · `StorageUploadInput` · `StorageUploadResult` · `StorageDownloadResult` · `DoorStoreInterface` · `DoorRecord` · `DoorState` · `DoorCommand`(`DoorOpenCommand` · `DoorDisconnectCommand`) · `PaymentGatewayInterface` · `PaymentEnvironment` · `PaymentLookupResult` · `PaymentCancelInput` · `PaymentCancelResult` · `AiGatewayInterface` · `AiHistoryItem` · `AiTextInput` · `AiJsonInput` · `AiEmbedInput` · `ConversationStoreInterface` · `ConversationTurn` · `ConversationUsage` |
+| `integration.constants.ts` | `SMS_UNAVAILABLE_MESSAGE` · `STORAGE_UNAVAILABLE_MESSAGE` · `STORAGE_PUBLIC_URL_MISSING_MESSAGE` · `STORAGE_UPLOAD_URL_TTL_SECONDS` · `STORAGE_DOWNLOAD_URL_TTL_SECONDS` · `FILE_STORAGE` · `REDIS_UNAVAILABLE_MESSAGE` · `DOOR_STATE` · `DOOR_TIME_NONE` · `DOOR_COMMAND_CHANNEL` · `DOOR_COMMAND` · `PAYMENT_UNAVAILABLE_MESSAGE` · `PAYMENT_FAILED_MESSAGE` · `TOSS_API_BASE_URL` · `PAYMENT_REQUEST_TIMEOUT_MS` · `TOSS_PAYMENT_STATUS_DONE` · `AI_UNAVAILABLE_MESSAGE` · `AI_REQUEST_TIMEOUT_MS` · `AI_EMBEDDING_DIMENSIONS` · `AI_CHAT_MODEL_DEFAULT` · `AI_EMBEDDING_MODEL_DEFAULT` · `AI_EMBED_TASK` |
 | `integration.util.ts` | `toDoorTime` — 시각 → 문 시각(한국 시각 yyyyMMddHHmmss) · `toE164KrPhone` — 국내 번호 → `+82…` · `classifyTossFailure` — 토스 실패 → 업무 · 일시 · 결제 없음 · `verifyPaymentLookup` — 토스 조회 결과 ↔ 우리 결제 행 대조 · `isSampleFileKey` · `isS3StorageConfigured` · `isAwsKeyConfigured` · `gatewayPublicUrl` |
 | `sms/sns-sms.sender.ts` · `sms/sms.module.ts` | `SnsSmsSender`(SNS `Publish`, Transactional — AWS 키가 비면 생략 · 로그) · `SmsModule`(`@Global`) |
 | `storage/routing-storage.gateway.ts` · `storage/s3-storage.gateway.ts` · `storage/local-storage.gateway.ts` · `storage/local-storage.util.ts` · `storage/storage.module.ts` | `RoutingStorageGateway`(저장소 포트 — 업로드는 지금 저장소, 읽기 · 삭제는 행의 `file_storage`, 샘플 키) · `S3StorageGateway`(presigned PutObject — Content-Type 서명 · presigned GetObject · HeadObject · DeleteObject) · `LocalStorageGateway`(내부 파일 저장소 — 게이트웨이 `/files` 서명 주소 · 폴더 확인 · 삭제) · `signLocalFileRequest` · `isValidLocalFileSignature` · `resolveLocalFilePath` · `localFileStorageDir` · `StorageModule`(`@Global`, `STORAGE_GATEWAY` = `RoutingStorageGateway`) |
 | `redis/redis.connection.ts` · `redis/redis.module.ts` | `RedisConnection`(node-redis — 부팅을 막지 않는 연결 · 끊긴 동안 명령을 쌓지 않음 · 준비 전 503 · `subscribe(channel, listener)` — 채널마다 구독 전용 연결) · `RedisModule`(`@Global`) |
 | `door/redis-door.store.ts` · `door/door-store.module.ts` | `RedisDoorStore`(`getMany` · `setQr` · `revokeQr` · `verify` · `open` · `close` · `disconnect` · `subscribe` — Lua 스크립트 3개: QR 확인 + 열림 · 바로 열기 + PUBLISH · QR 지우기) · `DoorStoreModule`(`@Global`, RedisModule 포함) |
 | `payment/toss-payment.gateway.ts` · `payment/payment.module.ts` | `TossPaymentGateway`(fetch — Basic 인증 · 30초 제한 · 조회 · 전액 취소) · `PaymentModule`(`@Global`, 앱 등록은 Phase 17) |
+| `ai/gemini-ai.gateway.ts` · `ai/ai.module.ts` | `GeminiAiGateway`(공식 SDK `@google/genai` — `generateJson`(정해진 JSON 응답 + Google 검색 그라운딩) · `streamText`(글 조각) · `embed`(768차원) — 키가 비면 503 · 부팅 때 경고, 끊기 신호는 그대로 · 그 밖 실패는 503) · `AiModule`(`@Global` — user-service · scheduler) |
+| `conversation/redis-conversation.store.ts` · `conversation/conversation-store.module.ts` | `RedisConversationStore`(AI 대화 이력 · 하루 질문 수 한 줄 · 답하는 중 잠금 — Lua: 저장 + 질문 수 · 초기화 · 잠금 · 지난 대화 지우기) · `ConversationStoreModule`(`@Global`, RedisModule 포함 — user-service · scheduler) |
 
 설정은 `.env` 의 `AWS_REGION` · `AWS_ACCESS_KEY_ID` · `AWS_SECRET_ACCESS_KEY` · `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL`(AWS — S3 자격증명은 SDK 기본 체인이 읽는다, SMS 는 키가 비면 생략), `GATEWAY_PUBLIC_URL` · `FILE_STORAGE_DIR`(내부 파일 저장소 · 샘플 사진 주소), `REDIS_URL`(Redis), `TOSS_SECRET_KEY`(토스 — 비어 있으면 부팅 경고 · 결제 요청만 503) 이다.
 
@@ -58,6 +60,20 @@
 - **접두가 공개 여부를 가른다** — 공개 `store/…`(CloudFront 가 OAC 로 읽는다), 비공개 `private/…`(버킷 정책이 CloudFront 에 열지 않는다 → 서명된 열람 주소로만). 접두는 파일 용도 룩업의 `is_private` 로 정한다(store.util.ts `buildApplicationFileKey`).
 - **등록 명령은 키 모양을 다시 확인한다** — 그 리소스 · 공개 여부 · 형식으로 발급한 키인지(`isApplicationFileKey`) 본 뒤 `exists(key)`. 남의 리소스 키나 다른 접두를 막는다.
 - 파일 삭제는 행을 지운 뒤 저장소 파일을 지운다(마지막 단계 — 503 이면 재시도). S3 삭제는 없는 키에도 성공하므로 재시도해도 안전하다.
+
+## AI (`AI_GATEWAY` · Google Gemini)
+
+- **지시문 · 응답 형식은 쓰는 도메인이 들고** 어댑터는 호출 · 실패 분류만 한다(user-service chat 의 요청 읽기 · 답 쓰기, scheduler 의 업체 검색 벡터) — 다른 기능도 같은 포트를 쓸 수 있게.
+- **세 가지 호출** — `generateJson`(정해진 JSON 응답 `responseJsonSchema` · 필요하면 Google 검색 그라운딩 `googleSearch` — 둘을 한 요청에 같이 쓰는 것은 Gemini 3 계열만이라 `GEMINI_CHAT_MODEL` 기본값이 `gemini-3-flash-preview`) · `streamText`(`generateContentStream` 조각) · `embed`(`embedContent` — `outputDimensionality` 768, 업체는 `RETRIEVAL_DOCUMENT` · 질문은 `RETRIEVAL_QUERY`).
+- **실패** — 키(`GEMINI_API_KEY`)가 비면 503(부팅은 된다 — 부팅 때 한 번 경고), 이용자가 연결을 끊어 넘긴 끊기 신호가 울린 것은 그 오류 그대로(503 으로 바꾸지 않는다), 그 밖(한도 · 5xx · 네트워크 · 제한 시간 30초 · JSON 아님 · 벡터 수 · 차원이 다름)은 모두 503 `AI_UNAVAILABLE_MESSAGE` — 이용자가 고칠 것이 없어 400 을 두지 않는다. 글 스트리밍은 전체 60초(`AI_STREAM_TIMEOUT_MS` — 멈춘 스트림이 답하는 중 잠금 3분보다 오래 가지 않게, 넘기면 503). 글이 하나도 오지 않은 답은 쓰는 쪽(user-service chat)이 503 으로 끝낸다(빈 답을 이력에 남기면 다음 요청마다 거절된다).
+- 웹 검색 그라운딩은 모델이 실제로 한 검색만큼 요금이 붙는다(Gemini 3) — 하루 질문 수(`CHAT_DAILY_LIMIT`)로 부르는 횟수를 묶는다. 세팅: [guides/gemini-setup.md](guides/gemini-setup.md)
+
+## AI 대화 (`CONVERSATION_STORE` · Redis)
+
+- **저장 모양** — `chat-turns:<user_id>`(ZSET — 점수 = 물은 시각 ms, 값 = 질문 + 답 한 건 JSON `{turn_id, user_id, question, answer, stores, asked_at, answered_at}`, 7일 동안 질문이 없으면 키 만료) · `chat-users`(ZSET — 이력이 있는 이용자, 지난 대화 지우기가 훑는다) · `chat-usage:<user_id>`(STRING — 하루 질문 수 한 줄 `yyyy-MM-dd:횟수`) · `chat-busy:<user_id>`(STRING — 답하는 중 잠금, 값 = 요청 ID · 3분 만료). 대화창 · 벌점 · 정지 키는 없다(사용자 결정 2026-11-25).
+- **하루 질문 수 한 줄** — 저장할 때(`appendTurn` 의 Lua): 줄이 없으면 `오늘:1` 등록 · 다른 날짜면 `오늘:1` 로 바꿈 · 같은 날짜면 +1. 읽을 때는 줄을 바꾸지 않고 쓰는 쪽(user-service `toChatQuota`)이 날짜가 오늘이 아니면 0회로 본다 — 날짜를 바꾸는 별도 작업이 없다. 대화 초기화(`clearTurns`)는 이력만 지우고 이 줄은 남긴다(초기화로 하루 한도를 넘기지 않게).
+- **원자적 동작** — 이력 저장 + 질문 수 · 초기화(이력 키 · 목록) · 잠금 잡기(`SET NX PX`) · 잠금 풀기(값이 같을 때만) · 이용자 한 명의 지난 대화 지우기는 Lua 하나씩. 지난 대화 지우기(`purgeTurns`)는 이용자 목록을 500명씩 훑어 이용자 하나씩 Lua 를 돌린다(Redis 를 오래 막지 않게).
+- 대화는 DB 가 아니라 실제로 지운다(소프트 삭제 규칙은 DB 에만). Redis 가 없으면 503(부팅은 된다). 문 정보와 같은 단일 노드 Redis 를 쓴다.
 
 ## 문 정보 (`DOOR_STORE` · Redis)
 

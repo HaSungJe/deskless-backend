@@ -20,6 +20,7 @@ import {DoorOpenLogManager1795050011114} from './migrations/1795050011114-DoorOp
 import {SmsVerificationCode1795478255569} from './migrations/1795478255569-SmsVerificationCode.js';
 import {Inquiry1795503980335} from './migrations/1795503980335-Inquiry.js';
 import {StoreDetail1795525176585} from './migrations/1795525176585-StoreDetail.js';
+import {StoreEmbedding1795550230239} from './migrations/1795550230239-StoreEmbedding.js';
 
 /**
  * DataSource 에 등록할 마이그레이션 목록 (실행 순서 = 클래스명 끝의 타임스탬프 순).
@@ -48,4 +49,5 @@ export const MIGRATIONS = [
     SmsVerificationCode1795478255569,
     Inquiry1795503980335,
     StoreDetail1795525176585,
+    StoreEmbedding1795550230239,
 ];

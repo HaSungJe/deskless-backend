@@ -2,6 +2,8 @@
 
 큐 경로 요청 1건의 전체 흐름과, 게이트웨이 · 서비스가 지키는 규칙. 구현은 [libs/messaging](../libs/messaging/src/) · [CommandStreamService](../apps/gateway/src/modules/transport/command-stream.service.ts).
 
+> 답을 조각으로 흘려야 하는 긴 요청(AI 대화 `POST /api/v1/user-service/chat/message`)은 큐가 아니라 세 번째 경로인 **내부 HTTP 스트리밍**이다 — 큐는 결과를 done 한 번으로 돌려주는 구조라 조각을 흘릴 수 없다. 규칙은 [streaming.md](streaming.md). SSE 한 덩어리의 모양(`event: x\ndata: {...}\n\n` — `formatSseEvent`)과 실패 이벤트 data(`{status_code, …실패 본문}`)는 두 경로가 같다(`libs/common/src/utils/sse.ts`).
+
 ## 흐름
 
 ```

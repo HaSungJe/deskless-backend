@@ -41,6 +41,7 @@
     "@aws-sdk/client-s3": "^3.1146.0",
     "@aws-sdk/client-sns": "^3.1146.0",
     "@aws-sdk/s3-request-presigner": "^3.1146.0",
+    "@google/genai": "^3.6.1",
     "@nestjs-cls/transactional": "^4.0.1",
     "@nestjs-cls/transactional-adapter-typeorm": "^2.0.1",
     "@nestjs/common": "^12.0.1",
@@ -72,6 +73,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.9",
+    "@electric-sql/pglite-pgvector": "^0.0.10",
     "@electric-sql/pglite-socket": "^0.2.12",
     "@nestjs/cli": "^12.0.0",
     "@nestjs/schematics": "^12.0.0",

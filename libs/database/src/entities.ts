@@ -23,6 +23,7 @@ import {RoomEntity} from './entities/room/room.entity.js';
 import {StoreApplicationStateEntity} from './entities/store/store-application-state.entity.js';
 import {StoreApplicationEntity} from './entities/store/store-application.entity.js';
 import {StoreBreakEntity} from './entities/store/store-break.entity.js';
+import {StoreEmbeddingEntity} from './entities/store/store-embedding.entity.js';
 import {StoreFilePurposeEntity} from './entities/store/store-file-purpose.entity.js';
 import {StoreFileEntity} from './entities/store/store-file.entity.js';
 import {StoreHourEntity} from './entities/store/store-hour.entity.js';
@@ -57,6 +58,7 @@ export const ENTITIES = [
     StoreHourEntity,
     StoreBreakEntity,
     StoreUnavailablePeriodEntity,
+    StoreEmbeddingEntity,
     RoomStateEntity,
     RoomPlanTypeEntity,
     RoomPlanEntity,

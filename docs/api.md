@@ -12,7 +12,7 @@ export class UserController { ... }
 
 `@ApiTags('<한글>')` → `@Controller(...)`.
 
-게이트웨이 공개 controller 는 전달 경로별로 2파일이다 — 동기 `controllers/<domain>.controller.ts`(`UserController`), 큐 `controllers/<domain>.controller.queue.ts`(`UserQueueController`). 둘 다 같은 `@ApiTags` · 경로 접두를 쓰므로 Swagger 에는 한 태그로 묶여 보인다.
+게이트웨이 공개 controller 는 전달 경로별로 파일을 나눈다 — 동기 `controllers/<domain>.controller.ts`(`UserController`), 큐 `controllers/<domain>.controller.queue.ts`(`UserQueueController`), 스트림 `controllers/<domain>.controller.stream.ts`(`ChatStreamController` — 아래 "스트림 핸들러"). 모두 같은 `@ApiTags` · 경로 접두를 쓰므로 Swagger 에는 한 태그로 묶여 보인다.
 
 ## 동기 핸들러 (`controllers/<domain>.controller.ts`)
 
@@ -78,6 +78,31 @@ async leave(@PassportActor() actor: Actor, @Body() dto: UserLeaveDto, @Ip() ip: 
 - `@ApiOkResponse({type: X})` 는 **done 이벤트의 data** 를 뜻한다. 결과가 void 면 생략.
 - 에러 응답 데코레이터는 스트림이 열리기 전의 실패(400 검증 · 401 · 503)와 failed 이벤트의 `status_code` 를 함께 나타낸다.
 - 시그니처 세 형태(인증 + 입력 / 비인증 `actor: null` / 입력 없음 `payload: {}`) — [conventions.md](conventions.md). 본문은 `dispatch` 한 줄.
+
+## 스트림 핸들러 (`controllers/<domain>.controller.stream.ts`, 내부 HTTP 스트리밍)
+
+```ts
+@Post('/message')
+@UseGuards(PassportJwtAuthGuard)
+@ApiBearerAuth()
+@ApiOperation({summary: 'AI 메시지 보내기 (스트림)'})
+@ApiBody({type: ChatMessageDto})
+@ApiProduces('text/event-stream')
+@ApiOkResponse({type: ChatMessageDoneResultDto})
+@ApiBadRequestResponse({type: ApiFailResultDto})
+@ApiUnauthorizedResponse({type: ApiFailResultDto})
+@ApiConflictResponse({type: ApiFailResultDto})
+@ApiTooManyRequestsResponse({type: ApiFailResultDto})
+@ApiServiceUnavailableResponse({type: ApiFailResultDto})
+@ApiInternalServerErrorResponse({type: ApiFailResultDto})
+async sendMessage(@PassportActor() actor: Actor, @Body() dto: ChatMessageDto, @Ip() ip: string, @Res() res: Response): Promise<void> {
+    await this.internalHttp.stream('user', CHAT_INTERNAL_PATH.MESSAGE, res, {actor, body: dto, client_ip: ip});
+}
+```
+
+- 데코레이터 순서 · `@HttpCode` 없음 · `@ApiOkResponse({type: done 이벤트의 data})` 는 큐 핸들러와 같다. 이벤트 이름 · data 는 도메인이 정한다(chat: `progress` → `stores` → `delta` … → `done` | `failed` — contracts `CHAT_STREAM_EVENT`).
+- 에러 응답 데코레이터는 스트림이 열리기 전의 실패(서비스가 일반 HTTP 상태 · 실패 본문으로 답한 것을 게이트웨이가 그대로 — 예: 409 답하는 중 · 429 오늘 질문을 다 씀)와 `failed` 이벤트의 `status_code` 를 함께 나타낸다.
+- 본문은 `internalHttp.stream(service, path, res, {actor, body, client_ip})` 한 줄 — 규칙은 [streaming.md](streaming.md).
 
 ## 로그인 그룹(도메인) · 인증 가드
 

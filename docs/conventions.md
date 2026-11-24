@@ -33,8 +33,9 @@
 - controller 는 게이트웨이 · 서비스 모두 도메인 폴더의 `controllers/` 에 두고, **전달 경로별로 파일을 나눈다(한 파일에 섞지 않는다)**:
   - 동기(내부 HTTP) `controllers/<domain>.controller.ts` · 클래스 `<Domain>Controller`
   - 큐(RabbitMQ) `controllers/<domain>.controller.queue.ts` · 클래스 `<Domain>QueueController`
-  - 게이트웨이(`apps/gateway/src/api/v1/<service>/<domain>/controllers/`): 동기는 `InternalHttpClient` 만, 큐(요청 단위 SSE)는 `CommandStreamService` 만 주입. 둘 다 같은 `@ApiTags` · `@Controller('/api/v1/<service>/<domain>')`, 도메인 모듈 `controllers: [<Domain>Controller, <Domain>QueueController]`. controller 자체의 spec 은 두지 않는다 — spec 은 service 기능 · repository 만([testing.md](testing.md)).
-  - 서비스(`apps/<app>/src/<domain>/controllers/`): 동기는 `@Controller('/internal/v1/<service>/<domain>')` → 모듈 `controllers`. 큐는 `@Injectable` + `@OnCommand` provider → 모듈 `providers`(HTTP 컨트롤러가 아니다 — `CommandHandlerRegistry` 가 provider 를 스캔한다).
+  - 스트림(내부 HTTP 스트리밍 — 답을 조각으로 흘리는 긴 요청만, [streaming.md](streaming.md)) `controllers/<domain>.controller.stream.ts` · 클래스 `<Domain>StreamController`
+  - 게이트웨이(`apps/gateway/src/api/v1/<service>/<domain>/controllers/`): 동기 · 스트림은 `InternalHttpClient` 만(스트림은 `stream()`), 큐(요청 단위 SSE)는 `CommandStreamService` 만 주입. 모두 같은 `@ApiTags` · `@Controller('/api/v1/<service>/<domain>')`, 도메인 모듈 `controllers: [<Domain>Controller, <Domain>QueueController, <Domain>StreamController]`(있는 것만, 이 순서). controller 자체의 spec 은 두지 않는다 — spec 은 service 기능 · repository 만([testing.md](testing.md)).
+  - 서비스(`apps/<app>/src/<domain>/controllers/`): 동기는 `@Controller('/internal/v1/<service>/<domain>')` → 모듈 `controllers`. 큐는 `@Injectable` + `@OnCommand` provider → 모듈 `providers`(HTTP 컨트롤러가 아니다 — `CommandHandlerRegistry` 가 provider 를 스캔한다). 스트림은 동기와 같은 `@Controller` + `@Res()` → `writeSseStream(res, service 의 이벤트 async generator, failed 이벤트)` 한 줄(끊기 신호 `abortOnClose(res)`) → 모듈 `controllers`.
 
 **인프라 · 라이브러리 파일** — `<kebab-이름>.<role>.ts`: `internal-http.client.ts` · `command-stream.service.ts` · `command.dispatcher.ts` · `command-handler.registry.ts` · `rabbitmq-command.publisher.ts` · `on-command.decorator.ts` · `custom-error.filter.ts` · `internal-auth.guard.ts` · `job-lock/job-lock.service.ts` · `cors.config.ts`. 모듈 전용 util 은 `<module>.util.ts`(transport.util.ts · messaging.util.ts · seeder.util.ts). 전역 util 은 role 접미사 없이 `utils/<이름>.ts`. 이름에 점이 들어간 예외: `passport.jwt.auth.*` · `global.result.dto.ts`.
 
@@ -193,7 +194,7 @@ return this.storeService.getStoreList(dto);
 | service 의 DataSource · `txHost` · `Repository<T>` 직접 사용 | repository 포트 |
 | service private 헬퍼 | util |
 | controller 의 로직 · throw | service 위임 |
-| 한 controller 파일에 동기 · 큐 혼합, `controllers/` 밖의 controller, `<domain>.handler.ts` | `controllers/<domain>.controller.ts` · `controllers/<domain>.controller.queue.ts` |
+| 한 controller 파일에 동기 · 큐 · 스트림 혼합, `controllers/` 밖의 controller, `<domain>.handler.ts` | `controllers/<domain>.controller.ts` · `controllers/<domain>.controller.queue.ts` · `controllers/<domain>.controller.stream.ts` |
 | 내부 HTTP 경로 문자열 직접 사용 | `<domain>.commands.ts` 의 경로 상수 |
 | Swagger 응답 데코레이터의 `description` | `type` 만 |
 | 타임스탬프 직접 할당, `@CreateDateColumn`/`@UpdateDateColumn` | `@BeforeInsert`/`@BeforeUpdate` 훅 |

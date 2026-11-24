@@ -107,7 +107,7 @@ function toNullable(value: unknown): unknown {
 }
 
 /**
- * 파일 전용 — SSE 응답의 마지막 이벤트(`event: x\ndata: {...}\n\n` — transport.util formatSseEvent 형식).
+ * 파일 전용 — SSE 응답의 마지막 이벤트(`event: x\ndata: {...}\n\n` — libs/common utils/sse.ts formatSseEvent 형식).
  *
  * @param text SSE 본문
  * @returns 이벤트 또는 null

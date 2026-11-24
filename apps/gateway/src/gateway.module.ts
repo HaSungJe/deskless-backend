@@ -17,6 +17,7 @@ import {RoomModule} from './api/v1/admin-service/room/room.module.js';
 import {StatsModule} from './api/v1/admin-service/stats/stats.module.js';
 import {StoreModule} from './api/v1/admin-service/store/store.module.js';
 import {UserModule as AdminUserModule} from './api/v1/admin-service/user/user.module.js';
+import {ChatModule} from './api/v1/user-service/chat/chat.module.js';
 import {DiscoveryModule} from './api/v1/user-service/discovery/discovery.module.js';
 import {InquiryModule as UserInquiryModule} from './api/v1/user-service/inquiry/inquiry.module.js';
 import {ReservationModule} from './api/v1/user-service/reservation/reservation.module.js';
@@ -38,6 +39,7 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
  * - 같은 이름 도메인이 서비스마다 있으면(행위자별 서버 — 사용자 결정 2026-11-07) 별칭으로 들인다
  * - 업체 둘러보기 라우트: DiscoveryModule(/api/v1/user-service/discovery — 가드 없음, 반경 업체 · 업체 이름 검색 · 업체 상세 · 객실 그룹 목록)
  * - 문의 라우트: UserInquiryModule(/api/v1/user-service/inquiry — 카테고리 목록은 가드 없음, 등록 · 내 문의는 이용자 가드) · InquiryModule(/api/v1/admin-service/inquiry — /mine 은 매니저 가드(소속 업체 문의), 그 밖 관리자 가드(바로방 문의) — 목록 · 상세 · 답변 · 블라인드 · 해제)
+ * - AI 대화형 업체 검색 라우트: ChatModule(/api/v1/user-service/chat — 이용자 가드: 대화 보기 · 남은 질문 수(동기) · 메시지 보내기(내부 HTTP 스트리밍 — user-service SSE 를 그대로 흘린다) · 대화 초기화(큐))
  * - DoorSocketModule: 문 소켓(`/ws/v1/door` — 업체 ID + 시크릿, 표준 WebSocket) — QR 확인 · 잠금 알림 · 바로 열기 명령
  * - LocalFileModule: 내부 파일 저장소 경로(`/files` — 업로드 받기는 AWS_S3_BUCKET 이 빌 때만, 비공개 열람 · 공개 파일은 늘 — S3 로 바꾸기 전에 올린 LOCAL 행)
  * - ApiLogModule: API 로그 — 모든 HTTP 요청(가드보다 먼저 거는 미들웨어)을 응답이 끝난 뒤 로그 전용 연결로 t_api_log 에 넣는다(Swagger 문서 제외)
@@ -62,6 +64,7 @@ import {UserModule} from './api/v1/user-service/user/user.module.js';
         AdminUserModule,
         StatsModule,
         UserInquiryModule,
+        ChatModule,
         InquiryModule,
         DoorSocketModule,
         LocalFileModule,

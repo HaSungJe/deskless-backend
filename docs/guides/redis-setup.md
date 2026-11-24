@@ -1,6 +1,7 @@
 # Redis 세팅 · 실행 가이드
 
 > 문 정보(호실의 현재 QR · 문을 마지막으로 연 시각)와 문 명령 채널을 둔다 — 열림 · 닫힘 상태는 두지 않는다(사용자 결정 2026-11-19). 쓰는 앱은 넷이다 — gateway(문 소켓의 바로 열기 · 연결 끊기 명령 구독) · user-service(문 소켓 QR 확인 + 연 시각 · 내 예약 QR · 사용중지 호실 취소 · 이용 중 취소 승인 때 QR 지우기) · admin-service(호실 목록의 연 시각 · 바로 열기 · 시크릿 변경 때 소켓 끊기) · scheduler(이용 시작 · QR 동기화).
+> AI 대화형 업체 검색의 대화 이력 · 하루 질문 수 · 답하는 중 잠금도 같은 Redis 에 둔다 — user-service(대화 보기 · 질문 · 초기화) · scheduler(7일 지난 대화 지우기). 대화는 7일만 두는 값이라 잃어도 다시 쌓이지만, 하루 질문 수 줄을 잃으면 그날 한도가 다시 찬다.
 > QR 이력은 DB(`t_room_qr`)에 있어 비거나 지워져도 scheduler 가 매분 현재 QR 을 다시 쓰지만, 마지막으로 연 시각은 Redis 에만 있다 — 영속(AOF · 백업)을 켠다.
 
 ## 1. 로컬 · 클러스터 안 Redis — deskless 인프라 묶음
@@ -29,6 +30,10 @@
 |---|---|---|
 | `door-qr:<room_id>` | 그 호실의 현재 QR (만료 = QR 유효 끝) | `9f3c…e1` — 이용 끝 시각에 저절로 사라진다 |
 | `door-opened:<room_id>` | 문을 마지막으로 연 시각 (한국 시각 yyyyMMddHHmmss, 만료 없음) | `20261119143005` — QR 확인이 맞았거나 바로 열기를 한 때. 연 적 없으면 키가 없다 |
+| `chat-turns:<user_id>` | AI 대화 이력 ZSET (점수 = 물은 시각 ms, 값 = 질문 + 답 한 건 JSON) | 7일 동안 질문이 없으면 키 만료, scheduler 가 매시 7일 지난 건을 지운다, 대화 초기화는 키를 바로 지운다 |
+| `chat-users` | 대화 이력이 있는 이용자 ZSET (점수 = 마지막으로 물은 시각) | 지난 대화 지우기가 훑는 목록 |
+| `chat-usage:<user_id>` | 하루 질문 수 한 줄 `yyyy-MM-dd:횟수` | `2026-11-25:3` — 답을 받을 때마다 오늘 날짜면 +1, 다른 날짜거나 없으면 `오늘:1`. 초기화해도 남는다 |
+| `chat-busy:<user_id>` | 답하는 중 잠금 (값 = 요청 ID, 3분 만료) | 답이 끝나면 지워진다 — 남아 있으면 그 이용자의 질문이 409 |
 | 채널 `door-commands` | `{"store_id", "room_id", "command": "open"}` · `{"store_id", "command": "disconnect"}` | 업체 관리자의 바로 열기 → 그 업체 소켓에 `door.open` / 업체 문 시크릿 변경 → 그 업체 소켓을 모두 끊기 — gateway 가 구독한다 |
 
 ```bash
@@ -38,6 +43,8 @@ GET door-opened:<room_id>
 PTTL door-qr:<room_id>        # 남은 유효 시간(ms)
 SCAN 0 MATCH door-qr:* COUNT 100
 SUBSCRIBE door-commands       # 바로 열기 명령 지켜보기
+GET chat-usage:<user_id>       # 오늘 질문 수
+ZRANGE chat-turns:<user_id> 0 -1   # 대화 이력
 ```
 
 - 옛 문 상태 키(`door:<room_id>` = `open|close:시각`)는 더 쓰지 않는다(2026-11-19). 남아도 코드가 읽지 않고, 지우려면 `SCAN 0 MATCH door:* COUNT 100` 으로 찾아 `DEL` 한다 — `door-qr:*` · `door-opened:*` 는 지우지 않는다(`door:` 가 아니라 `door-` 로 시작한다).

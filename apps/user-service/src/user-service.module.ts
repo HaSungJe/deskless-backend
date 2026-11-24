@@ -6,6 +6,8 @@ import {USER_COMMAND_BINDING, USER_COMMAND_QUEUE} from '@app/contracts/user/user
 import {DatabaseModule} from '@app/database/database.module.js';
 import {SeederService} from '@app/database/seeder/seeder.service.js';
 import {BROKER_USER} from '@app/messaging/messaging.constants.js';
+import {AiModule} from '@app/integration/ai/ai.module.js';
+import {ConversationStoreModule} from '@app/integration/conversation/conversation-store.module.js';
 import {DoorStoreModule} from '@app/integration/door/door-store.module.js';
 import {PaymentModule} from '@app/integration/payment/payment.module.js';
 import {SmsModule} from '@app/integration/sms/sms.module.js';
@@ -13,6 +15,7 @@ import {StorageModule} from '@app/integration/storage/storage.module.js';
 import {MessagingModule} from '@app/messaging/messaging.module.js';
 import {MonitoringModule} from '@app/monitoring/monitoring.module.js';
 import {toMonitoringOptions} from '@app/monitoring/monitoring.util.js';
+import {ChatModule} from './chat/chat.module.js';
 import {DiscoveryModule} from './discovery/discovery.module.js';
 import {DoorModule} from './door/door.module.js';
 import {InquiryModule} from './inquiry/inquiry.module.js';
@@ -30,8 +33,10 @@ import {UserModule} from './user/user.module.js';
  * - StorageModule: 파일 저장소 포트(STORAGE_GATEWAY, Amazon S3 · CloudFront) — 입점 신청 업체 정보 파일(업로드 주소 · 존재 확인 · 삭제 · 서명 열람 주소) · 업체 둘러보기의 업체 · 객실 그룹 사진 공개 주소
  * - DoorStoreModule: 문 정보 포트(DOOR_STORE, Redis — RedisModule 연결 포함) — 문 소켓 접속 확인 · QR 확인 · 잠금, 내 예약 QR 발급 · 결제 확인 때 호실의 현재 QR 쓰기, 사용중지 호실 취소 · 이용 중 취소 승인 때 QR 지우기
  * - PaymentModule: 결제 포트(PAYMENT_GATEWAY, 토스페이먼츠) — 예약 결제 환경 · 결제 확인
+ * - AiModule: AI 포트(AI_GATEWAY, Google Gemini) — AI 대화형 업체 검색의 요청 읽기 · 답 스트리밍 · 검색 문장 벡터
+ * - ConversationStoreModule: 대화 저장소 포트(CONVERSATION_STORE, Redis — RedisModule 연결 포함) — AI 대화 이력 · 하루 질문 수 · 답하는 중 잠금
  * - SeederService: DB 를 소유하는 이 서비스가 룩업 기본 데이터 · 첫 총관리자를 보장한다
- * 도메인(이용자 기능 — 사용자 결정 2026-11-07): UserModule(회원) · ReservationModule(예약) · DiscoveryModule(업체 둘러보기) · StoreModule(입점 신청) · DoorModule(문 소켓 처리) · InquiryModule(문의). crontab 은 scheduler 앱이 돌린다(이 서비스에는 ScheduleModule 이 없다).
+ * 도메인(이용자 기능 — 사용자 결정 2026-11-07): UserModule(회원) · ReservationModule(예약) · DiscoveryModule(업체 둘러보기) · StoreModule(입점 신청) · DoorModule(문 소켓 처리) · InquiryModule(문의) · ChatModule(AI 대화형 업체 검색). crontab 은 scheduler 앱이 돌린다(이 서비스에는 ScheduleModule 이 없다).
  */
 @Module({
     imports: [
@@ -42,12 +47,15 @@ import {UserModule} from './user/user.module.js';
         StorageModule,
         DoorStoreModule,
         PaymentModule,
+        AiModule,
+        ConversationStoreModule,
         UserModule,
         ReservationModule,
         DiscoveryModule,
         StoreModule,
         DoorModule,
         InquiryModule,
+        ChatModule,
     ],
     providers: [{provide: APP_GUARD, useClass: InternalAuthGuard}, {provide: APP_INTERCEPTOR, useClass: ReturnedExceptionInterceptor}, SeederService],
 })

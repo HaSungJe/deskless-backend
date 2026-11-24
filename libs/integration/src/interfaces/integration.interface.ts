@@ -272,3 +272,122 @@ export interface PaymentGatewayInterface {
      */
     cancel(input: PaymentCancelInput): Promise<PaymentCancelResult>;
 }
+
+/** AI 대화 기록 한 줄 — user: 이용자, model: AI */
+export interface AiHistoryItem {
+    role: 'user' | 'model';
+    text: string;
+}
+
+/** AI 글 입력 — 지시문 · 대화 기록 · 이번 말 · 웹 검색(Google 검색 그라운딩) 사용 · 끊기 신호 */
+export interface AiTextInput {
+    system: string;
+    history: AiHistoryItem[];
+    content: string;
+    use_search: boolean;
+    signal: AbortSignal;
+}
+
+/** AI 정해진 JSON 응답 입력 — 글 입력 + 응답 JSON Schema */
+export interface AiJsonInput extends AiTextInput {
+    schema: object;
+}
+
+/** 임베딩 입력 — 글 목록 · 용도(AI_EMBED_TASK) · 끊기 신호 */
+export interface AiEmbedInput {
+    texts: string[];
+    task: 'DOCUMENT' | 'QUERY';
+    signal: AbortSignal;
+}
+
+/**
+ * AI 포트 — 구현 GeminiAiGateway. 지시문 · 응답 형식은 쓰는 도메인이 들고, 어댑터는 호출만 한다.
+ * 키(GEMINI_API_KEY)가 비거나 Gemini 가 실패하면 503 AI_UNAVAILABLE_MESSAGE, 끊기 신호(AbortSignal)면 그 AbortError 를 그대로 던진다.
+ */
+export interface AiGatewayInterface {
+    /**
+     * 정해진 JSON 형식의 답 하나 — 웹 검색을 같이 쓸 수 있다(Gemini 3 계열).
+     *
+     * @returns JSON 을 읽은 값(모양 확인은 쓰는 쪽)
+     * @throws ServiceUnavailableException `{message: AI_UNAVAILABLE_MESSAGE}` — 키 없음 · 실패 · JSON 아님 · 제한 시간 초과
+     */
+    generateJson(input: AiJsonInput): Promise<unknown>;
+
+    /**
+     * 답 글을 조각으로 흘린다.
+     *
+     * @throws ServiceUnavailableException `{message: AI_UNAVAILABLE_MESSAGE}` — 시작 전 · 중간 실패
+     */
+    streamText(input: AiTextInput): AsyncIterable<string>;
+
+    /**
+     * 글마다 벡터(AI_EMBEDDING_DIMENSIONS 차원) — 받은 순서대로.
+     *
+     * @throws ServiceUnavailableException `{message: AI_UNAVAILABLE_MESSAGE}`
+     */
+    embed(input: AiEmbedInput): Promise<number[][]>;
+}
+
+/** AI 대화 한 건 — 질문 + 답(업체 카드) · user_id · 시각(ISO). 카드 모양은 쓰는 도메인의 결과 DTO */
+export interface ConversationTurn {
+    turn_id: string;
+    user_id: string;
+    question: string;
+    answer: string;
+    stores: unknown[];
+    asked_at: string;
+    answered_at: string;
+}
+
+/** 하루 질문 수 한 줄 — 저장된 한국 날짜(yyyy-MM-dd — 줄이 없으면 null) · 그 날짜의 횟수 · 답하는 중인지 */
+export interface ConversationUsage {
+    date: string | null;
+    count: number;
+    is_answering: boolean;
+}
+
+/**
+ * 대화 저장소 포트 — 구현 RedisConversationStore. 이용자마다 이력 하나(chat-turns:<user_id> — 7일) · 질문 수 한 줄(chat-usage:<user_id> = yyyy-MM-dd:횟수) · 답하는 중 잠금(chat-busy:<user_id>).
+ * Redis 가 없으면 503 REDIS_UNAVAILABLE_MESSAGE.
+ */
+export interface ConversationStoreInterface {
+    /**
+     * 이력 — since 이후 물은 대화 중 마지막 limit 건(오래된 순).
+     */
+    getTurns(user_id: string, since: Date, limit: number): Promise<ConversationTurn[]>;
+
+    /**
+     * 한 건 저장 + 질문 수 — 이력에 더하고, 질문 수 한 줄은 date(물은 한국 날짜)로 바꾼다(줄 없음 → date:1, 다른 날짜 → date:1, 같은 날짜 → +1).
+     *
+     * @param keep_ms 이력 · 질문 수 키를 쓰지 않으면 지울 시간
+     * @returns 바뀐 뒤 그 날짜의 질문 수
+     */
+    appendTurn(user_id: string, turn: ConversationTurn, date: string, keep_ms: number): Promise<number>;
+
+    /**
+     * 이력을 모두 지운다(질문 수 한 줄은 남긴다).
+     */
+    clearTurns(user_id: string): Promise<void>;
+
+    /**
+     * 질문 수 한 줄 · 답하는 중 — 날짜 비교는 쓰는 쪽(줄이 없거나 모양이 틀리면 date null · count 0).
+     */
+    getUsage(user_id: string): Promise<ConversationUsage>;
+
+    /**
+     * 답하는 중 잠금 — 비어 있을 때만 lock_id 로 잡는다(ttl_ms 뒤 만료).
+     *
+     * @returns 잡았으면 true
+     */
+    acquireBusy(user_id: string, lock_id: string, ttl_ms: number): Promise<boolean>;
+
+    /**
+     * 답하는 중 잠금 풀기 — 값이 lock_id 일 때만.
+     */
+    releaseBusy(user_id: string, lock_id: string): Promise<void>;
+
+    /**
+     * 지난 대화 지우기 — 이력이 있는 이용자마다 before 전에 물은 대화를 지우고, 남은 대화가 없으면 목록에서 뺀다.
+     */
+    purgeTurns(before: Date): Promise<void>;
+}

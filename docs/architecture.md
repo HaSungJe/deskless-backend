@@ -20,10 +20,10 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 
 | 앱 | 역할 | 외부 노출 |
 |---|---|---|
-| `apps/gateway` | 유일한 진입점. JWT · DTO 검증, 경로 선택(동기 / 큐), 요청 단위 SSE, Swagger, 문 소켓(`/ws/v1/door` — 문 쪽 타 업체 프로그램, [realtime.md](realtime.md)), API 로그(모든 HTTP 요청 → 로그 전용 연결로 `t_api_log`) | O (GATEWAY_PORT) |
-| `apps/user-service` | 이용자 서버(이용자가 쓰는 기능) — `user`(회원) · `store`(입점 신청 · 취소 · 업체 정보 파일 · 내 신청) · `door`(문 소켓 접속 확인 · QR 확인 · 잠금 — 게이트웨이 문 소켓의 내부 HTTP) · `discovery`(업체 둘러보기 — 반경 업체 · 업체 이름 검색(문의할 업체 고르기) · 업체 상세 · 객실 그룹 목록, 로그인 없음 · 공유 DB 읽기만) · `inquiry`(문의 — 카테고리 목록(로그인 없음) · 등록 · 내 문의 목록 · 상세) · `reservation`(예약 — 공유 DB 의 업체 · 객실 · 상품 · 영업시간을 읽는다, 그룹 → 시간대 → 호수 예약 가능 시간 · 지금 바로, 내 예약 QR — 이력은 `t_room_qr` · 현재 QR 은 Redis). DB(PostgreSQL) 소유, 룩업 시드 · 마이그레이션 | X (내부망, INTERNAL_API_TOKEN) |
+| `apps/gateway` | 유일한 진입점. JWT · DTO 검증, 경로 선택(동기 / 큐 / 스트림), 요청 단위 SSE, 내부 HTTP 스트리밍(AI 대화 — [streaming.md](streaming.md)), Swagger, 문 소켓(`/ws/v1/door` — 문 쪽 타 업체 프로그램, [realtime.md](realtime.md)), API 로그(모든 HTTP 요청 → 로그 전용 연결로 `t_api_log`) | O (GATEWAY_PORT) |
+| `apps/user-service` | 이용자 서버(이용자가 쓰는 기능) — `user`(회원) · `store`(입점 신청 · 취소 · 업체 정보 파일 · 내 신청) · `chat`(AI 대화형 업체 검색 — 대화 보기 · 남은 질문 수 · 메시지 스트림 · 대화 초기화, Gemini · 업체 검색 벡터 · Redis 대화) · `door`(문 소켓 접속 확인 · QR 확인 · 잠금 — 게이트웨이 문 소켓의 내부 HTTP) · `discovery`(업체 둘러보기 — 반경 업체 · 업체 이름 검색(문의할 업체 고르기) · 업체 상세 · 객실 그룹 목록, 로그인 없음 · 공유 DB 읽기만) · `inquiry`(문의 — 카테고리 목록(로그인 없음) · 등록 · 내 문의 목록 · 상세) · `reservation`(예약 — 공유 DB 의 업체 · 객실 · 상품 · 영업시간을 읽는다, 그룹 → 시간대 → 호수 예약 가능 시간 · 지금 바로, 내 예약 QR — 이력은 `t_room_qr` · 현재 QR 은 Redis). DB(PostgreSQL) 소유, 룩업 시드 · 마이그레이션 | X (내부망, INTERNAL_API_TOKEN) |
 | `apps/admin-service` | 업체 관리자 · 업체 총관리자 · 관리자 · 총관리자 전용 기능 — 매니저(`manager`) · 관리자(`admin`) · 업체(`store` — 입점 신청 관리 · 승인 · 업체 관리 · 내 업체 설정 · 문 소켓 시크릿) · 객실(`room` — 상품 · 그룹 · 호실 · 문을 마지막으로 연 시각 · 바로 열기) · 업체 예약(`reservation` — 예약 현황 · 업체 취소 · 호실 이동) · 이용자 관리(`user` — 총관리자 · 관리자의 이용자 목록 · 상세 · 예약 이력 · 이용 제한) · 통계(`stats` — 총관리자 · 관리자 전체 · 업체별, 업체 관리자 내 업체, 조회만) · 문의 관리(`inquiry` — 업체 관리자는 소속 업체 문의, 관리자는 바로방 문의 — 목록 · 상세 · 답변 · 블라인드 · 해제) 도메인. 공유 DB 를 직접 쓴다(마이그레이션 · 시드는 user-service 묶음) | X (내부망, INTERNAL_API_TOKEN) |
-| `apps/scheduler` | crontab 전용(`user` 탈퇴 자동처리 · `reservation` 결제 대기 만료 · 늦은 승인 재확인 · 환불 — 토스, 이용 시작 · 종료 전환 · QR 동기화 — Redis, QR 확인 링크 — SNS). 들어오는 연결 없음 — listen · 큐 소비 · 컨트롤러가 없고 DB · Redis · 토스 · SNS 에만 붙는다(지표 · 헬스 체크 전용 포트만 예외 — [monitoring.md](monitoring.md)) | X (연결을 받지 않음) |
+| `apps/scheduler` | crontab 전용(`store` 업체 검색 벡터 갱신 — Gemini 임베딩 · 1시간마다, `chat` 지난 AI 대화 지우기 — Redis · 7일, `user` 탈퇴 자동처리 · `reservation` 결제 대기 만료 · 늦은 승인 재확인 · 환불 — 토스, 이용 시작 · 종료 전환 · QR 동기화 — Redis, QR 확인 링크 — SNS). 들어오는 연결 없음 — listen · 큐 소비 · 컨트롤러가 없고 DB · Redis · 토스 · SNS 에만 붙는다(지표 · 헬스 체크 전용 포트만 예외 — [monitoring.md](monitoring.md)) | X (연결을 받지 않음) |
 
 - **기능은 쓰는 사람(행위자)으로 서버를 고른다** — 이용자 기능은 user-service, 관리자 쪽 기능은 admin-service. 같은 데이터라도 행위자가 다르면 그 서버에 같은 이름 도메인을 따로 둔다(`store` · `reservation` · `user` 가 두 서비스에 있다 — 사용자 결정 2026-11-07).
 - **서버 안 도메인은 권한이 아니라 기능 대상으로 나눈다** — 같은 대상을 다루는 기능은 권한이 달라도 한 도메인에 두고 라우트마다 그 그룹의 가드로 가른다(admin-service: 관리자 계정 `admin` · 매니저 계정 `manager`(업체 총관리자의 업체 관리자 관리 + 총관리자의 업체 관리자 관리) · 이용자 `user` · 업체 `store` · 객실 `room` · 예약 `reservation` — 사용자 결정 2026-11-09).
@@ -36,24 +36,25 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 | lib | 내용 | 쓰는 곳 |
 |---|---|---|
 | `libs/account` | 계정 공통 — `issueAccessAndRefresh`(utils/token) · SMS 인증번호 생성 · 상태 검사 · 기록 엔티티 · 본문 · 하루 한도(utils/sms-verification) · 임시 비밀번호(utils/password) · `account.constants.ts`(SMS 용도 · 한도 · 공통 메시지) | user-service · admin-service |
-| `libs/common` | `ApiFailResultDto` · `toFailResult` · `CustomErrorFilter` · `validationExceptionFactory` · `PaginationDto`/`PaginationResultDto` · 순수 util(bcrypt/hash/cipher/jwt/validation/fail-result/retry/pagination/env/id/dayjs/search) · `InternalAuthGuard` · `@ClientIp` · `@InternalActor`(서비스 내부 HTTP 의 로그인 회원 — `@InternalActor('user_id')`) | 모든 앱 |
+| `libs/common` | `ApiFailResultDto` · `toFailResult` · `CustomErrorFilter` · `validationExceptionFactory` · `PaginationDto`/`PaginationResultDto` · 순수 util(bcrypt/hash/cipher/jwt/validation/fail-result/retry/pagination/env/id/dayjs/search/sse — SSE 직렬화 · 스트림 이어 쓰기) · `InternalAuthGuard` · `@ClientIp` · `@InternalActor`(서비스 내부 HTTP 의 로그인 회원 — `@InternalActor('user_id')`) | 모든 앱 |
 | `libs/contracts` | 게이트웨이↔서비스 공유 규격: 요청/응답 DTO, 명령 type · 큐 이름 · 내부 경로 상수, 메시지 봉투, `Actor`, 내부 헤더, SSE 이벤트 이름 | 모든 앱 |
 | `libs/database` | `entities/<domain>/` · `entities.ts`(ENTITIES) · `migrations/` · `migrations.ts`(MIGRATIONS) · `typeorm.config.ts` · `DatabaseModule`(TypeORM + 트랜잭션, 전역) · `JobLockService`(`job-lock/`) · `isUniqueViolation`/`isForeignKeyViolation` · `notDeleted`(소프트 삭제 조건) · seeder · `data-source`(마이그레이션 실행용) | DB 소유 서비스 |
-| `libs/integration` | 외부 연동 포트 `SMS_SENDER`(Amazon SNS) · `STORAGE_GATEWAY`(Amazon S3, presigned URL) · `DOOR_STORE`(Redis — 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 · 연결 끊기 명령 채널, 열림 · 닫힘 상태는 두지 않는다) · `PAYMENT_GATEWAY`(토스페이먼츠 — 조회 검증 · 환불) · `SmsModule` · `StorageModule` · `RedisModule` · `DoorStoreModule` · `PaymentModule`(전역) — [integration.md](integration.md) · [guides/aws-setup.md](guides/aws-setup.md) · [guides/redis-setup.md](guides/redis-setup.md) · [guides/toss-setup.md](guides/toss-setup.md) | 포트를 쓰는 서비스(SMS: user-service 휴대폰 인증 · 아이디 찾기, admin-service 매니저 아이디 찾기 · 비밀번호 초기화 · 입점 승인 · 업체 취소 · 호실 이동 · 이용 중 취소 요청 안내, scheduler QR 확인 링크 / 파일: user-service 입점 신청 업체 정보 파일 · 업체 둘러보기 공개 주소, admin-service 업체 정보 파일 · 객실 그룹 사진 / 문 정보: gateway 명령 구독 · user-service 문 소켓 QR 확인 · 잠금 · 내 예약 QR · 취소 때 QR 지우기 · admin-service 문 상태 · 바로 열기 · scheduler 이용 시작 · QR 동기화 / 결제: user-service 예약 · scheduler 결제 대기 만료 · 환불) |
+| `libs/integration` | 외부 연동 포트 `AI_GATEWAY`(Google Gemini — 정해진 JSON 응답 · 글 스트리밍 · 임베딩) · `CONVERSATION_STORE`(Redis — AI 대화 이력 · 하루 질문 수 한 줄 · 답하는 중 잠금) · `SMS_SENDER`(Amazon SNS) · `STORAGE_GATEWAY`(Amazon S3, presigned URL) · `DOOR_STORE`(Redis — 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 · 연결 끊기 명령 채널, 열림 · 닫힘 상태는 두지 않는다) · `PAYMENT_GATEWAY`(토스페이먼츠 — 조회 검증 · 환불) · `SmsModule` · `StorageModule` · `RedisModule` · `DoorStoreModule` · `PaymentModule`(전역) — [integration.md](integration.md) · [guides/aws-setup.md](guides/aws-setup.md) · [guides/redis-setup.md](guides/redis-setup.md) · [guides/toss-setup.md](guides/toss-setup.md) | 포트를 쓰는 서비스(SMS: user-service 휴대폰 인증 · 아이디 찾기, admin-service 매니저 아이디 찾기 · 비밀번호 초기화 · 입점 승인 · 업체 취소 · 호실 이동 · 이용 중 취소 요청 안내, scheduler QR 확인 링크 / 파일: user-service 입점 신청 업체 정보 파일 · 업체 둘러보기 공개 주소, admin-service 업체 정보 파일 · 객실 그룹 사진 / 문 정보: gateway 명령 구독 · user-service 문 소켓 QR 확인 · 잠금 · 내 예약 QR · 취소 때 QR 지우기 · admin-service 문 상태 · 바로 열기 · scheduler 이용 시작 · QR 동기화 / 결제: user-service 예약 · scheduler 결제 대기 만료 · 환불) |
 | `libs/messaging` | `RabbitMqConnection` · 명령 발행 · 결과 구독 · 명령 소비 · `@OnCommand` · `CommandDispatcher` · `MessagingModule.forGateway()/forService()`(둘 다 전역) | 게이트웨이 · 서비스 |
 | `libs/monitoring` | `MonitoringModule.forRoot`(전역 — 앱마다 지표 · 헬스 체크 전용 포트 `/metrics` · `/health/live` · `/health/ready`) · `MetricsService`(레지스트리 · gauge · histogram — 부품이 `@Optional` 로) · `HttpMetricsMiddleware` · `MetricsServer` · `toRouteLabel` · `toMonitoringOptions` — [monitoring.md](monitoring.md) | 모든 앱 |
 
 - import 는 `@app/<lib>/<경로>.js` (barrel 없음). 앱 · 도메인 내부는 상대경로. 라이브러리 안의 import 방식은 [conventions.md](conventions.md).
 - 라이브러리 의존 방향: `messaging` → `contracts` · `common`, `common` → `contracts`, `contracts` 는 외부 패키지만, `database` → `common`(시더의 bcrypt — 첫 총관리자 비밀번호 해시 · typeorm.config 의 env 파서 `readPositiveInt`), `integration` 은 다른 lib 를 쓰지 않는다, `account` → `common` · `database`(SMS 인증 기록 엔티티). 앱끼리는 서로 import 하지 않고(0건), 게이트웨이는 `@app/database` · `@app/account` 를 쓰지 않는다.
 
-## 전달 경로 — 동기 vs 큐
+## 전달 경로 — 동기 · 큐 · 스트림
 
-모든 외부 요청은 예외 없이 게이트웨이를 거친다. 게이트웨이가 라우트마다 경로를 고르고, 경로별로 controller 파일을 나눈다 — 동기 `controllers/<domain>.controller.ts`, 큐 `controllers/<domain>.controller.queue.ts`(서비스도 같은 이름으로 나눈다).
+모든 외부 요청은 예외 없이 게이트웨이를 거친다. 게이트웨이가 라우트마다 경로를 고르고, 경로별로 controller 파일을 나눈다 — 동기 `controllers/<domain>.controller.ts`, 큐 `controllers/<domain>.controller.queue.ts`, 스트림 `controllers/<domain>.controller.stream.ts`(서비스도 같은 이름으로 나눈다).
 
 | 경로 | 언제 | 게이트웨이 | 서비스 | 클라이언트가 받는 것 |
 |---|---|---|---|---|
 | **동기** | 즉시 결과가 필요하고 몰리지 않는 요청(조회 · 로그인 · 토큰 재발급) | `InternalHttpClient.request()` | 내부 controller (`/internal/v1/...`) | 일반 JSON 응답 |
 | **큐** | 상태를 바꾸는 쓰기, 버스트 · 경합 · 후속 알림이 있는 작업(가입 · 탈퇴 · 비밀번호 변경 · 이후 예약 · 사물 제어) | `CommandStreamService.dispatch()` | 큐 컨트롤러 `@OnCommand` | `text/event-stream`: accepted → done \| failed \| pending |
+| **스트림** | 답을 조각으로 흘려야 하는 긴 요청(AI 대화 — 사용자 결정 2026-11-24) — "쓰기는 큐" 의 예외 | `InternalHttpClient.stream()` | 스트림 컨트롤러 + `writeSseStream`(service 는 이벤트 async generator) | `text/event-stream`: 도메인 이벤트(예: progress → stores → delta … → done \| failed) — 시작 전 실패는 일반 HTTP 상태 · 실패 본문 · [streaming.md](streaming.md) |
 
 공개 라우트는 로그인 그룹(`t_user.login_scope`)마다 도메인 · 서비스 · 접두가 따로다 — 이용자 `/api/v1/user-service/user`(user-service, SNS 가입 · 로그인만), 매니저 `/api/v1/admin-service/manager`(admin-service, 총매니저 · 매니저), 관리자 `/api/v1/admin-service/admin`(admin-service, 총관리자 · 관리자). 경로 규칙: 공개 `/api/v1/<service>/<domain>/<action>` · 내부 `/internal/v1/<service>/<domain>/<action>` — service 는 서비스 앱(`user-service` · `admin-service`), domain 은 그 앱의 도메인 폴더. 로그인 그룹은 경로가 아니라 게이트웨이 가드로 가른다.
 
@@ -69,6 +70,9 @@ NestJS 12 모노레포(ESM) · TypeORM 1.x(PostgreSQL) · RabbitMQ · nestjs-cls
 | `GET /api/v1/admin-service/stats` · `GET /api/v1/admin-service/stats/mine` | 동기 (`/internal/v1/admin-service/stats(/mine)` → admin-service, 전체는 관리자 가드 · `/mine` 은 매니저 가드 — 조회만이라 큐 없음) |
 | `GET /api/v1/user-service/inquiry/category` · `GET /api/v1/user-service/inquiry(/:inquiry_id)` · `GET /api/v1/user-service/discovery/store-search` | 동기 (`/internal/v1/user-service/{inquiry,discovery}/*` → user-service, 카테고리 목록 · 업체 이름 검색은 가드 없음 · 내 문의는 이용자 가드) |
 | `POST /api/v1/user-service/inquiry` | 큐 (`user.inquiry.create` → `q.user.cmd`, 이용자 가드) |
+| `GET /api/v1/user-service/chat` · `GET /api/v1/user-service/chat/quota` | 동기 (`/internal/v1/user-service/chat(/quota)` → user-service, 이용자 가드) |
+| `POST /api/v1/user-service/chat/message` | 스트림 (`/internal/v1/user-service/chat/message` → user-service SSE 를 그대로 흘린다, 이용자 가드) |
+| `DELETE /api/v1/user-service/chat` | 큐 (`user.chat.clear` → `q.user.cmd`, 이용자 가드) |
 | `GET /api/v1/admin-service/inquiry/mine(/:inquiry_id)` · `GET /api/v1/admin-service/inquiry(/:inquiry_id)` | 동기 (`/internal/v1/admin-service/inquiry*` → admin-service, `/mine` 은 매니저 가드 · 그 밖 관리자 가드) |
 | `PUT …/inquiry(/mine)/:inquiry_id/answer` · `PATCH …/inquiry(/mine)/:inquiry_id/blind · /unblind` | 큐 (`admin.inquiry.*` → `q.admin.cmd`, `/mine` 은 매니저 가드 · 그 밖 관리자 가드) |
 | `GET /api/v1/user-service/store/application/mine(/:id)` · `POST …/application/mine/:id/file/upload-url` | 동기 (`/internal/v1/user-service/store/*` → user-service, 이용자 가드) |
@@ -128,6 +132,7 @@ apps/gateway/src/
 ├── api/v1/admin-service/admin/    # 관리자 도메인 라우트(/api/v1/admin-service/admin) — controllers/(admin.controller.ts · admin.controller.queue.ts) · admin.module.ts
 ├── api/v1/user-service/discovery/    # 업체 둘러보기 라우트(/api/v1/user-service/discovery — 가드 없음) — controllers/(discovery.controller.ts 동기만) · discovery.module.ts
 ├── api/v1/user-service/inquiry/      # 이용자 문의 라우트(/api/v1/user-service/inquiry — 카테고리 목록은 가드 없음, 그 밖 이용자 가드) — controllers/(inquiry.controller.ts · inquiry.controller.queue.ts) · inquiry.module.ts
+├── api/v1/user-service/chat/         # AI 대화형 업체 검색 라우트(/api/v1/user-service/chat — 이용자 가드) — controllers/(chat.controller.ts 동기 · chat.controller.queue.ts 큐 · chat.controller.stream.ts 스트림) · chat.module.ts
 ├── api/v1/user-service/reservation/  # 예약 도메인 라우트(/api/v1/user-service/reservation — 이용자) — controllers/(reservation.controller.ts · reservation.controller.queue.ts) · reservation.module.ts
 ├── api/v1/user-service/store/        # 입점 신청 라우트(/api/v1/user-service/store — 이용자 가드) — controllers/(store.controller.ts · store.controller.queue.ts) · store.module.ts
 ├── api/v1/admin-service/store/    # 업체 도메인 라우트(/api/v1/admin-service/store — 관리자 · 매니저 가드) — controllers/(store.controller.ts · store.controller.queue.ts) · store.module.ts
@@ -139,7 +144,7 @@ apps/gateway/src/
 ├── guards/
 │   ├── passport.jwt.auth/  # 그룹별 strategy · guard(auth=이용자 · manager · admin) · util(공통 옵션 · 회원 조회 · 401) · decorator(@PassportUser · @PassportActor) · module
 │   └── roles/              # roles.guard.ts · roles.decorator.ts(@Roles — 그룹 안 권한, 사용 0)
-├── modules/transport/      # internal-http.client · command-stream.service · transport.util
+├── modules/transport/      # internal-http.client(동기 · 스트림 — stream() 이 서비스 SSE 를 그대로 흘린다) · command-stream.service · transport.util
 ├── modules/api-log/        # api-log.middleware(모든 HTTP 요청 — 글 응답 조각 모으기(바이너리 — /files 사진은 본문 null) · finish/close 1번) · api-log.writer(로그 전용 DataSource insert) · api-log.util(라우트 패턴 · 응답 본문 · SSE 마지막 이벤트) · api-log.module
 ├── modules/door-socket/    # door-socket.server(upgrade 수신 · 인증 · 메시지 · 명령 구독 · ping) · door-socket.util · door-socket.module
 ├── modules/local-file/     # 내부 파일 저장소 경로(/files — 받기는 AWS_S3_BUCKET 이 빌 때만, 읽기는 늘) — local-file.server(업로드 받기 · 비공개 열람 · 공개 파일) · local-file.util · local-file.module
@@ -170,6 +175,7 @@ apps/gateway/src/
 ## 스케줄러
 
 crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `<domain>-<feature>.crontab.ts`(`@Cron`)로 두고 도메인 모듈 providers 에 등록한다. 서비스 앱에는 `ScheduleModule` · crontab 을 두지 않는다 — 요청 처리와 배치가 같은 프로세스 · DB 연결 풀을 나눠 쓰지 않게 한다. `ScheduleModule.forRoot()` 는 scheduler 루트 모듈에 1회.
+- `apps/scheduler/src/store/crontabs/store-embedding.crontab.ts`(업체 검색 벡터 — 매시 30분 · 바뀐 업체만 Gemini 임베딩) · `apps/scheduler/src/chat/crontabs/chat-purge.crontab.ts`(지난 AI 대화 — 매시 정각 · Redis 에서 7일 지난 것) — 운영 데이터(업체 · 예약)를 바꾸지 않는 검색 색인 · 대화 정리라 개발 환경에서도 돈다(운영 가드 없음 — 개발 DB 에서 AI 검색을 시험할 수 있게).
 - `apps/scheduler/src/user/crontabs/user-leave-cleanup.crontab.ts` — `@Cron(CronExpression.EVERY_HOUR)`, 운영(`NODE_ENV === 'production'`)이 아니면 바로 return, 탈퇴 예약 경과자를 LEAVE 로 전환. 잠금 키는 파일 상수 `USER_LEAVE_CLEANUP_LOCK`.
 - scheduler 도 여러 대일 수 있고(인스턴스 수는 deskless 차트) 배포 중 두 대가 겹칠 수 있어 crontab 이 인스턴스마다 깨어날 수 있다. 본문은 `JobLockService.runExclusive('<domain>.<작업>', ...)`(libs/database, PostgreSQL advisory lock)로 감싸 회차마다 1대만 실행한다. 잠금은 동시 실행만 막으므로, 대상은 상태 조건으로 골라 두 번 돌아도 결과가 같게 한다.
 
@@ -199,8 +205,8 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | 인스턴스 ID | `GATEWAY_INSTANCE_ID` 비움 → `gw-<호스트명 = 파드 이름>-<pid>`(영숫자 · `-` 외 문자는 `-` — messaging.util.ts) — 결과 큐가 겹치지 않는다 |
 | 앞단 프록시 | `TRUST_PROXY` = 믿을 앞단 단 수(Ingress 1단이면 1) — [trust-proxy.config.ts](../apps/gateway/src/config/trust-proxy.config.ts) |
 | 내부 파일 저장소 | `AWS_S3_BUCKET` 이 빌 때 gateway · user-service · admin-service 가 같은 폴더를 봐야 한다 — 공용 볼륨을 `/app/storage/files` 에 붙이고 `FILE_STORAGE_DIR` 로 넘긴다(이미지가 그 폴더를 `node` 소유로 만들어 두어 빈 볼륨이 소유자를 물려받는다). 노드가 여러 대면 S3 모드 |
-| 게이트웨이 앞단(Ingress) | 요청 본문 한도 10MB(`LOCAL_FILE_MAX_BYTES` — integration.constants.ts) · SSE 응답 버퍼링 끔(게이트웨이가 `X-Accel-Buffering: no` 를 보낸다) · 문 소켓 `/ws/` WebSocket 업그레이드 · 읽기 대기 120초([realtime.md](realtime.md)) |
-| 마이그레이션 | `node dist/apps/user-service/apps/user-service/src/migrate.js`(user-service 이미지) — 앱보다 먼저, 한 번만. 적용은 사용자가 실행한다. 적용 계정에는 PostgreSQL 확장 `btree_gist`(기간 가격 · 예약 점유 겹침 배타 제약) 생성 권한이 필요하다(RDS PostgreSQL 13+ 는 DB 의 CREATE 권한) |
+| 게이트웨이 앞단(Ingress) | 요청 본문 한도 10MB(`LOCAL_FILE_MAX_BYTES` — integration.constants.ts) · SSE 응답 버퍼링 끔(게이트웨이가 `X-Accel-Buffering: no` 를 보낸다) · 문 소켓 `/ws/` WebSocket 업그레이드 · 읽기 대기 120초([realtime.md](realtime.md)) · AI 대화 스트림 `POST /api/v1/user-service/chat/message` 도 버퍼링 끔 · 읽기 대기 120초(답 조각이 계속 오지만 웹 검색 단계는 조각 없이 30초까지 걸릴 수 있다 — [streaming.md](streaming.md)) |
+| 마이그레이션 | `node dist/apps/user-service/apps/user-service/src/migrate.js`(user-service 이미지) — 앱보다 먼저, 한 번만. 적용은 사용자가 실행한다. 적용 계정에는 PostgreSQL 확장 `btree_gist`(기간 가격 · 예약 점유 겹침 배타 제약) 생성 권한이 필요하다(RDS PostgreSQL 13+ 는 DB 의 CREATE 권한) · `vector`(pgvector — 업체 검색 벡터 `t_store_embedding`, 마이그레이션이 `CREATE EXTENSION IF NOT EXISTS vector` 를 한다 — PostgreSQL 이미지에 pgvector 가 있어야 한다, 예: `pgvector/pgvector` 이미지 · RDS 는 지원 확장) |
 | 프로브 | `GET /health/live` · `GET /health/ready`(지표 · 헬스 체크 포트 — [monitoring.md](monitoring.md)) |
 | 브로커 계정 · 권한 | 앱별 계정(`BROKER_USER`)과 그 권한 — `deskless.cmd` 쓰기는 gateway 만([messaging.md](messaging.md)). `npm run broker:check` 로 설계와 대조한다 |
 | 시각대 | `TZ=Asia/Seoul` |
@@ -236,7 +242,7 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | RabbitMQ | `RABBITMQ_HOST` · `RABBITMQ_PORT` (필수) | 브로커 주소 — 로컬은 deskless 로컬 클러스터, 운영은 클러스터 안 브로커 또는 Amazon MQ 등 |
 | 〃 | `RABBITMQ_USER` · `RABBITMQ_PASSWORD` | 관리자 계정 — `npm run broker:check`(계정 권한 점검) 전용, 앱은 쓰지 않는다 |
 | 〃 | `RABBITMQ_GATEWAY_PASSWORD` · `RABBITMQ_USER_SERVICE_PASSWORD` · `RABBITMQ_ADMIN_SERVICE_PASSWORD` (필수) | 앱별 브로커 계정 비밀번호 — 키 이름은 계정에서 만든다(`RABBITMQ_<계정>_PASSWORD` — messaging.util.ts), 각 앱은 자기 것만 읽는다. 계정 · 권한은 deskless 인프라 묶음이 만들어 같은 값이어야 한다. 큰따옴표 · 역슬래시 금지(계정 설정에 문자열로 그대로 실린다) |
-| Redis (문 정보) | `REDIS_URL` (필수) | 호실의 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 명령 채널 — 네 앱 모두. 비밀번호에 `@` `:` `/` 가 있으면 URL 인코딩, TLS 면 `rediss://` — [guides/redis-setup.md](guides/redis-setup.md) |
+| Redis (문 정보 · AI 대화) | `REDIS_URL` (필수) | 호실의 현재 QR · 문을 마지막으로 연 시각 · 바로 열기 명령 채널, AI 대화 이력 · 하루 질문 수 · 답하는 중 잠금 — 네 앱 모두. 비밀번호에 `@` `:` `/` 가 있으면 URL 인코딩, TLS 면 `rediss://` — [guides/redis-setup.md](guides/redis-setup.md) |
 | 로그인 · 암호화 | `JWT_SECRET` (필수) | 토큰 서명 — user-service · admin-service 가 발급하고 게이트웨이가 검증한다(같은 값) |
 | 〃 | `BCRYPT_CODE` · `BCRYPT_ROUNDS` | 비밀번호 해시 pepper — 가입이 시작된 뒤 바꾸면 기존 비밀번호를 검증할 수 없다 · 라운드(4 ~ 31 정수, 기본 12) |
 | 〃 | `TOKEN_CIPHER_KEY` (필수) | refresh 토큰 암호화 키(hex 64자) — 만드는 명령은 `.env.example` 주석 |
@@ -246,6 +252,9 @@ crontab 은 scheduler 앱(`apps/scheduler`)의 도메인 `crontabs/` 폴더에 `
 | 파일 저장 | `AWS_S3_BUCKET` · `AWS_S3_PUBLIC_URL` | 사진 버킷 — 비면 내부 파일 저장소(게이트웨이 `/files`). CloudFront 배포 주소(`https://<배포>.cloudfront.net`) — S3 를 쓸 때 공개 파일 주소의 기준, 비면 공개 파일 주소 요청이 실패한다 — [guides/aws-setup.md](guides/aws-setup.md) |
 | 〃 | `FILE_STORAGE_DIR` | 내부 파일 저장소 폴더(버킷이 빌 때) — 비면 `storage/files`(실행 위치 기준 — 로컬은 저장소 루트). gateway · user-service · admin-service 가 같은 폴더를 봐야 한다(쿠버네티스는 공용 파일 볼륨 자리) |
 | 결제 (토스페이먼츠) | `TOSS_SECRET_KEY` | 시크릿 키 — 개발 `test_sk_…`(결제 환경 TEST) · 운영 `live_sk_…`. 결제창 · 승인은 프론트, 서버는 토스 조회로 검증 · 환불(user-service · scheduler). 비면 부팅은 되고 예약 생성 · 결제 확인 · 환불만 503 — [guides/toss-setup.md](guides/toss-setup.md) |
+| AI 대화형 업체 검색 (Gemini) | `GEMINI_API_KEY` | Google AI Studio API 키 — user-service(요청 읽기 · 답 스트리밍 · 검색 문장 벡터) · scheduler(업체 검색 벡터)만. 비면 부팅은 되고 AI 질문 · 벡터 갱신만 503(부팅 때 한 번 경고) — [guides/gemini-setup.md](guides/gemini-setup.md) |
+| 〃 | `GEMINI_CHAT_MODEL` · `GEMINI_EMBEDDING_MODEL` | 대화 모델(기본 `gemini-3-flash-preview` — Google 검색 그라운딩과 정해진 JSON 응답을 같이 쓰려면 Gemini 3 계열) · 임베딩 모델(기본 `gemini-embedding-001` — 768차원으로 줄여 쓴다, 바꾸면 scheduler 가 모든 업체 벡터를 다시 만든다) |
+| 〃 | `CHAT_DAILY_LIMIT` | 이용자 하루 질문 수(기본 5 — 한국 시각 자정에 다시 채움, 답을 다 받은 질문만 센다) — user-service |
 
 - 운영에 올리기 전 값 확인: `NODE_ENV=production`(development 는 JWT 만료를 검사하지 않는다) · 비밀값 새로 생성(내부 토큰 · 브로커 계정 비밀번호 · DB · Redis 비밀번호 · JWT · 토큰 암호화 키) · `CORS_ORIGINS` 를 실제 프론트 주소로 · `TRUST_PROXY` 를 앞단 단 수로 · `BCRYPT_CODE` 확정(가입 시작 후 바꾸면 기존 비밀번호 검증 불가) · `SEED_SAMPLE_DATA=0`.
 
